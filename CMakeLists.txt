@@ -28,7 +28,13 @@ if (MARKDOWN)
         COMMAND ${MARKDOWN} ${CMAKE_CURRENT_SOURCE_DIR}/README.md > README.html
         MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/README.md
     )
-    list(APPEND DOC README.html)
+    add_custom_command(
+        OUTPUT LICENSE.html
+        COMMAND
+            ${MARKDOWN} ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.md > LICENSE.html
+        MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.md
+    )
+    list(APPEND DOC README.html LICENSE.html)
 endif()
 
 find_package(Doxygen)

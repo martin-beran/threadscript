@@ -10,6 +10,11 @@ Martin Beran
 
 <martin@mber.cz>
 
+## License
+
+This software is available under the terms of BSD 2-Clause License, see
+file [LICENSE.md](LICENSE.html).
+
 ## Repository structure
 
 - `doc/` – documentation
