@@ -4,4 +4,9 @@
  * <a href="../README.html">README.md</a>
  *
  * License: <a href="../LICENSE.html">LICENSE.md</a>
+ *
+ * The initial places to start exploring ThreadScript sources are
+ * \arg namespace \ref threadscript
+ * \arg header file threadscript/threadscript.hpp
+ * \arg the command line interpreter program ts.cpp
  */

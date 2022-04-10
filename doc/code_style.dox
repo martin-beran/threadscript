@@ -1,0 +1,62 @@
+/*! \page Code_style Code style
+ *
+ * \section Cpp_general General C++ rules
+ *
+ * \arg C++20 is used.
+ * \arg Unless specified otherwise here, rules from
+ * <a href="https://en.cppreference.com/w/">cppreference.com</a> and
+ * <a href="http://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines">C++
+ * Core Guidelines</a> appy.
+ *
+ * \section Source_code_documentation Source code documentation
+ *
+ * \arg C++ source code is documented by Doxygen.
+ * \arg Other code is documented by comments.
+ *
+ * \section Identifiers Identifiers
+ *
+ * \arg Names of macros are uppercase with words separated by underscores.
+ * \arg Names of template parameters use camel-case (words not separated, the
+ * first letter of each word capitalized).
+ * \arg All other identifiers are lowercase with words separated by
+ * underscores.
+ *
+ * \section Class_declarations Class declarations
+ *
+ * \arg Class access specifiers are used in the order \c public, \c protected,
+ * \c private, unless other order is required by mutual dependencies of member
+ * declarations.
+ *
+ * \arg Each sequence of member declarations belonging to the same access
+ * specifier is organized in the order: types, const member variables,
+ * constructors, destructor, copy and move assignment, other member functions,
+ * non-const member variables.
+ *
+ * \section Order_of_declarations Order of declarations
+ *
+ * \arg Declarations in header files are ordered in an order following from the
+ * internal logic of the source code.
+ *
+ * \arg Definitions, except class members, in implementation files and inline
+ * definitions of entities declared earlier in a header file use the same order
+ * as their respective declarations.
+ *
+ * \arg Class members (member functions and static member variables) of each
+ * class are defined together, with variables defined first in the
+ * lexicographical order and member functions following also in the
+ * lexicographical order.
+ *
+ * \section Functions
+ *
+ * \arg Every function parameter must be named (so that it can be documented)
+ * in a function declaration. The related definition may omit names of unused
+ * parameters.
+ *
+ * \section Control_structures Control structures
+ *
+ * \arg Each \c switch statement must have a \c default branch.
+ * \arg Each \c switch statement with an enumeration must have a 
+ * \c case for every enumerator.
+ * \arg A fall-through in a switch branch must be marked by an explicit
+ * <code>[[fallthrough]]</code> attribute.
+ */

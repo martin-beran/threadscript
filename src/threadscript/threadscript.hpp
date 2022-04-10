@@ -6,6 +6,10 @@
  * This header must be included by each program that embeds ThreadScript.
  */
 
+//! \cond
+#include "threadscript/config.hpp"
+//! \endcond
+
 //! The top-level namespace of ThreadScript
 namespace threadscript {
 } // namespace threadscript

@@ -1,12 +1,62 @@
 # CMake prologue
 cmake_minimum_required(VERSION 3.18.4)
 
-project(ThreadScript)
+project(
+    ThreadScript
+    LANGUAGES C CXX
+)
 
-# We require C++20
+### BEGIN Build configuration #################################################
+
+if (NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE "RelWithDebInfo")
+endif()
+
+set(
+    CONFIG_FILE_HPP "threadscript/config_default.hpp" CACHE STRING
+    "C++ source configuration file"
+)
+
+option(BUILD_SHARED_LIBS "Build shared (ON) or static (OFF) libraries" ON)
+if (BUILD_SHARED_LIBS)
+    set(LIBS_TYPE "SHARED")
+else()
+    set(LIBS_TYPE "STATIC")
+endif()
+
+### END Build configuration ###################################################
+
+# Version from Git
+message(CHECK_START "Getting version by Git")
+execute_process(
+    COMMAND git describe
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    OUTPUT_VARIABLE GIT_DESCRIBE
+)
+if (GIT_DESCRIBE)
+    message(CHECK_PASS "OK")
+else()
+    message(CHECK_FAIL "FAIL")
+    set(GIT_DESCRIBE "unknown")
+endif()
+
+# C++ options
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+add_compile_options(
+    -Wall -Wextra -pedantic -Werror
+    -Wswitch-default -Wswitch-enum
+)
 
+find_package(Boost 1.74 REQUIRED)
+find_package(Threads REQUIRED)
+
+# We really want asserts in all builds
+add_compile_options(-UNDEBUG)
+
+include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
+include_directories(${CMAKE_SOURCE_DIR}/src ${CMAKE_BINARY_DIR}/src)
 
 # Optional Markdown utility for generating the top-level documentation stub
 find_program(
@@ -41,7 +91,7 @@ find_package(Doxygen)
 if (DOXYGEN_FOUND)
     add_custom_target(
         doxygen
-        COMMAND Doxygen::doxygen ${CMAKE_SOURCE_DIR}/Doxyfile
+        COMMAND Doxygen::doxygen ${CMAKE_SOURCE_DIR}/Doxyfile > /dev/null
     )
 endif()
 
@@ -50,5 +100,9 @@ add_custom_target(
 )
 
 # Report CMake configuration
-message(STATUS "Doxygen:  ${DOXYGEN_FOUND} ${DOXYGEN_VERSION}")
-message(STATUS "Markdown: ${MARKDOWN}")
+message(STATUS "Version:     ${GIT_DESCRIBE}")
+message(STATUS "Config file: ${CONFIG_FILE_HPP}")
+message(STATUS "Build type:  ${CMAKE_BUILD_TYPE}")
+message(STATUS "Libraries:   ${LIBS_TYPE}")
+message(STATUS "Doxygen:     ${DOXYGEN_FOUND} ${DOXYGEN_VERSION}")
+message(STATUS "Markdown:    ${MARKDOWN}")

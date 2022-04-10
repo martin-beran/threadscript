@@ -5,7 +5,7 @@
  * interpreter from the command line.
  */
 
-#include "threadscript.hpp"
+#include "threadscript/threadscript.hpp"
 
 #include <cstdlib>
 

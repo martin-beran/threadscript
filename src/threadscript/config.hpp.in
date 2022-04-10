@@ -1,0 +1,23 @@
+#pragma once
+
+/*! \file
+ * \brief Selection of a build configuration file
+ * By default, this file includes config_default.hpp. Another configuration
+ * file can be selected by setting CMake variable \c CONFIG_FILE_HPP.
+ */
+
+#include <string_view>
+
+namespace threadscript {
+
+//! The version obtained from Git
+/*! The version identifier is obtained by command <code>git describe</code>
+ * called by CMake. The returned version is substituted as the value of this
+ * variable. If Git fails, the value will be \c "unknown". */
+constexpr std::string_view version{"${GIT_DESCRIBE}"};
+
+//! \cond
+#include "${CONFIG_FILE_HPP}"
+//! \endcond
+
+} //namespace threadscript
