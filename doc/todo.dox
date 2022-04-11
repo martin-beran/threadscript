@@ -4,6 +4,5 @@
  * using command <tt>\\todo</tt>. If a ToDo is not related to a particular
  * place in C++ code, add it here.
  *
- * \todo Add \c clang-tidy to CMake.
  * \todo Add tests to CMake.
  */
