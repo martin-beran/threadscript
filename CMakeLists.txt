@@ -48,15 +48,16 @@ add_compile_options(
     -Wall -Wextra -pedantic -Werror
     -Wswitch-default -Wswitch-enum
 )
-
-find_package(Boost 1.74 REQUIRED)
-find_package(Threads REQUIRED)
+include_directories(${CMAKE_SOURCE_DIR}/src ${CMAKE_BINARY_DIR}/src)
 
 # We really want asserts in all builds
 add_compile_options(-UNDEBUG)
 
+# Used packages
+find_package(Boost 1.74 REQUIRED)
+find_package(Threads REQUIRED)
+
 include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
-include_directories(${CMAKE_SOURCE_DIR}/src ${CMAKE_BINARY_DIR}/src)
 
 # Optional Markdown utility for generating the top-level documentation stub
 find_program(
@@ -106,3 +107,4 @@ message(STATUS "Build type:  ${CMAKE_BUILD_TYPE}")
 message(STATUS "Libraries:   ${LIBS_TYPE}")
 message(STATUS "Doxygen:     ${DOXYGEN_FOUND} ${DOXYGEN_VERSION}")
 message(STATUS "Markdown:    ${MARKDOWN}")
+message(STATUS "Clang-tidy:  ${CLANG_TIDY}")

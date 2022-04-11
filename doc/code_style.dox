@@ -8,6 +8,12 @@
  * <a href="http://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines">C++
  * Core Guidelines</a> appy.
  *
+ * \section Source_code_formatting Source code formatting
+ *
+ * \arg Maximum line length is 80 characters, unless a longer line is
+ * necessary.
+ * \arg Indentation step is 4 spaces.
+ *
  * \section Source_code_documentation Source code documentation
  *
  * \arg C++ source code is documented by Doxygen.

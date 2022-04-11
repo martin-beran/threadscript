@@ -1,0 +1,7 @@
+---
+Checks:
+    '*,
+    -abseil-*,
+    -android-*,
+    -llvm*,
+    -modernize-use-trailing-return-type'
