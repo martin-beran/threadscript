@@ -13,7 +13,7 @@
 /*! \param[in] argc the number of command line arguments
  * \param[in] argv the array of command line arguments
  * \return the program exit status */
-int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[])
+int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
 {
     return EXIT_SUCCESS;
 }

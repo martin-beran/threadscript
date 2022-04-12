@@ -6,6 +6,8 @@ project(
     LANGUAGES C CXX
 )
 
+include(CTest)
+
 ### BEGIN Build configuration #################################################
 
 if (NOT CMAKE_BUILD_TYPE)
@@ -54,10 +56,14 @@ include_directories(${CMAKE_SOURCE_DIR}/src ${CMAKE_BINARY_DIR}/src)
 add_compile_options(-UNDEBUG)
 
 # Used packages
-find_package(Boost 1.74 REQUIRED)
+find_package(Boost 1.74 REQUIRED OPTIONAL_COMPONENTS unit_test_framework)
 find_package(Threads REQUIRED)
 
 include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
+link_directories(${Boost_LIBRARY_DIRS})
+if (NOT Boost_unit_test_framework_FOUND)
+    set(BUILD_TESTING OFF)
+endif()
 
 # Optional Markdown utility for generating the top-level documentation stub
 find_program(
@@ -68,7 +74,9 @@ find_program(
 
 # Subdirectories with CMake configurations
 add_subdirectory(src)
-add_subdirectory(test)
+if (BUILD_TESTING)
+    add_subdirectory(test)
+endif()
 
 # Generate documentation, optional (Markdown and Doxygen)
 set(DOC "")
@@ -108,3 +116,4 @@ message(STATUS "Libraries:   ${LIBS_TYPE}")
 message(STATUS "Doxygen:     ${DOXYGEN_FOUND} ${DOXYGEN_VERSION}")
 message(STATUS "Markdown:    ${MARKDOWN}")
 message(STATUS "Clang-tidy:  ${CLANG_TIDY}")
+message(STATUS "Build tests: ${BUILD_TESTING}")
