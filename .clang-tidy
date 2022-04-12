@@ -1,7 +1,16 @@
 ---
-Checks:
-    '*,
-    -abseil-*,
-    -android-*,
-    -llvm*,
-    -modernize-use-trailing-return-type'
+Checks: -*,
+        boost-*,
+        bugprone-*,
+        cert-*,
+        clang-analyzer-*,
+        concurrency-*,
+        cppcoreguidelines-*,
+        google-*,
+        hicpp-*,
+        misc-*,
+        -misc-no-recursion,
+        modernize-*,
+        -modernize-use-trailing-return-type,
+        performance-*,
+        readability-*
