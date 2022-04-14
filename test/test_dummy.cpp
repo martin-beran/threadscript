@@ -2,6 +2,7 @@
  * \brief A dummy test program
  *
  * This program is used to prepare the test infrastructure.
+ * \test \c dummy &ndash; A simple test that always passes
  */
 
 #include <cstdlib>
@@ -14,8 +15,7 @@
  * \param[in] argc the number of command line arguments
  * \param[in] argv the array of command line arguments
  * \return test result: \c EXIT_SUCCESS if passed,
- * \c EXIT_FAILURE if failed
- * \test Test description */
+ * \c EXIT_FAILURE if failed */
 int main(int argc, char* argv[])
 {
     using namespace std::string_view_literals;

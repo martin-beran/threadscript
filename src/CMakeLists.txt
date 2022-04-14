@@ -7,6 +7,7 @@ configure_file(
 # ThreadScript library
 add_library(
     libthreadscript
+    default_allocator.cpp
     threadscript.cpp
 )
 

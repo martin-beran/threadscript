@@ -16,8 +16,9 @@ namespace threadscript {
  * variable. If Git fails, the value will be \c "unknown". */
 constexpr std::string_view version{"${GIT_DESCRIBE}"};
 
+} //namespace threadscript
+
 //! \cond
 #include "${CONFIG_FILE_HPP}"
 //! \endcond
-
-} //namespace threadscript
+#include "threadscript/config_check.hpp"
