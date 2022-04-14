@@ -8,6 +8,7 @@ link_libraries(
 set(
     TEST_PROGRAMS
     allocator_config
+    default_allocator
     dummy
     dummy_boost
 )

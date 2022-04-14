@@ -8,6 +8,7 @@
 #include "threadscript/config_default.hpp"
 
 #include <atomic>
+#include <memory>
 
 namespace threadscript {
 
@@ -16,8 +17,7 @@ namespace threadscript {
  * can make some values imprecise temporarily when read and updated by several
  * threads concurrently.
  *
- * This class is thread-safe, a single instance can be accessed by multiple
- * threads simultanously. */
+ * \threadsafe{safe, safe} */
 class allocator_config {
 public:
     //! Type of allocation sizes
@@ -31,7 +31,8 @@ public:
         //! Initializes all metrics to zero.
         metrics_t() = default;
         //! Copy constructor
-        /*! \param[in] o source object */
+        /*! \param[in] o the the source object */
+        // NOLINTNEXTLINE(performance-move-constructor-init)
         metrics_t(const metrics_t& o) noexcept:
             alloc_ops(o.alloc_ops.load()),
             alloc_rejects(o.alloc_rejects.load()),
@@ -39,12 +40,13 @@ public:
             allocs(o.allocs.load()), max_allocs(o.max_allocs.load()),
             balance(o.balance.load()), max_balance(o.max_balance.load()) {}
         //! Move constructor is the same as copy.
-        /*! \param[in] o source object */
+        /*! \param[in] o the source object */
+        // NOLINTNEXTLINE(performance-move-constructor-init)
         metrics_t(metrics_t&& o) noexcept: metrics_t(o) {}
         //! Default destructor
         ~metrics_t() = default;
         //! Copy assignment
-        /*! \param[in] o source object
+        /*! \param[in] o the source object
          * \return \c *this */
         metrics_t& operator=(const metrics_t& o) noexcept {
             if (&o != this) {
@@ -59,7 +61,7 @@ public:
             return *this;
         }
         //! Move assignment is the same as copy.
-        /*! \param[in] o source object
+        /*! \param[in] o the source object
          * \return \c *this */
         metrics_t& operator=(metrics_t&& o) noexcept {
             operator=(o);
@@ -91,6 +93,7 @@ public:
         limits_t(const limits_t& o) noexcept: balance(o.balance.load()) {}
         //! Move constructor is the same as copy.
         /*! \param[in] o source object */
+        // NOLINTNEXTLINE(performance-move-constructor-init)
         limits_t(limits_t&& o) noexcept: limits_t(o) {}
         //! Default destructor
         ~limits_t() = default;
@@ -146,16 +149,103 @@ private:
 };
 
 //! The default allocator class.
-/*! It provides various statistics about memory allocation and can limit the
- * amount of allocated memory. Memory limits are not exact, because some
- * overhead may not be included in counters.
+/*! It allocates memory by the global <tt>\::operator new()</tt> and
+ * deallocates by the global <tt>\::operator delete()</tt>. It provides various
+ * metrics about memory allocation and can limit the amount of allocated memory
+ * by using allocator_config. Memory limits are not exact, because some
+ * overhead may not be included in counters. A single allocator_config object
+ * can be shared by multiple allocators.
  *
  * It satisfies requirements of \c std::Allocator, so it is compatible with \c
  * std::allocator_traits and it can be used wherever the standard library
- * expects an allocator. */
-template <class T> class default_allocator {
+ * expects an allocator.
+ * \tparam T the type of allocated objects
+ * \tparam CfgPtr the type of a pointer to allocator_config used for metrics
+ * and limits of this allocator; a raw or smart pointer to allocator_config
+ * \threadsafe{safe, unsafe} */
+template <class T, class CfgPtr = allocator_config*>
+class default_allocator: public std::allocator<T> {
+    static_assert(std::is_same_v<
+        typename std::pointer_traits<CfgPtr>::element_type, allocator_config>);
 public:
-    using value_type = T; //!< The type of allocated values
+    //! Enable propagation on container copy
+    struct propagate_on_container_copy_assignment: std::true_type {};
+    //! Enable propagation on container move
+    struct propagate_on_container_move_assignment: std::true_type {};
+    //! Enable propagation on container swap
+    struct propagate_on_container_swap: std::true_type {};
+    //! Creates the allocator
+    /*! \param[in] cfg a metrics and limits object; if \c nullptr, metrics will
+     * not be recorded and no limits will be enforced */
+    explicit constexpr default_allocator(CfgPtr cfg = {}) noexcept:
+        _cfg(std::move(cfg)) {}
+    //! Copy constructor
+    /*! \param[in] o the source object */
+    constexpr default_allocator(const default_allocator& o) = default;
+    //! Move constructor
+    /*! It leaves _cfg in the source object unmodified.
+     * \param[in] o the source object */
+    constexpr default_allocator(default_allocator&& o) noexcept:
+        std::allocator<T>(std::move(o)), _cfg(o._cfg) {}
+    //! Rebinding constructor
+    /*! \tparam U the value type of the source allocator
+     * \param[in] o the source object */
+    // NOLINTNEXTLINE(hicpp-explicit-conversions): Implicit conversions used
+    template <class U> default_allocator(const default_allocator<U>& o)
+        noexcept: std::allocator<T>(o), _cfg(o._cfg) {}
+    //! Default destructor
+    constexpr ~default_allocator() = default;
+    //! Copy assignment
+    /*! \param[in] o the source object
+     * \return \c *this */
+    constexpr default_allocator& operator=(const default_allocator& o) =
+        default;
+    //! Move assignment
+    /*! It leaves _cfg in the source object unmodified.
+     * \param[in] o the source object
+     * \return \c *this */
+    constexpr default_allocator& operator=(default_allocator&& o) noexcept {
+        if (&o != this) {
+            std::allocator<T>::operator=(std::move(o));
+            _cfg = o._cfg;
+        }
+        return *this;
+    }
+    //! Allocation function
+    /*! \param[in] n the number of objects to allocate
+     * \return a pointer to array of not yet constructed \a n objects
+     * \throw std::bad_alloc if allocation is denied by a limit
+     * \throw ... any exception thrown by \c std::allocator<T>::allocate() */
+    [[nodiscard]] constexpr T* allocate(std::size_t n) {
+        if (_cfg && !_cfg->allocate(n * sizeof(T)))
+            throw std::bad_alloc();
+        try {
+            return std::allocator<T>::allocate(n);
+        } catch (...) {
+            if (_cfg)
+                _cfg->deallocate(n * sizeof(T));
+            throw;
+        }
+    }
+    //! Deallocation function
+    /*! \param[in] p a storage allocated by a previous allocate()
+     * \param[in] n the number of objects passed to the related call of
+     * allocate() */
+    constexpr void deallocate(T* p, std::size_t n) noexcept {
+        std::allocator<T>::deallocate(p, n);
+        if (_cfg)
+            _cfg->deallocate(n * sizeof(T));
+    }
+    //! Gets the attached allocator_config object.
+    /*! \return a metrics and limits object or \c nullptr */
+    CfgPtr cfg() const noexcept { return _cfg; }
+private:
+    CfgPtr _cfg; //!< Metrics and limits, may be \c nullptr
 };
+
+//! The default_allocator class with a shared pointer to allocator_config.
+/*! \tparam the type of allocated objects */
+template <class T> using default_allocator_shptr =
+    default_allocator<T, std::shared_ptr<allocator_config>>;
 
 } // namespace threadscript
