@@ -18,6 +18,13 @@
  *
  * \arg C++ source code is documented by Doxygen.
  * \arg Other code is documented by comments.
+ * \arg Where applicable, thread safety of declarations (e.g., classes) should
+ * be described by Doxygen custom command <tt>\\threadsafe{safe,unsafe}</tt>.
+ * Each argument should be either <tt>safe</tt> or <tt>unsafe</tt>, optionally
+ * followed by more detailed description of thread safety conditions. The first
+ * argument specifies thread safety when using distinct objects from different
+ * threads. The second argument specifies thread safety when using a single
+ * object from different threads concurrently.
  *
  * \section Identifiers Identifiers
  *
