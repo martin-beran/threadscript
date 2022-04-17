@@ -28,5 +28,6 @@ Checks: -*,
         readability-*,
         -readability-braces-around-statements,
         -readability-function-cognitive-complexity,
-        -readability-magic-numbers
+        -readability-magic-numbers,
+        -readability-qualified-auto
 HeaderFilterRegex: .*

@@ -3,7 +3,7 @@
  *
  * This program is used to prepare the test infrastructure.
  *
- * \test \c dummy_boost_pass &ndash; A simple test that always passes
+ * \test \c dummy_boost_pass -- A simple test that always passes
  */
 
 //! \cond

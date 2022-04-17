@@ -2,7 +2,7 @@
  * \brief A dummy test program
  *
  * This program is used to prepare the test infrastructure.
- * \test \c dummy &ndash; A simple test that always passes
+ * \test \c dummy -- A simple test that always passes
  */
 
 #include <cstdlib>

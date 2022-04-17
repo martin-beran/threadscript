@@ -43,7 +43,7 @@ std::ostream& operator<<(std::ostream& os, const test::vector<T>& v)
 //! \endcond
 
 /*! \file
- * \test \c default_constructed &ndash; Metrics in a default-constructed
+ * \test \c default_constructed -- Metrics in a default-constructed
  * threadscript::allocator_config are zero and limits are unlimited. */
 //! \cond
 BOOST_AUTO_TEST_CASE(default_constructed)
@@ -63,7 +63,7 @@ BOOST_AUTO_TEST_CASE(default_constructed)
 //! \endcond
 
 /*! \file
- * \test \c set_limits &ndash; Limits are remembered correctly */
+ * \test \c set_limits -- Limits are remembered correctly */
 //! \cond
 BOOST_AUTO_TEST_CASE(set_limits)
 {
@@ -77,7 +77,7 @@ BOOST_AUTO_TEST_CASE(set_limits)
 //! \endcond
 
 /*! \file
- * \test \c alloc_success &ndash; Metrics of successful allocations */
+ * \test \c alloc_success -- Metrics of successful allocations */
 //! \cond
 BOOST_DATA_TEST_CASE(alloc_success,
                      (test::vector<test::vector<int>>{
@@ -122,7 +122,7 @@ BOOST_DATA_TEST_CASE(alloc_success,
 //! \endcond
 
 /*! \file
- * \test \c alloc_reject &ndash; Rejecting allocations due to limits */
+ * \test \c alloc_reject -- Rejecting allocations due to limits */
 //! \cond
 BOOST_DATA_TEST_CASE(alloc_reject,
                      (test::vector<test::vector<int>>{

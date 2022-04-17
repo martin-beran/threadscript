@@ -9,6 +9,7 @@
 
 #include <atomic>
 #include <memory>
+#include <scoped_allocator>
 
 namespace threadscript {
 
@@ -192,7 +193,7 @@ public:
     /*! \tparam U the value type of the source allocator
      * \param[in] o the source object */
     // NOLINTNEXTLINE(hicpp-explicit-conversions): Implicit conversions used
-    template <class U> default_allocator(const default_allocator<U>& o)
+    template <class U> default_allocator(const default_allocator<U, CfgPtr>& o)
         noexcept: std::allocator<T>(o), _cfg(o._cfg) {}
     //! Default destructor
     constexpr ~default_allocator() = default;
@@ -242,11 +243,28 @@ public:
     CfgPtr cfg() const noexcept { return _cfg; }
 private:
     CfgPtr _cfg; //!< Metrics and limits, may be \c nullptr
+    //! Needed by the rebinding constructor
+    template <class U, class CP> friend class default_allocator;
 };
 
 //! The default_allocator class with a shared pointer to allocator_config.
-/*! \tparam the type of allocated objects */
+/*! \tparam T the type of allocated objects */
 template <class T> using default_allocator_shptr =
     default_allocator<T, std::shared_ptr<allocator_config>>;
+
+//! The default_allocator adapted for multilevel standard library containers
+/*! \tparam T the type of allocated objects
+ * \tparam CfgPtr the type of a pointer to allocator_config used for metrics
+ * and limits of this allocator; a raw or smart pointer to allocator_config
+ *
+ * \sa test_default_allocator.cpp
+ * \snippet{lineno} test_default_allocator.cpp Using scoped_allocator */
+template <class T, class CfgPtr = allocator_config*> using scoped_allocator =
+    std::scoped_allocator_adaptor<default_allocator<T, CfgPtr>>;
+
+//! The scoped_allocator class with a shared pointer to allocator_config.
+/*! \tparam T the type of allocated objects */
+template <class T> using scoped_allocator_shptr =
+    scoped_allocator<T, std::shared_ptr<allocator_config>>;
 
 } // namespace threadscript
