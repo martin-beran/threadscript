@@ -23,10 +23,28 @@ file [LICENSE.md](LICENSE.html).
 
 ## Build
 
+Build libraries, the command line interpreter, tests, and basic (Markdown)
+documentation:
+
     mkdir build
     cd build
     cmake ..
-    make -j `nproc`
+    cmake --build . -j `nproc`
+
+A clean build of libraries, the command line interpreter, tests, all
+documentation (Markdown and Doxygen), running `clang-tidy` on sources, and
+running tests:
+
+    mkdir build
+    cd build
+    cmake ..
+    cmake --build . -t full
+
+The full build with tests like the previous one, but repeated with all
+supported sanitizers:
+
+    rm -rf build-sanitizer-*
+    ./make-everyting.sh
 
 ## Run
 

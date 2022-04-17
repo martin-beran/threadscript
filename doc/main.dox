@@ -16,21 +16,26 @@
  *
  * The main targets for CMake and \c make:
  *
- * \arg \c all &ndash; Build the library (\c libthreadscript.so or \c
- * libthreadscript.a) and the command line interpreter \c ts. It also calls
+ * \arg \c all -- Build the library (\c libthreadscript.so or \c
+ * libthreadscript.a), the command line interpreter \c ts, and all test
+ * programs. It also calls
  * target \c doc.
  *
- * \arg \c clang-tidy &ndash; Check C++ sources by \c clang-tidy.
+ * \arg \c clang-tidy -- Check C++ sources by \c clang-tidy.
  *
- * \arg \c clean &ndash; Remove created files.
+ * \arg \c clean -- Remove created files.
  *
- * \arg \c clean-tidy &ndash; Remove files \c *.tidy containing problems founds
+ * \arg \c clean-tidy -- Remove files \c *.tidy containing problems founds
  * by \c clang-tidy.
  *
- * \arg \c doc &ndash; Generate HTML documentation from Markdown sources
+ * \arg \c doc -- Generate HTML documentation from Markdown sources
  *
- * \arg \c doxygen &ndash; Generate documentation by Doxygen.
+ * \arg \c doxygen -- Generate documentation by Doxygen.
  *
+ * \arg \c full -- Calls targets \c clean, \c all, \c doxygen, \c clean-tidy,
+ * \c clang-tidy, \c test.
+ *
+ * \arg \c test -- Runs tests by command \c ctest.
  * \section Tests Tests
  *
  * Tests of C++ code are implemented using Boost::Test in directory
