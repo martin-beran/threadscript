@@ -16,8 +16,8 @@ namespace threadscript {
 /*! For better performance, atomic values are used instead of locking, which
  * can make some values imprecise temporarily when read and updated by several
  * threads concurrently.
- *
- * \threadsafe{safe, safe} */
+ * \threadsafe{safe, safe}
+ * \test in file test_allocator_config.cpp */
 class allocator_config {
 public:
     //! Type of allocation sizes
@@ -162,7 +162,8 @@ private:
  * \tparam T the type of allocated objects
  * \tparam CfgPtr the type of a pointer to allocator_config used for metrics
  * and limits of this allocator; a raw or smart pointer to allocator_config
- * \threadsafe{safe, unsafe} */
+ * \threadsafe{safe, unsafe}
+ * \test in file test_default_allocator.cpp */
 template <class T, class CfgPtr = allocator_config*>
 class default_allocator: public std::allocator<T> {
     static_assert(std::is_same_v<
