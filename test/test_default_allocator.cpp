@@ -35,12 +35,22 @@ BOOST_AUTO_TEST_CASE(cfg)
 {
     threadscript::allocator_config cfg;
     threadscript::default_allocator<uint32_t> a(&cfg);
+    uint64_t ops = 0;
     for (int n: {1, 2, 4, 8}) {
         BOOST_TEST_CONTEXT("n=" << n) {
             uint32_t* p = a.allocate(n);
             BOOST_TEST(p != nullptr);
+            uint64_t balance = cfg.metrics().balance.load();
             a.deallocate(p, n);
-            BOOST_TEST(false); // TODO: check metrics
+            ++ops;
+            auto metrics = a.cfg()->metrics();
+            BOOST_TEST(metrics.alloc_ops.load() == ops);
+            BOOST_TEST(metrics.alloc_rejects.load() == 0);
+            BOOST_TEST(metrics.dealloc_ops.load() == ops);
+            BOOST_TEST(metrics.allocs.load() == 0);
+            BOOST_TEST(metrics.max_allocs.load() == 1);
+            BOOST_TEST(metrics.balance.load() == 0);
+            BOOST_TEST(metrics.max_balance.load() == balance);
         }
     }
 }
@@ -71,12 +81,22 @@ BOOST_AUTO_TEST_CASE(cfg_shptr)
 {
     auto cfg = std::make_shared<threadscript::allocator_config>();
     threadscript::default_allocator_shptr<uint32_t> a(cfg);
+    uint64_t ops = 0;
     for (int n: {1, 2, 4, 8}) {
         BOOST_TEST_CONTEXT("n=" << n) {
             uint32_t* p = a.allocate(n);
             BOOST_TEST(p != nullptr);
+            uint64_t balance = cfg->metrics().balance.load();
             a.deallocate(p, n);
-            BOOST_TEST(false); // TODO: check metrics
+            ++ops;
+            auto metrics = a.cfg()->metrics();
+            BOOST_TEST(metrics.alloc_ops.load() == ops);
+            BOOST_TEST(metrics.alloc_rejects.load() == 0);
+            BOOST_TEST(metrics.dealloc_ops.load() == ops);
+            BOOST_TEST(metrics.allocs.load() == 0);
+            BOOST_TEST(metrics.max_allocs.load() == 1);
+            BOOST_TEST(metrics.balance.load() == 0);
+            BOOST_TEST(metrics.max_balance.load() == balance);
         }
     }
 }
