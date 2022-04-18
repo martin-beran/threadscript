@@ -1,9 +1,8 @@
 /*! \file
- * \brief Tests of template threadscript::default_allocator
+ * \brief Tests of threadscript::default_allocator
  */
 
 //! \cond
-#include "threadscript/config.hpp"
 #include "threadscript/default_allocator.hpp"
 
 #include <scoped_allocator>

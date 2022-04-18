@@ -2,6 +2,10 @@
 
 /*! \file
  * \brief The default allocator class
+ *
+ * This file is usually not included. File threadscript/config.hpp is usually
+ * included instead and types threadscript::config::allocator_type and
+ * threadscript::allocator_any are used as default allocators.
  */
 
 #include "threadscript/config.hpp"
@@ -20,8 +24,6 @@ namespace threadscript {
  * \test in file test_allocator_config.cpp */
 class allocator_config {
 public:
-    //! Type of allocation sizes
-    using size_type = config::size_type;
     //! Type of counters
     using counter_type = config::counter_type;
     //! A collection of metrics
@@ -78,9 +80,9 @@ public:
         //! The maximum number of allocated objects
         std::atomic<counter_type> max_allocs = 0;
         //! The current size of allocated memory (bytes)
-        std::atomic<size_type> balance = 0;
+        std::atomic<size_t> balance = 0;
         //! The maximum size of allocated memory (bytes)
-        std::atomic<size_type> max_balance = 0;
+        std::atomic<size_t> max_balance = 0;
     };
     //! A collection of limits
     /*! \note Keep constructors and assignments consistent when adding data
@@ -114,12 +116,12 @@ public:
             return *this;
         }
         //! Used to denote an unlimited size
-        static constexpr size_type unlimited_size = 0;
+        static constexpr size_t unlimited_size = 0;
         //! Used to denote an unlimited count
         static constexpr counter_type unlimited_count = 0;
         //! The limit of the allocated memory (bytes)
         /*! Zero means unlimited. */
-        std::atomic<size_type> balance = unlimited_size;
+        std::atomic<size_t> balance = unlimited_size;
     };
     //! Checks limits and records an allocation.
     /*! It adjust counters of allocated memory appropriately, adding \a size if
@@ -127,13 +129,13 @@ public:
      * \param[in] size the size of an allocation
      * \return \c true if the allocation is allowed by limits, \c false if
      * denied due to exceeding a limit */
-    bool allocate(size_type size) noexcept;
+    bool allocate(size_t size) noexcept;
     //! Records a deallocation.
     /*! It should be eventually called with the same \a size for each
      * allocate() that returned \c true. It must not be called for allocate()
      * that returned \c false.
      * \param[in] size the size of an allocation */
-    void deallocate(size_type size) noexcept;
+    void deallocate(size_t size) noexcept;
     //! Gets the metrics.
     /*! \return the current values of metrics */
     [[nodiscard]] metrics_t metrics() const noexcept { return _metrics; }
@@ -239,7 +241,7 @@ public:
     }
     //! Gets the attached allocator_config object.
     /*! \return a metrics and limits object or \c nullptr */
-    CfgPtr cfg() const noexcept { return _cfg; }
+    [[nodiscard]] CfgPtr cfg() const noexcept { return _cfg; }
 private:
     CfgPtr _cfg; //!< Metrics and limits, may be \c nullptr
     //! Needed by the rebinding constructor

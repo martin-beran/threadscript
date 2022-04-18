@@ -7,6 +7,7 @@ link_libraries(
 
 set(
     TEST_PROGRAMS
+    allocated
     allocator_config
     default_allocator
     dummy

@@ -2,11 +2,21 @@
 
 /*! \file
  * \brief Selection of a build configuration file
+ *
+ * This file  includes the configured build config file, checks declarations
+ * from it by threadscript/config_check.hpp, and adds some common declarations
+ * depending directly on contents of the config file.
+ *
  * By default, this file includes config_default.hpp. Another configuration
  * file can be selected by setting CMake variable \c CONFIG_FILE_HPP.
  */
 
 #include <string_view>
+
+//! \cond
+#include "${CONFIG_FILE_HPP}"
+//! \endcond
+#include "threadscript/config_check.hpp"
 
 namespace threadscript {
 
@@ -16,9 +26,9 @@ namespace threadscript {
  * variable. If Git fails, the value will be \c "unknown". */
 constexpr std::string_view version{"${GIT_DESCRIBE}"};
 
-} //namespace threadscript
+//! The configured allocator for type \c void.
+/*! It is passed to a virtual_machine and other classes, which then rebind it
+ * to other allocated types. */
+using allocator_any = config::allocator_type<void>;
 
-//! \cond
-#include "${CONFIG_FILE_HPP}"
-//! \endcond
-#include "threadscript/config_check.hpp"
+} //namespace threadscript

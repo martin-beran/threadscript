@@ -1,5 +1,6 @@
-/* \file
- * \brief Tests of classes threadscript::virtual_machine and
+/*! \file
+ * \brief Tests of threadscript::basic_virtual_machine,
+ * threadscript::basic_state, threadscript::virtual_machine,
  * threadscript::state
  */
 
@@ -16,7 +17,7 @@
 //! \cond
 BOOST_AUTO_TEST_CASE(vm_states)
 {
-    threadscript::vm_allocator alloc;
+    threadscript::allocator_any alloc;
     threadscript::virtual_machine vm(alloc);
     BOOST_TEST(vm.num_states() == 0);
     {

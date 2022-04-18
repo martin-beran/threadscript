@@ -9,7 +9,7 @@ namespace threadscript {
 
 /*** allocator_config ********************************************************/
 
-bool allocator_config::allocate(size_type size) noexcept
+bool allocator_config::allocate(size_t size) noexcept
 {
     auto l_balance{_limits.balance.load()};
     if (l_balance != limits_t::unlimited_size &&
@@ -28,7 +28,7 @@ bool allocator_config::allocate(size_type size) noexcept
     return true;
 }
 
-void allocator_config::deallocate(size_type size) noexcept
+void allocator_config::deallocate(size_t size) noexcept
 {
     ++_metrics.dealloc_ops;
     --_metrics.allocs;

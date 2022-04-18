@@ -19,7 +19,6 @@
 
 namespace threadscript::config {
 
-static_assert(std::is_unsigned_v<size_type>);
 static_assert(std::is_unsigned_v<counter_type>);
 
 } // namespace threadscript::config

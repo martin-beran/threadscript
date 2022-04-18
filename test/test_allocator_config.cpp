@@ -1,9 +1,8 @@
 /*! \file
- * \brief Tests of class threadscript::allocator_config
+ * \brief Tests of threadscript::allocator_config
  */
 
 //! \cond
-#include "threadscript/config.hpp"
 #include "threadscript/default_allocator.hpp"
 
 #include <optional>

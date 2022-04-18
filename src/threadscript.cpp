@@ -6,7 +6,7 @@
 
 namespace threadscript {
 
-template class basic_virtual_machine<vm_allocator>;
-template class basic_state<vm_allocator>;
+template class basic_virtual_machine<allocator_any>;
+template class basic_state<allocator_any>;
 
 } // namespace threadscript
