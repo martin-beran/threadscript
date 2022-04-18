@@ -27,4 +27,14 @@ using size_type = std::size_t;
 //! The type used for various counters.
 using counter_type = std::uint64_t;
 
-} // namespace threadscript
+} // namespace threadscript::config
+
+#include "threadscript/default_allocator.hpp"
+
+namespace threadscript::config {
+
+//! The type used as the allocator.
+template <class T> using allocator_type =
+    threadscript::default_allocator<T, allocator_config*>;
+
+} // namespace threadscript::config

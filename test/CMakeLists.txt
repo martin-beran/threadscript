@@ -11,6 +11,7 @@ set(
     default_allocator
     dummy
     dummy_boost
+    virtual_machine
 )
 
 foreach (P ${TEST_PROGRAMS})
