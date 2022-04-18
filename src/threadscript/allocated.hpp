@@ -49,12 +49,14 @@ using unique_ptr_alloc = std::unique_ptr<T, deleter<T, Allocator>>;
  * \return a unique_ptr_alloc pointing to the allocated object
  * \test in file test_allocated.cpp */
 template <class T, class Allocator, class ...Args>
-unique_ptr_alloc<T, Allocator> allocate_unique(Allocator alloc, Args&& ...args)
+auto allocate_unique(const Allocator& alloc, Args&& ...args)
 {
-    T* p = new(alloc.allocate(1)) T(std::forward<Args>(args)...);
+    using a_t =
+        typename std::allocator_traits<Allocator>::template rebind_alloc<T>;
+    a_t a{alloc};
+    T* p = new(a.allocate(1)) T(std::forward<Args>(args)...);
     return
-        unique_ptr_alloc<T, Allocator>(p,
-                                       deleter<T, Allocator>(std::move(alloc)));
+        unique_ptr_alloc<T, a_t>(p, deleter<T, a_t>(std::move(alloc)));
 }
 
 } // namespace threadscript

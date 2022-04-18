@@ -18,24 +18,26 @@
 BOOST_AUTO_TEST_CASE(unique_ptr_alloc)
 {
     threadscript::allocator_config cfg;
-    threadscript::default_allocator<int> alloc{&cfg};
+    threadscript::default_allocator<int> alloc_int{&cfg};
+    threadscript::default_allocator<void> alloc_void{&cfg};
     {
-        auto p = threadscript::allocate_unique<int>(alloc, 123);
+        auto p_int = threadscript::allocate_unique<int>(alloc_int, 123);
+        auto p_void = threadscript::allocate_unique<int>(alloc_void, 123);
         auto metrics = cfg.metrics();
-        BOOST_TEST(metrics.alloc_ops.load() == 1);
+        BOOST_TEST(metrics.alloc_ops.load() == 2);
         BOOST_TEST(metrics.alloc_rejects.load() == 0);
         BOOST_TEST(metrics.dealloc_ops.load() == 0);
-        BOOST_TEST(metrics.allocs.load() == 1);
-        BOOST_TEST(metrics.max_allocs.load() == 1);
+        BOOST_TEST(metrics.allocs.load() == 2);
+        BOOST_TEST(metrics.max_allocs.load() == 2);
         BOOST_TEST(metrics.balance.load() > 0);
         BOOST_TEST(metrics.max_balance.load() == metrics.balance.load());
     }
     auto metrics = cfg.metrics();
-    BOOST_TEST(metrics.alloc_ops.load() == 1);
+    BOOST_TEST(metrics.alloc_ops.load() == 2);
     BOOST_TEST(metrics.alloc_rejects.load() == 0);
-    BOOST_TEST(metrics.dealloc_ops.load() == 1);
+    BOOST_TEST(metrics.dealloc_ops.load() == 2);
     BOOST_TEST(metrics.allocs.load() == 0);
-    BOOST_TEST(metrics.max_allocs.load() == 1);
+    BOOST_TEST(metrics.max_allocs.load() == 2);
     BOOST_TEST(metrics.balance.load() == 0);
     BOOST_TEST(metrics.max_balance.load() > 0);
 }
