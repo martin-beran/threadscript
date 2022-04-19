@@ -351,7 +351,7 @@ BOOST_AUTO_TEST_CASE(wrapped_msg_trace)
 //! \endcond
 
 /*! \file
- * \test \c parse_error -- Class thredscript::exception::parse_error */
+ * \test \c parse_error -- Class threadscript::exception::parse_error */
 //! \cond
 BOOST_AUTO_TEST_CASE(parse_error)
 {
@@ -363,7 +363,7 @@ BOOST_AUTO_TEST_CASE(parse_error)
 //! \endcond
 
 /*! \file
- * \test \c alloc_bad -- Class thredscript::exception::alloc_bad */
+ * \test \c alloc_bad -- Class threadscript::exception::alloc_bad */
 //! \cond
 BOOST_AUTO_TEST_CASE(alloc_bad)
 {
@@ -375,7 +375,7 @@ BOOST_AUTO_TEST_CASE(alloc_bad)
 //! \endcond
 
 /*! \file
- * \test \c alloc_limit -- Class thredscript::exception::alloc_limit */
+ * \test \c alloc_limit -- Class threadscript::exception::alloc_limit */
 //! \cond
 BOOST_AUTO_TEST_CASE(alloc_limit)
 {
@@ -387,7 +387,7 @@ BOOST_AUTO_TEST_CASE(alloc_limit)
 //! \endcond
 
 /*! \file
- * \test \c unknown_symbol -- Class thredscript::exception::unknown_symbol */
+ * \test \c unknown_symbol -- Class threadscript::exception::unknown_symbol */
 //! \cond
 BOOST_AUTO_TEST_CASE(unknown_symbol)
 {
@@ -399,7 +399,7 @@ BOOST_AUTO_TEST_CASE(unknown_symbol)
 //! \endcond
 
 /*! \file
- * \test \c value_bad -- Class thredscript::exception::value_bad */
+ * \test \c value_bad -- Class threadscript::exception::value_bad */
 //! \cond
 BOOST_AUTO_TEST_CASE(value_bad)
 {
@@ -411,7 +411,7 @@ BOOST_AUTO_TEST_CASE(value_bad)
 //! \endcond
 
 /*! \file
- * \test \c value_null -- Class thredscript::exception::value_null */
+ * \test \c value_null -- Class threadscript::exception::value_null */
 //! \cond
 BOOST_AUTO_TEST_CASE(value_null)
 {
@@ -423,7 +423,7 @@ BOOST_AUTO_TEST_CASE(value_null)
 //! \endcond
 
 /*! \file
- * \test \c value_type -- Class thredscript::exception::value_type */
+ * \test \c value_type -- Class threadscript::exception::value_type */
 //! \cond
 BOOST_AUTO_TEST_CASE(value_type)
 {
@@ -436,7 +436,7 @@ BOOST_AUTO_TEST_CASE(value_type)
 
 /*! \file
  * \test \c value_out_of_range -- Class
- * thredscript::exception::value_out_of_range */
+ * threadscript::exception::value_out_of_range */
 //! \cond
 BOOST_AUTO_TEST_CASE(value_out_of_range)
 {
@@ -448,7 +448,7 @@ BOOST_AUTO_TEST_CASE(value_out_of_range)
 //! \endcond
 
 /*! \file
- * \test \c op_bad -- Class thredscript::exception::op_bad */
+ * \test \c op_bad -- Class threadscript::exception::op_bad */
 //! \cond
 BOOST_AUTO_TEST_CASE(op_bad)
 {
@@ -460,7 +460,7 @@ BOOST_AUTO_TEST_CASE(op_bad)
 //! \endcond
 
 /*! \file
- * \test \c op_recursion -- Class thredscript::exception::op_recursion */
+ * \test \c op_recursion -- Class threadscript::exception::op_recursion */
 //! \cond
 BOOST_AUTO_TEST_CASE(op_recursion)
 {
@@ -472,7 +472,7 @@ BOOST_AUTO_TEST_CASE(op_recursion)
 //! \endcond
 
 /*! \file
- * \test \c op_overflow -- Class thredscript::exception::op_overflow */
+ * \test \c op_overflow -- Class threadscript::exception::op_overflow */
 //! \cond
 BOOST_AUTO_TEST_CASE(op_overflow)
 {
@@ -484,7 +484,7 @@ BOOST_AUTO_TEST_CASE(op_overflow)
 //! \endcond
 
 /*! \file
- * \test \c op_div_zero -- Class thredscript::exception::op_div_zero */
+ * \test \c op_div_zero -- Class threadscript::exception::op_div_zero */
 //! \cond
 BOOST_AUTO_TEST_CASE(op_div_zero)
 {
@@ -496,7 +496,7 @@ BOOST_AUTO_TEST_CASE(op_div_zero)
 //! \endcond
 
 /*! \file
- * \test \c op_library -- Class thredscript::exception::op_library */
+ * \test \c op_library -- Class threadscript::exception::op_library */
 //! \cond
 BOOST_AUTO_TEST_CASE(op_library)
 {
