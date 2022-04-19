@@ -18,13 +18,15 @@
  *
  * \arg C++ source code is documented by Doxygen.
  * \arg Other code is documented by comments.
- * \arg Where applicable, thread safety of declarations (e.g., classes) should
- * be described by Doxygen custom command <tt>\\threadsafe{safe,unsafe}</tt>.
- * Each argument should be either <tt>safe</tt> or <tt>unsafe</tt>, optionally
- * followed by more detailed description of thread safety conditions. The first
- * argument specifies thread safety when using distinct objects from different
- * threads. The second argument specifies thread safety when using a single
- * object from different threads concurrently.
+ * \arg Where applicable (see also \ref Thread_safety), thread safety of
+ * declarations (e.g., classes) should be described by Doxygen custom command
+ * <tt>\\threadsafe{safe,unsafe}</tt>. Each argument should be either
+ * <tt>safe</tt> or <tt>unsafe</tt>, optionally followed by a more detailed
+ * description of thread safety conditions. The first argument specifies thread
+ * safety when modifying distinct objects from different threads. The second
+ * argument specifies thread safety when modifying a single object from
+ * different threads concurrently. It is always safe to perform non-modifying
+ * operations on the same object from multiple threads.
  *
  * \section Identifiers Identifiers
  *
@@ -72,4 +74,13 @@
  * \c case for every enumerator.
  * \arg A fall-through in a switch branch must be marked by an explicit
  * <code>[[fallthrough]]</code> attribute.
+ *
+ * \section Thread_safety Thread safety
+ *
+ * By default, different objects may be accessed from different threads
+ * simultanously. A single object may be read (reading data member and calling
+ * const member functions) by multiple threads, but write operations
+ * (modifying data members or calling non-const member functions) require
+ * exclusive access to the object. Any other thread safety properties must be
+ * documented (see also \ref Source_code_documentation).
  */

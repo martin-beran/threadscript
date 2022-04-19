@@ -5,6 +5,7 @@
  */
 
 #include "threadscript/config.hpp"
+#include "threadscript/vm_data.hpp"
 
 #include <atomic>
 #include <cassert>
@@ -52,6 +53,12 @@ public:
     [[nodiscard]] size_t num_states() const noexcept {
         return _num_states;
     }
+    //! Makes a shallow copy of a value.
+    /*! While running this function, \a v may not be modified by another
+     * thread.
+     * \param[in] v the copied value, may be \c nullptr
+     * \return a copy of \a v */
+    value_ptr shallow_copy(const value_ptr& v);
 private:
     //! The allocator used by this VM.
     Allocator alloc;

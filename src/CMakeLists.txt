@@ -8,6 +8,7 @@ configure_file(
 add_library(
     libthreadscript
     default_allocator.cpp
+    exception.cpp
     threadscript.cpp
 )
 

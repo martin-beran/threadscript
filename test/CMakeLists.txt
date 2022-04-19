@@ -12,6 +12,7 @@ set(
     default_allocator
     dummy
     dummy_boost
+    exception
     virtual_machine
 )
 

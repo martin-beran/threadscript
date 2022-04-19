@@ -23,7 +23,13 @@
 namespace threadscript::config {
 
 //! The type used for various counters.
-using counter_type = std::uint64_t;
+using counter_type = uint64_t;
+
+//! The type used for unsigned integer values
+using value_int_type = int64_t;
+
+//! The type used for signed integer values
+using value_unsigned_type = uint64_t;
 
 } // namespace threadscript::config
 
