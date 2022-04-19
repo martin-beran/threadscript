@@ -22,7 +22,36 @@ std::string src_location::to_string() const
 
 std::string frame_location::to_string() const
 {
-    return src_location::to_string() + function + "()";
+    return src_location::to_string() + ":" + function + "()";
+}
+
+/*** stack_trace *************************************************************/
+
+const int stack_trace::full_idx = std::ios_base::xalloc();
+
+std::ostream& stack_trace::full(std::ostream& os)
+{
+    os.iword(full_idx) = 1;
+    return os;
+}
+
+bool stack_trace::full_stream(std::ostream& os) {
+    auto& f = os.iword(full_idx);
+    bool result = f != 0;
+    f = 0;
+    return result;
+}
+
+std::string stack_trace::to_string(bool full) const
+{
+    std::string result;
+    for (size_t i = 0; i < size(); ++i) {
+        result.append("    ").append(std::to_string(i)).append(". ").
+            append(at(i).to_string()).append("\n");
+        if (!full)
+            break;
+    }
+    return result;
 }
 
 namespace exception {
@@ -35,6 +64,13 @@ void base::set_msg(size_t sz)
     size_t pl = strlen(p);
     assert(pl >= sz);
     _msg = std::string_view(p + pl - sz, sz);
+}
+
+std::string base::to_string(bool full) const {
+    std::string result = what();
+    if (full)
+        result.append("\n").append(_trace.to_string(true));
+    return result;
 }
 
 /*** wrapped *****************************************************************/

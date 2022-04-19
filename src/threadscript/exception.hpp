@@ -92,6 +92,53 @@ struct frame_location: src_location {
  * \test in file test_exception.cpp */
 class stack_trace: public std::vector<frame_location> {
     using std::vector<frame_location>::vector;
+public:
+    //! Gets the stored current location.
+    /*! \return the frame at top of the stack, or an empty frame_location if
+     * the stack trace is empty. */
+    [[nodiscard]] frame_location location() const & noexcept {
+        if (empty())
+            return {"", ""};
+        else
+            return front();
+    }
+    //! Gets the stored current location.
+    /*! \return the frame at top of the stack, or an empty frame_location if
+     * the stack trace is empty. */
+    [[nodiscard]] frame_location location() && noexcept {
+        if (empty())
+            return {"", ""};
+        else
+            return std::move(front());
+    }
+    //! Gets a stack trace as a (multiline) string
+    /*! \param[in] full the full stack trace is written if \c true; only the
+     * top of the stack is written if \c false
+     * \return the stack trace */
+    [[nodiscard]] std::string to_string(bool full = true) const;
+    //! An I/O manipulator that requests a full stack trace in the next write.
+    /*! \param[in] os an output stream
+     * \return \a os */
+    static std::ostream& full(std::ostream& os);
+    //! Tests if full() has been applied to \a os and resets it to \c false.
+    /*! \param[in] os an output stream
+     * \return \c true if the next \c operator<<() should write the full stack
+     * trace, \c false if it should write just the top of the stack */
+    [[nodiscard]] static bool full_stream(std::ostream& os);
+private:
+    static const int full_idx; //!< Used by full() and full_stream()
+    //! Writes a stack trace to a stream.
+    /*! It writes the result of to_string(). If manipulator \ref full is
+     * inserted into \a os, the next single call of \c operator<< will write
+     * the full stack trace. Otherwise, only the top of the stack will be
+     * written.
+     * \param[in] os an output stream
+     * \param[in] v a stack trace value to write
+     * \return \c os */
+    friend std::ostream& operator<<(std::ostream& os, const stack_trace& v) {
+        os << v.to_string(stack_trace::full_stream(os));
+        return os;
+    }
 };
 
 //! A namespace containing all ThreaScript exceptions
@@ -107,7 +154,8 @@ public:
      * \param[in] trace an optional stack trace */
     explicit base(const std::string& msg, stack_trace trace = {}):
         runtime_error((trace.empty() ? std::string{} :
-                       trace.front().to_string() + ": ") + msg)
+                       trace.front().to_string() + ": ") + msg),
+        _trace(std::move(trace))
     {
         set_msg(msg.size());
     }
@@ -162,19 +210,13 @@ public:
     /*! \return the frame at top of the stack, or an empty frame_location if
      * the stack trace is empty. */
     [[nodiscard]] frame_location location() const & noexcept {
-        if (_trace.empty())
-            return {"", ""};
-        else
-            return _trace.front();
+        return _trace.location();
     }
     //! Gets the stored error location.
     /*! \return the frame at top of the stack, or an empty frame_location if
      * the stack trace is empty. */
     [[nodiscard]] frame_location location() && noexcept {
-        if (_trace.empty())
-            return {"", ""};
-        else
-            return std::move(_trace.front());
+        return std::move(_trace).location();
     }
     //! Gets the stored stack trace.
     /*! \return the stack trace */
@@ -187,11 +229,18 @@ public:
         return std::move(_trace);
     }
     //! The same as in the base class
-    /*! It is marked final, because msg() and set_msg() depend on its behavior.
+    /*! If the stack trace in nonempty, the error message will contain the top
+     * of the stack location. If the stack trace is empty, the error message
+     * will be equal to the return value of msg().
+     * It is marked final, because msg() and set_msg() depend on its behavior.
      * \return the error message */
     [[nodiscard]] const char* what() const noexcept override final {
         return runtime_error::what();
     }
+    //! Gets the result of what() optionally followed by a stack trace.
+    /*! \param[in] full if the full stack trace is also returned
+     * \return the error message and optionally the stack trace */
+    [[nodiscard]] std::string to_string(bool full = true) const;
 private:
     //! The default text of the error message
     static constexpr const char* msg_default = "ThreadScript exception";
@@ -201,12 +250,13 @@ private:
     std::string_view _msg; //!< The stored message
     stack_trace _trace; //!< The recorded stack trace
     //! Writes the exception to a stream.
-    /*! It writes the result of to_string().
+    /*! It writes the result of what(). It honors manipulator
+     * stack_trace::full().
      * \param[in] os an output stream
      * \param[in] v a frame location value to write
      * \return \c os */
     friend std::ostream& operator<<(std::ostream& os, const base& v) {
-        os << v.what();
+        os << v.to_string(stack_trace::full_stream(os));
         return os;
     }
 };
@@ -236,7 +286,7 @@ public:
     [[noreturn]] void rethrow() { std::rethrow_exception(_wrapped); }
 private:
     //! The default text of the error message
-    static constexpr const char* msg_default = "ThreadScript exception";
+    static constexpr const char* msg_default = "ThreadScript wrapped exception";
     std::exception_ptr _wrapped; //!< The wrapped exception
 };
 
@@ -252,7 +302,7 @@ public:
 
 //! An error detected when running a script
 class runtime_error: public base {
-public:
+protected:
     //! Stores an error message.
     /*! \param[in] msg a description of a runtime error
      * \param[in] trace a stack trace */
@@ -373,6 +423,16 @@ public:
     /*! \param[in] trace a stack trace */
     explicit op_bad(stack_trace trace = {}):
         operation("Bad operation", std::move(trace)) {}
+};
+
+//! Too deep recursion of function calls.
+/*! It is used if the nesting level of a function call exceeds a limit. */
+class op_recursion: public operation {
+public:
+    //! Stores an error message.
+    /*! \param[in] trace a stack trace */
+    explicit op_recursion(stack_trace trace = {}):
+        operation("Recursion too deep", std::move(trace)) {}
 };
 
 //! The result operation is out of range of the destination value_type.
