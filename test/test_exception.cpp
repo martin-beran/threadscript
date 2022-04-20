@@ -351,6 +351,35 @@ BOOST_AUTO_TEST_CASE(wrapped_msg_trace)
 //! \endcond
 
 /*! \file
+ * \test 'c wrapped_exc -- Class threadscript::exception::wrapped with passing
+ * a message via an exception object. */
+//! \cond
+BOOST_AUTO_TEST_CASE(wrapped_exc)
+{
+    std::string wrapped_msg;
+    std::string inner_msg;
+    try {
+        try {
+            try {
+                throw std::runtime_error("Inner runtime error");
+            } catch (const std::exception& e) {
+                throw(ex::wrapped(e,
+                                  ts::stack_trace{{"main", "script", 10, 1}}));
+            }
+        } catch (ex::wrapped& e) {
+            wrapped_msg = e.msg();
+            BOOST_TEST(e.trace().size() == 1);
+            e.rethrow();
+        }
+    } catch (std::runtime_error& e) {
+        inner_msg = e.what();
+    }
+    BOOST_TEST(wrapped_msg == inner_msg);
+    BOOST_TEST(inner_msg == "Inner runtime error");
+}
+//! \endcond
+
+/*! \file
  * \test \c parse_error -- Class threadscript::exception::parse_error */
 //! \cond
 BOOST_AUTO_TEST_CASE(parse_error)
