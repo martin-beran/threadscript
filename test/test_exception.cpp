@@ -5,6 +5,7 @@
  */
 
 //! \cond
+#include "threadscript/debug.hpp"
 #include "threadscript/exception.hpp"
 #include <sstream>
 

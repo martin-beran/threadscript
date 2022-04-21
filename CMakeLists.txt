@@ -40,11 +40,8 @@ set(
 )
 
 option(BUILD_SHARED_LIBS "Build shared (ON) or static (OFF) libraries" ON)
-if (BUILD_SHARED_LIBS)
-    set(LIBS_TYPE "SHARED")
-else()
-    set(LIBS_TYPE "STATIC")
-endif()
+
+option(THREADSCRIPT_DEBUG "Enable use of threadscript::DEBUG class" OFF)
 
 set(
     SANITIZER "OFF" CACHE STRING
@@ -64,6 +61,12 @@ if (NOT BUILD_TYPE IN_LIST BUILD_TYPES)
 endif()
 if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE ${BUILD_TYPE})
+endif()
+
+if (BUILD_SHARED_LIBS)
+    set(LIBS_TYPE "SHARED")
+else()
+    set(LIBS_TYPE "STATIC")
 endif()
 
 set_property(
@@ -97,6 +100,9 @@ add_compile_options(
     -Wswitch-default -Wswitch-enum
 )
 include_directories(${CMAKE_SOURCE_DIR}/src ${CMAKE_BINARY_DIR}/src)
+if (THREADSCRIPT_DEBUG)
+    add_compile_definitions(THREADSCRIPT_DEBUG)
+endif()
 if (NOT SANITIZER STREQUAL "OFF")
     add_compile_options(
         -fsanitize=${SANITIZER}
@@ -181,4 +187,5 @@ message(STATUS "Doxygen:     ${DOXYGEN_FOUND} ${DOXYGEN_VERSION}")
 message(STATUS "Markdown:    ${MARKDOWN}")
 message(STATUS "Clang-tidy:  ${CLANG_TIDY}")
 message(STATUS "Build tests: ${BUILD_TESTING}")
+message(STATUS "DEBUG:       ${THREADSCRIPT_DEBUG}")
 message(STATUS "Sanitizer:   ${SANITIZER}")

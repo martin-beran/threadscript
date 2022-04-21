@@ -141,7 +141,7 @@ private:
     }
 };
 
-//! A namespace containing all ThreaScript exceptions
+//! A namespace containing all ThreadScript exceptions
 /*! \test in file test_exception.cpp */
 namespace exception {
 
