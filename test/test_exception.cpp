@@ -448,7 +448,20 @@ BOOST_AUTO_TEST_CASE(value_null)
     ex::value_null exc({{"main", "script", 10, 1}});
     BOOST_TEST(exc.trace().size() == 1);
     BOOST_TEST(exc.to_string(false) ==
-               "script:10:1:main(): Runtime error: Value is null");
+               "script:10:1:main(): Runtime error: Null value");
+}
+//! \endcond
+
+/*! \file
+ * \test \c value_read_only -- Class threadscript::exception::value_read_only
+ */
+//! \cond
+BOOST_AUTO_TEST_CASE(value_read_only)
+{
+    ex::value_read_only exc({{"main", "script", 10, 1}});
+    BOOST_TEST(exc.trace().size() == 1);
+    BOOST_TEST(exc.to_string(false) ==
+               "script:10:1:main(): Runtime error: Read-only value");
 }
 //! \endcond
 

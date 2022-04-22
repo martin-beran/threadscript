@@ -380,7 +380,16 @@ public:
     //! Stores an error message.
     /*! \param[in] trace a stack trace */
     explicit value_null(stack_trace trace = {}):
-        value("Value is null", std::move(trace)) {}
+        value("Null value", std::move(trace)) {}
+};
+
+//! Trying to modify a read-only value
+class value_read_only: public value {
+public:
+    //! Stores an error message.
+    /*! \param[in] trace a stack trace */
+    explicit value_read_only(stack_trace trace = {}):
+        value("Read-only value", std::move(trace)) {}
 };
 
 //! A bad type of a value
