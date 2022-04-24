@@ -26,9 +26,9 @@ namespace threadscript {
  * variable. If Git fails, the value will be \c "unknown". */
 constexpr std::string_view version{"${GIT_DESCRIBE}"};
 
-//! The configured allocator for type \c void.
+//! The configured allocator for type \c char.
 /*! It is passed to a virtual_machine and other classes, which then rebind it
  * to other allocated types. */
-using allocator_any = config::allocator_type<void>;
+using allocator_any = config::allocator_type<char>;
 
 } //namespace threadscript
