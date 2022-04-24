@@ -11,6 +11,7 @@
 #include "threadscript/config.hpp"
 
 #include <atomic>
+#include <locale>
 #include <memory>
 #include <scoped_allocator>
 
@@ -36,11 +37,13 @@ public:
         /*! \param[in] o the the source object */
         // NOLINTNEXTLINE(performance-move-constructor-init)
         metrics_t(const metrics_t& o) noexcept:
-            alloc_ops(o.alloc_ops.load()),
-            alloc_rejects(o.alloc_rejects.load()),
-            dealloc_ops(o.dealloc_ops.load()),
-            allocs(o.allocs.load()), max_allocs(o.max_allocs.load()),
-            balance(o.balance.load()), max_balance(o.max_balance.load()) {}
+            alloc_ops(o.alloc_ops.load(std::memory_order_relaxed)),
+            alloc_rejects(o.alloc_rejects.load(std::memory_order_relaxed)),
+            dealloc_ops(o.dealloc_ops.load(std::memory_order_relaxed)),
+            allocs(o.allocs.load(std::memory_order_relaxed)),
+            max_allocs(o.max_allocs.load(std::memory_order_relaxed)),
+            balance(o.balance.load(std::memory_order_relaxed)),
+            max_balance(o.max_balance.load(std::memory_order_relaxed)) {}
         //! Move constructor is the same as copy.
         /*! \param[in] o the source object */
         // NOLINTNEXTLINE(performance-move-constructor-init)
@@ -52,13 +55,21 @@ public:
          * \return \c *this */
         metrics_t& operator=(const metrics_t& o) noexcept {
             if (&o != this) {
-                alloc_ops = o.alloc_ops.load();
-                alloc_rejects = o.alloc_rejects.load();
-                dealloc_ops = o.dealloc_ops.load();
-                allocs = o.allocs.load();
-                max_allocs = o.max_allocs.load();
-                balance = o.balance.load();
-                max_balance = o.max_balance.load();
+                alloc_ops.store(o.alloc_ops.load(std::memory_order_relaxed),
+                                std::memory_order_relaxed);
+                alloc_rejects.store(o.alloc_rejects.load(
+                                                    std::memory_order_relaxed),
+                                    std::memory_order_relaxed);
+                dealloc_ops.store(o.dealloc_ops.load(std::memory_order_relaxed),
+                                  std::memory_order_relaxed);
+                allocs.store(o.allocs.load(std::memory_order_relaxed),
+                             std::memory_order_relaxed);
+                max_allocs.store(o.max_allocs.load(std::memory_order_relaxed),
+                                 std::memory_order_relaxed);
+                balance.store(o.balance.load(std::memory_order_relaxed),
+                              std::memory_order_relaxed);
+                max_balance.store(o.max_balance.load(std::memory_order_relaxed),
+                                  std::memory_order_relaxed);
             }
             return *this;
         }
@@ -92,7 +103,8 @@ public:
         limits_t() = default;
         //! Copy constructor
         /*! \param[in] o source object */
-        limits_t(const limits_t& o) noexcept: balance(o.balance.load()) {}
+        limits_t(const limits_t& o) noexcept:
+            balance(o.balance.load(std::memory_order_relaxed)) {}
         //! Move constructor is the same as copy.
         /*! \param[in] o source object */
         // NOLINTNEXTLINE(performance-move-constructor-init)
@@ -104,7 +116,8 @@ public:
          * \return \c *this */
         limits_t& operator=(const limits_t& o) noexcept {
             if (&o != this) {
-                balance = o.balance.load();
+                balance.store(o.balance.load(std::memory_order_relaxed),
+                              std::memory_order_relaxed);
             }
             return *this;
         }
