@@ -466,6 +466,19 @@ BOOST_AUTO_TEST_CASE(value_read_only)
 //! \endcond
 
 /*! \file
+ * \test \c value_mt_unsafe -- Class threadscript::exception::value_mt_unsafe
+ */
+//! \cond
+BOOST_AUTO_TEST_CASE(value_mt_unsafe)
+{
+    ex::value_mt_unsafe exc({{"main", "script", 10, 1}});
+    BOOST_TEST(exc.trace().size() == 1);
+    BOOST_TEST(exc.to_string(false) ==
+               "script:10:1:main(): Runtime error: Thread-unsafe value");
+}
+//! \endcond
+
+/*! \file
  * \test \c value_type -- Class threadscript::exception::value_type */
 //! \cond
 BOOST_AUTO_TEST_CASE(value_type)

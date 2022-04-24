@@ -8,6 +8,7 @@
 
 #include "threadscript/config.hpp"
 #include "threadscript/virtual_machine.hpp"
+#include "threadscript/vm_data.hpp"
 
 //! The top-level namespace of ThreadScript
 namespace threadscript {

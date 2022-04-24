@@ -22,9 +22,10 @@ template <class Allocator> class basic_state;
  *
  * In order to allow passing ownership of allocations among various objects
  * belonging to a VM, all allocators related to the same VM must cooperate.
- * It must be possible to deallocate each object by any allocator in the VM.
- * Allocators of type default_allocator sharing the same allocator_config
- * satisfy this requirement.
+ * It must be possible to allocate and deallocate each object by any allocator,
+ * or its (possibly rebound) copy, in the VM. Allocators of type
+ * default_allocator sharing the same allocator_config satisfy this
+ * requirement.
  * \tparam Allocator the allocator used by this VM
  * \threadsafe{safe,safe}
  * \test in file test_virtual_machine.cpp */
@@ -32,7 +33,7 @@ template <class Allocator> class basic_virtual_machine {
 public:
     //! Default constructor
     /*! \param[in] alloc the allocator to be used by this VM */
-    explicit basic_virtual_machine(Allocator alloc): alloc(std::move(alloc)) {}
+    explicit basic_virtual_machine(const Allocator& alloc): alloc(alloc) {}
     //! No copying
     basic_virtual_machine(const basic_virtual_machine&) = delete;
     //! No moving
@@ -53,12 +54,6 @@ public:
     [[nodiscard]] size_t num_states() const noexcept {
         return _num_states;
     }
-    //! Makes a shallow copy of a value.
-    /*! While running this function, \a v may not be modified by another
-     * thread.
-     * \param[in] v the copied value, may be \c nullptr
-     * \return a copy of \a v */
-    value_ptr shallow_copy(const value_ptr& v);
 private:
     //! The allocator used by this VM.
     Allocator alloc;

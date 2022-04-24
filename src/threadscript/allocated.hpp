@@ -18,7 +18,7 @@ template <class T, class Allocator> class deleter {
 public:
     //! Stores an allocator
     /*! \param[in] alloc the allocator used by this deleter */
-    explicit deleter(Allocator alloc) noexcept: alloc(std::move(alloc)) {}
+    explicit deleter(const Allocator& alloc) noexcept: alloc(alloc) {}
     //! Deletes an object using the stored allocator.
     /*! It does nothing if \a p is \c nullptr
      * \param[in] p an object to be deleted */

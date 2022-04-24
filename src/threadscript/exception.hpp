@@ -392,6 +392,15 @@ public:
         value("Read-only value", std::move(trace)) {}
 };
 
+//! Trying to mark as mt-safe a value that does not satisfy conditions
+class value_mt_unsafe: public value {
+public:
+    //! Stores an error message.
+    /*! \param[in] trace a stack trace */
+    explicit value_mt_unsafe(stack_trace trace = {}):
+        value("Thread-unsafe value", std::move(trace)) {}
+};
+
 //! A bad type of a value
 class value_type: public value {
 public:
