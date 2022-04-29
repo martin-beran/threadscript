@@ -13,6 +13,7 @@ set(
     dummy
     dummy_boost
     exception
+    vm_data
     virtual_machine
 )
 
