@@ -27,22 +27,22 @@ extern template class basic_state<allocator_any>;
 
 //! The \ref basic_value class using the configured allocator
 using value = basic_value<allocator_any>;
-extern template class value<allocator_any>;
+extern template class basic_value<allocator_any>;
 
 //! The \ref basic_value_bool using the configured allocator
 using value_bool = basic_value_bool<allocator_any>;
-extern template class value_bool<allocator_any>;
+extern template class basic_value_bool<allocator_any>;
 
 //! The \ref basic_value_int using the configured allocator
 using value_int = basic_value_int<allocator_any>;
-extern template class value_int<allocator_any>;
+extern template class basic_value_int<allocator_any>;
 
-//! The \ref basic_value_uint using the configured allocator
-using value_uint = basic_value_uint<allocator_any>;
-extern template class value_uint<allocator_any>;
+//! The \ref basic_value_unsigned using the configured allocator
+using value_unsigned = basic_value_unsigned<allocator_any>;
+extern template class basic_value_unsigned<allocator_any>;
 
 //! The \ref basic_value_string using the configured allocator
 using value_string = basic_value_string<allocator_any>;
-extern template class value_string<allocator_any>;
+extern template class basic_value_string<allocator_any>;
 
 } // namespace threadscript

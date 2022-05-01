@@ -290,6 +290,18 @@ private:
     std::exception_ptr _wrapped; //!< The wrapped exception
 };
 
+//! An exception thrown when an unimplemented feature is invoked
+class not_implemented: public base {
+public:
+    //! Stores an error message.
+    /*! \param[in] feature the unimplemented feature name
+     * \param[in] trace a stack trace */
+    explicit not_implemented(std::string_view feature,
+                             stack_trace trace = {}):
+        base(std::string(feature).append(" not implemented"), std::move(trace))
+    {}
+};
+
 //! An error detected when parsing a script source
 class parse_error: public base {
 public:

@@ -381,6 +381,19 @@ BOOST_AUTO_TEST_CASE(wrapped_exc)
 //! \endcond
 
 /*! \file
+ * \test \c not_implemented -- Class threadscript::exception::not_implemented
+ */
+//! \cond
+BOOST_AUTO_TEST_CASE(not_implemented)
+{
+    ex::not_implemented exc("Some feature", {{"main", "script", 10, 1}});
+    BOOST_TEST(exc.trace().size() == 1);
+    BOOST_TEST(exc.to_string(false) ==
+               "script:10:1:main(): Some feature not implemented");
+}
+//! \endcond
+
+/*! \file
  * \test \c parse_error -- Class threadscript::exception::parse_error */
 //! \cond
 BOOST_AUTO_TEST_CASE(parse_error)

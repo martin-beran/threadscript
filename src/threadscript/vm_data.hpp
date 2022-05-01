@@ -9,6 +9,8 @@
 
 #include "threadscript/concepts.hpp"
 #include "threadscript/config.hpp"
+#include "threadscript/config_default.hpp"
+#include "threadscript/exception.hpp"
 #include <memory>
 
 namespace threadscript {
@@ -83,9 +85,9 @@ private:
  * \tparam Name the type name used by the ThreadScript engine
  * \tparam Allocator the allocator to be used by \ref data (if needed).
  * \test in file test_vm_data.cpp */
-template <class Derived, class T, const char* Name, allocator Allocator>
+template <class Derived, class T, const char* Name, impl::allocator Allocator>
 class basic_typed_value: public basic_value<Allocator> {
-    static_assert(std::is_final_v<Derived>);
+protected:
     struct tag {}; //!< Used to distiguish between constructors
 public:
     //! The shared pointer type to \a Derived
@@ -94,7 +96,7 @@ public:
     using const_typed_value_ptr = std::shared_ptr<const Derived>;
     //! Gets the type name of this value.
     /*! \return a type name */
-    std::string_view type_name() const noexcept override final;
+    [[nodiscard]] std::string_view type_name() const noexcept override final;
     //! Gets read-only access to the contained \ref data.
     /*! \return \ref data */
     const T& value() const noexcept { return data; }
@@ -103,7 +105,7 @@ public:
      * \throw exception::value_read_only if the value is read-only (that is,
      * marked thread-safe) */
     T& value() {
-        if (mt_safe())
+        if (this->mt_safe())
             throw exception::value_mt_unsafe();
         return data;
     }
@@ -115,83 +117,113 @@ public:
      * member object that needs an allocator
      * \return a copy of this value */
     typed_value_ptr shallow_copy(const Allocator& alloc) const {
-        static_pointer_cast<typed_value_ptr>(shallow_copy_impl>(alloc));
+        static_pointer_cast<typed_value_ptr>(shallow_copy_impl(alloc));
     }
-protected:
     //! Creates a default value.
-    /*! \param[in] alloc an allocator to be used by \ref data; ignored if \a T
+    /*! \param[in] t an ignored parameter used to overload constructors
+     * \param[in] alloc an allocator to be used by \ref data; ignored if \a T
      * does not need an allocator */
-    explicit basic_typed_value(const Allocator& alloc):
-        basic_typed_value(tag{}, alloc) {}
-    value_ptr shallow_copy_impl(const Allocator& alloc) const override;
+    explicit basic_typed_value([[maybe_unused]] tag t,
+                               const Allocator& alloc):
+        basic_typed_value(alloc) {}
+protected:
+    typename basic_value<Allocator>::value_ptr
+        shallow_copy_impl(const Allocator& alloc) const override;
 private:
     //! Creates a default value, used if \a T needs an allocator.
-    /*! \param[in] tag an ignored parameter used to overload constructors
-     * \param[in] a an allocator */
-    template <class A> requires impl::uses_allocator<T>
-    basic_typed_value(tag t, const A& a);
+    /*! \param[in] a an allocator */
+    template <class A> requires impl::uses_allocator<T, A>
+    explicit basic_typed_value(const A& a);
     //! Creates a default value, used if \a T does not need an allocator.
-    /*! \param[in] tag an ignored parameter used to overload constructors
-     * \param[in] a an ignored allocator */
-    template <class A> requires !impl::uses_allocator<T>
-    basic_typed_value(tag t, const A& a);
+    /*! \param[in] a an ignored allocator */
+    template <class A> requires (!impl::uses_allocator<T, A>)
+    explicit basic_typed_value(const A& a);
     T data; //! The stored data of this value
 };
 
+template <impl::allocator Allocator> class basic_value_bool;
+
 namespace impl {
-constexpr char name_value_bool[] = "bool"; //!< The name of value_bool.
-}
+//! The name of basic_value_bool
+inline constexpr char name_value_bool[] = "bool";
+//! The base class of basic_value_bool
+/*! \tparam Allocator an allocator type */
+template <allocator Allocator> using basic_value_bool_base =
+    basic_typed_value<basic_value_bool<Allocator>, bool, name_value_bool,
+        Allocator>;
+} // namespace impl
 
 //! The value class holding a Boolean value
 /*! \tparam Allocator an allocator type; unused
  * \test in file test_vm_data.cpp */
-template <allocator Allocator> class basic_value_bool final:
-    public basic_typed_value<value_bool, bool, name_value_bool, Allocator>
+template <impl::allocator Allocator> class basic_value_bool final:
+    public impl::basic_value_bool_base<Allocator>
 {
-    using basic_typed_value::basic_typed_value;
+    using impl::basic_value_bool_base<Allocator>::basic_typed_value;
 };
 
+template <impl::allocator Allocator> class basic_value_int;
+
 namespace impl {
-constexpr char name_value_int[] = "int"; //!< The name of value_int.
-}
+//! The name of basic_value_int
+inline constexpr char name_value_int[] = "int";
+//! The base class of basic_value_int
+/*! \tparam Allocator an allocator type */
+template <allocator Allocator> using basic_value_int_base =
+    basic_typed_value<basic_value_int<Allocator>, config::value_int_type,
+        name_value_int, Allocator>;
+} // namespace impl
 
 //! The value class holding a signed integer value
 /*! \tparam Allocator an allocator type; unused
  * \test in file test_vm_data.cpp */
-template <allocator Allocator> class basic_value_int final:
-    public basic_typed_value<value_int, config::value_signed_type,
-        name_value_int, Allocator>
+template <impl::allocator Allocator> class basic_value_int final:
+    public impl::basic_value_int_base<Allocator>
 {
-    using basic_typed_value::basic_typed_value;
+    using impl::basic_value_int_base<Allocator>::basic_typed_value;
 };
 
+template <impl::allocator Allocator> class basic_value_unsigned;
+
 namespace impl {
-constexpr char name_value_uint[] = "uint"; //!< The name of value_uint.
-}
+//! The name of value_unsigned
+inline constexpr char name_value_unsigned[] = "unsigned";
+//! The base class of basic_value_unsigned
+/*! \tparam Allocator an allocator type */
+template <allocator Allocator> using basic_value_unsigned_base =
+    basic_typed_value<basic_value_unsigned<Allocator>,
+        config::value_unsigned_type, name_value_unsigned, Allocator>;
+} // namespace impl
 
 //! The value class holding an unsigned integer value
 /*! \tparam Allocator an allocator type; unused
  * \test in file test_vm_data.cpp */
-template <allocator Allocator> class basic_value_uint final:
-    public basic_typed_value<value_uint, config::value_unsigned_type,
-        name_value_uint, Allocator>
+template <impl::allocator Allocator> class basic_value_unsigned final:
+    public impl::basic_value_unsigned_base<Allocator>
 {
-    using basic_typed_value::basic_typed_value;
+    using impl::basic_value_unsigned_base<Allocator>::basic_typed_value;
 };
 
-name impl {
-constexpr char name_value_string[] = "string"; //! The  name of value_string.
-}
+template <impl::allocator Allocator> class basic_value_string;
+
+namespace impl {
+//! The  name of value_string
+inline constexpr char name_value_string[] = "string";
+//! The base class of basic_value_string
+/*! \tparam Allocator an allocator type */
+template <allocator Allocator> using basic_value_string_base =
+    basic_typed_value<basic_value_string<Allocator>, std::string,
+        name_value_string, Allocator>;
+} // namespace impl
 
 //! The value class holding a string value
 /*! \tparam Allocator and allocator type; used internally by the stored string
  * value
  * \test in file test_vm_data.cpp */
-template <allocator Allocator> class basic_value_string final:
-    public basic_typed_value<value_string, std::string,
-        name_value_string, Allocator>
+template <impl::allocator Allocator> class basic_value_string final:
+    public impl::basic_value_string_base<Allocator>
 {
-    using basic_typed_value::basic_typed_value;
+    using impl::basic_value_string_base<Allocator>::basic_typed_value;
 };
 
 } // namespace threadscript
