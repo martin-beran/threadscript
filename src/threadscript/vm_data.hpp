@@ -94,12 +94,21 @@ public:
     using typed_value_ptr = std::shared_ptr<Derived>;
     //! The shared pointer type to const \a Derived
     using const_typed_value_ptr = std::shared_ptr<const Derived>;
+    //! Creates a new default value.
+    /*! \param[in] alloc an allocator
+     * \return a shared pointer to the created value */
+    static typed_value_ptr create(const Allocator& alloc) {
+        return std::allocate_shared<Derived>(alloc, tag{}, alloc);
+    }
     //! Gets the type name of this value.
     /*! \return a type name */
     [[nodiscard]] std::string_view type_name() const noexcept override final;
     //! Gets read-only access to the contained \ref data.
     /*! \return \ref data */
     const T& value() const noexcept { return data; }
+    //! Gets read-only access to the contained \ref data.
+    /*! \return \ref data */
+    const T& cvalue() const noexcept { return data; }
     //! Gets writable access to the contained \ref data.
     /*! \return \ref data
      * \throw exception::value_read_only if the value is read-only (that is,
@@ -117,28 +126,30 @@ public:
      * member object that needs an allocator
      * \return a copy of this value */
     typed_value_ptr shallow_copy(const Allocator& alloc) const {
-        static_pointer_cast<typed_value_ptr>(shallow_copy_impl(alloc));
+        return static_pointer_cast<Derived>(shallow_copy_impl(alloc));
     }
     //! Creates a default value.
     /*! \param[in] t an ignored parameter used to overload constructors
      * \param[in] alloc an allocator to be used by \ref data; ignored if \a T
      * does not need an allocator */
-    explicit basic_typed_value([[maybe_unused]] tag t,
-                               const Allocator& alloc):
-        basic_typed_value(alloc) {}
+    explicit basic_typed_value(tag t, const Allocator& alloc);
 protected:
     typename basic_value<Allocator>::value_ptr
         shallow_copy_impl(const Allocator& alloc) const override;
 private:
     //! Creates a default value, used if \a T needs an allocator.
-    /*! \param[in] a an allocator */
-    template <class A> requires impl::uses_allocator<T, A>
+    /*! \tparam A an allocator type
+     * \param[in] a an allocator */
+    template <class A> //! \cond
+        requires impl::uses_allocator<T, A> //! \endcond
     explicit basic_typed_value(const A& a);
     //! Creates a default value, used if \a T does not need an allocator.
-    /*! \param[in] a an ignored allocator */
-    template <class A> requires (!impl::uses_allocator<T, A>)
+    /*! \tparam A an allocator type
+     * \param[in] a an ignored allocator */
+    template <class A> //! \cond
+        requires (!impl::uses_allocator<T, A>)//! \endcond
     explicit basic_typed_value(const A& a);
-    T data; //! The stored data of this value
+    T data; //!< The stored data of this value
 };
 
 template <impl::allocator Allocator> class basic_value_bool;
@@ -159,7 +170,7 @@ template <allocator Allocator> using basic_value_bool_base =
 template <impl::allocator Allocator> class basic_value_bool final:
     public impl::basic_value_bool_base<Allocator>
 {
-    using impl::basic_value_bool_base<Allocator>::basic_typed_value;
+    using impl::basic_value_bool_base<Allocator>::basic_value_bool_base;
 };
 
 template <impl::allocator Allocator> class basic_value_int;
@@ -180,7 +191,7 @@ template <allocator Allocator> using basic_value_int_base =
 template <impl::allocator Allocator> class basic_value_int final:
     public impl::basic_value_int_base<Allocator>
 {
-    using impl::basic_value_int_base<Allocator>::basic_typed_value;
+    using impl::basic_value_int_base<Allocator>::basic_value_int_base;
 };
 
 template <impl::allocator Allocator> class basic_value_unsigned;
@@ -201,7 +212,7 @@ template <allocator Allocator> using basic_value_unsigned_base =
 template <impl::allocator Allocator> class basic_value_unsigned final:
     public impl::basic_value_unsigned_base<Allocator>
 {
-    using impl::basic_value_unsigned_base<Allocator>::basic_typed_value;
+    using impl::basic_value_unsigned_base<Allocator>::basic_value_unsigned_base;
 };
 
 template <impl::allocator Allocator> class basic_value_string;
@@ -223,7 +234,7 @@ template <allocator Allocator> using basic_value_string_base =
 template <impl::allocator Allocator> class basic_value_string final:
     public impl::basic_value_string_base<Allocator>
 {
-    using impl::basic_value_string_base<Allocator>::basic_typed_value;
+    using impl::basic_value_string_base<Allocator>::basic_value_string_base;
 };
 
 } // namespace threadscript

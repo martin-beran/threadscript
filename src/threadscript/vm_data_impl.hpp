@@ -19,6 +19,14 @@ void basic_value<Allocator>::set_mt_safe()
 /*** basic_typed_value ******************************************************/
 
 template <class Derived, class T, const char* Name, impl::allocator Allocator>
+basic_typed_value<Derived, T, Name, Allocator>::basic_typed_value(tag,
+                                                      const Allocator& alloc):
+    basic_typed_value(alloc)
+{
+}
+
+//! \cond
+template <class Derived, class T, const char* Name, impl::allocator Allocator>
 template <class A> requires impl::uses_allocator<T, A>
 basic_typed_value<Derived, T, Name, Allocator>::basic_typed_value(const A& a):
     data{a}
@@ -31,13 +39,14 @@ basic_typed_value<Derived, T, Name, Allocator>::basic_typed_value(const A&):
     data{}
 {
 }
+//! \endcond
 
 template <class Derived, class T, const char* Name, impl::allocator Allocator>
 auto basic_typed_value<Derived, T, Name, Allocator>::shallow_copy_impl(
                                                     const Allocator& alloc)
     const -> typename basic_value<Allocator>::value_ptr
 {
-    auto p = std::make_shared<Derived>(tag{}, alloc);
+    auto p = create(alloc);
     p->value() = value();
     return p;
 }

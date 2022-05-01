@@ -33,6 +33,7 @@ template <class Allocator> class basic_virtual_machine {
 public:
     //! Default constructor
     /*! \param[in] alloc the allocator to be used by this VM */
+    // \NOLINTNEXTLINE(modernize-pass-by-value)
     explicit basic_virtual_machine(const Allocator& alloc): alloc(alloc) {}
     //! No copying
     basic_virtual_machine(const basic_virtual_machine&) = delete;
