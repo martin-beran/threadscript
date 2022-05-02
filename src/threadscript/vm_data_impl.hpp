@@ -21,21 +21,23 @@ void basic_value<Allocator>::set_mt_safe()
 template <class Derived, class T, const char* Name, impl::allocator Allocator>
 basic_typed_value<Derived, T, Name, Allocator>::basic_typed_value(tag,
                                                       const Allocator& alloc):
-    basic_typed_value(alloc)
+    basic_typed_value(tag2{}, alloc)
 {
 }
 
 //! \cond
 template <class Derived, class T, const char* Name, impl::allocator Allocator>
 template <class A> requires impl::uses_allocator<T, A>
-basic_typed_value<Derived, T, Name, Allocator>::basic_typed_value(const A& a):
+basic_typed_value<Derived, T, Name, Allocator>::basic_typed_value(tag2,
+                                                                  const A& a):
     data{a}
 {
 }
 
 template <class Derived, class T, const char* Name, impl::allocator Allocator>
 template <class A> requires (!impl::uses_allocator<T, A>)
-basic_typed_value<Derived, T, Name, Allocator>::basic_typed_value(const A&):
+basic_typed_value<Derived, T, Name, Allocator>::basic_typed_value(tag2,
+                                                                  const A&):
     data{}
 {
 }

@@ -58,6 +58,16 @@ public:
      * \throw exception::value_mt_unsafe if this value does not satisfy
      * conditions for being thread-safe */
     virtual void set_mt_safe();
+    //! Copies this value, but not referenced values.
+    /*! It makes a deep copy of the representation of this value itself, but
+     * any pointers to other basic_value objects will reference the same
+     * objects as in the source object.
+     * \param[in] alloc the allocator used to make the copy and passed to any
+     * member object that needs an allocator
+     * \return a copy of this value */
+    value_ptr shallow_copy(const Allocator& alloc) const {
+        return shallow_copy_impl(alloc);
+    }
 protected:
     //! Default constructor
     /*! Protected, because no instances of this class should be created. */
@@ -90,10 +100,17 @@ class basic_typed_value: public basic_value<Allocator> {
 protected:
     struct tag {}; //!< Used to distiguish between constructors
 public:
+    //! The type of a stored value
+    using value_type = T;
     //! The shared pointer type to \a Derived
     using typed_value_ptr = std::shared_ptr<Derived>;
     //! The shared pointer type to const \a Derived
     using const_typed_value_ptr = std::shared_ptr<const Derived>;
+    //! Name of this value type
+    /*! \return the type name */
+    [[nodiscard]] static consteval std::string_view static_type_name() {
+        return Name;
+    }
     //! Creates a new default value.
     /*! \param[in] alloc an allocator
      * \return a shared pointer to the created value */
@@ -129,24 +146,28 @@ public:
         return static_pointer_cast<Derived>(shallow_copy_impl(alloc));
     }
     //! Creates a default value.
-    /*! \param[in] t an ignored parameter used to overload constructors
+    /*! \param[in] t an ignored parameter used to overload constructors and to
+     * prevent using this constructor directly
      * \param[in] alloc an allocator to be used by \ref data; ignored if \a T
      * does not need an allocator */
-    explicit basic_typed_value(tag t, const Allocator& alloc);
+    basic_typed_value(tag t, const Allocator& alloc);
 protected:
     typename basic_value<Allocator>::value_ptr
         shallow_copy_impl(const Allocator& alloc) const override;
 private:
+    struct tag2 {}; //!< Used to distiguish between constructors
     //! Creates a default value, used if \a T needs an allocator.
     /*! \tparam A an allocator type
+     * \param[in] t an ignored parameter used to overload constructors
      * \param[in] a an allocator */
     template <class A> requires impl::uses_allocator<T, A>
-    explicit basic_typed_value(const A& a);
+    explicit basic_typed_value(tag2 t,const A& a);
     //! Creates a default value, used if \a T does not need an allocator.
     /*! \tparam A an allocator type
+     * \param[in] t an ignored parameter used to overload constructors
      * \param[in] a an ignored allocator */
     template <class A> requires (!impl::uses_allocator<T, A>)
-    explicit basic_typed_value(const A& a);
+    explicit basic_typed_value(tag2 t, const A& a);
     T data; //!< The stored data of this value
 };
 
