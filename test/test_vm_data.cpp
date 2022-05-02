@@ -46,8 +46,8 @@ template <> struct properties<ts::value_unsigned> {
 };
 template <> struct properties<ts::value_string> {
     static constexpr std::string_view type_name{"string"};
-    inline static const std::string default_value{};
-    inline static const std::string set_value{"abc"};
+    inline static const ts::a_string default_value{};
+    inline static const ts::a_string set_value{"abc"};
 };
 //! \endcond
 

@@ -5,6 +5,7 @@
  */
 
 #include <memory>
+
 namespace threadscript::impl {
 
 //! Basic requirements for a type used as an allocator.

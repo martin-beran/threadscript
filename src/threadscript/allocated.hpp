@@ -5,7 +5,10 @@
  * pointer.
  */
 
+#include "threadscript/concepts.hpp"
+
 #include <memory>
+#include <vector>
 
 namespace threadscript {
 
@@ -14,7 +17,7 @@ namespace threadscript {
  * \tparam Allocator an allocator type
  * \tparam U the type allocated by \a Allocator
  * \test in file test_allocated.cpp */
-template <class T, class Allocator> class deleter {
+template <class T, impl::allocator Allocator> class deleter {
 public:
     //! Stores an allocator
     /*! \param[in] alloc the allocator used by this deleter */
@@ -36,7 +39,7 @@ private:
  * \tparam Allocator an allocator template
  * \tparam U the type allocated by \a Allocator
  * \test in file test_allocated.cpp */
-template <class T, class Allocator>
+template <class T, impl::allocator Allocator>
 using unique_ptr_alloc = std::unique_ptr<T, deleter<T, Allocator>>;
 
 //! A function to allocate an object and create unique_ptr_alloc.
@@ -48,7 +51,7 @@ using unique_ptr_alloc = std::unique_ptr<T, deleter<T, Allocator>>;
  * \param[in] args arguments for a constructor of T
  * \return a unique_ptr_alloc pointing to the allocated object
  * \test in file test_allocated.cpp */
-template <class T, class Allocator, class ...Args>
+template <class T, impl::allocator Allocator, class ...Args>
 auto allocate_unique(const Allocator& alloc, Args&& ...args)
 {
     using a_t =
@@ -58,5 +61,18 @@ auto allocate_unique(const Allocator& alloc, Args&& ...args)
     return
         unique_ptr_alloc<T, a_t>(p, deleter<T, a_t>(std::move(alloc)));
 }
+
+//! An instance of template \c std::basic_string using an allocator
+/*! \tparam Allocator an allocator type */
+template <impl::allocator Allocator>
+using a_basic_string = std::basic_string<char, std::char_traits<char>,
+    typename std::allocator_traits<Allocator>::template rebind_alloc<char>>;
+
+//! An instance of template \c std::vector using an allocator
+/*! \tparam T a type of vector elements
+ * \tparam Allocator an allocator type */
+template <class T, impl::allocator Allocator>
+using a_basic_vector = std::vector<T,
+    typename std::allocator_traits<Allocator>::template rebind_alloc<T>>;
 
 } // namespace threadscript

@@ -18,6 +18,13 @@ namespace threadscript {
 namespace impl {
 } // namespace impl
 
+//! A string type using the configured allocator
+using a_string = a_basic_string<allocator_any>;
+
+//! A vector type using the configured allocator
+/*! \tparam T a type of vector elements */
+template <class T> using a_vector = a_basic_vector<T, allocator_any>;
+
 //! The virtual machine class using the configured allocator
 using virtual_machine = basic_virtual_machine<allocator_any>;
 extern template class basic_virtual_machine<allocator_any>;
@@ -51,8 +58,9 @@ extern template class basic_value_unsigned<allocator_any>;
 
 //! The \ref basic_value_string using the configured allocator
 using value_string = basic_value_string<allocator_any>;
-extern template class basic_typed_value<value_string, std::string,
-    threadscript::impl::name_value_string, allocator_any>;
+extern template class basic_typed_value<value_string,
+    a_basic_string<allocator_any>, threadscript::impl::name_value_string,
+    allocator_any>;
 extern template class basic_value_string<allocator_any>;
 
 } // namespace threadscript

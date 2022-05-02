@@ -24,7 +24,7 @@ template class basic_typed_value<value_unsigned, config::value_unsigned_type,
     threadscript::impl::name_value_unsigned, allocator_any>;
 template class basic_value_unsigned<allocator_any>;
 
-template class basic_typed_value<value_string, std::string,
+template class basic_typed_value<value_string, a_basic_string<allocator_any>,
     threadscript::impl::name_value_string, allocator_any>;
 template class basic_value_string<allocator_any>;
 

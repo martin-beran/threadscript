@@ -7,6 +7,7 @@
  * data and execution state, e.g., values, variables, symbol tables, or stacks.
  */
 
+#include "threadscript/allocated.hpp"
 #include "threadscript/concepts.hpp"
 #include "threadscript/config.hpp"
 #include "threadscript/config_default.hpp"
@@ -242,7 +243,7 @@ inline constexpr char name_value_string[] = "string";
 //! The base class of basic_value_string
 /*! \tparam Allocator an allocator type */
 template <allocator Allocator> using basic_value_string_base =
-    basic_typed_value<basic_value_string<Allocator>, std::string,
+    basic_typed_value<basic_value_string<Allocator>, a_basic_string<Allocator>,
         name_value_string, Allocator>;
 } // namespace impl
 
@@ -255,5 +256,18 @@ template <impl::allocator Allocator> class basic_value_string final:
 {
     using impl::basic_value_string_base<Allocator>::basic_value_string_base;
 };
+
+template <impl::allocator Allocator> class basic_value_array;
+
+namespace impl {
+//! The name of value_array
+inline constexpr char name_value_array[] = "array";
+//! The base class of basic_value_array
+/*!\tparam Allocator an allocator type */
+template <allocator Allocator> using basic_value_array_value =
+    basic_typed_value<basic_value_array<Allocator>,
+        a_basic_vector<typename basic_value<Allocator>::value_ptr, Allocator>,
+        name_value_array, Allocator>;
+} // namespace impl
 
 } // namespace threadscript
