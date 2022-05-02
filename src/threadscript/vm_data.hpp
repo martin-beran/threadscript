@@ -140,14 +140,12 @@ private:
     //! Creates a default value, used if \a T needs an allocator.
     /*! \tparam A an allocator type
      * \param[in] a an allocator */
-    template <class A> //! \cond
-        requires impl::uses_allocator<T, A> //! \endcond
+    template <class A> requires impl::uses_allocator<T, A>
     explicit basic_typed_value(const A& a);
     //! Creates a default value, used if \a T does not need an allocator.
     /*! \tparam A an allocator type
      * \param[in] a an ignored allocator */
-    template <class A> //! \cond
-        requires (!impl::uses_allocator<T, A>)//! \endcond
+    template <class A> requires (!impl::uses_allocator<T, A>)
     explicit basic_typed_value(const A& a);
     T data; //!< The stored data of this value
 };

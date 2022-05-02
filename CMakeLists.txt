@@ -156,11 +156,28 @@ if (MARKDOWN)
     list(APPEND DOC README.html LICENSE.html)
 endif()
 
-find_package(Doxygen)
+# Location of Doxygen is not customizable, hence we cannot use
+# find_package(Doxygen) to find a newer locally installed version in
+# a non-standard directory.
+if (DOXYGEN_EXECUTABLE)
+    execute_process(
+        COMMAND ${DOXYGEN_EXECUTABLE} --version
+        RESULT_VARIABLE DOXYGEN_FOUND
+        OUTPUT_VARIABLE DOXYGEN_VERSION
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    if (DOXYGEN_FOUND EQUAL "0")
+        set(DOXYGEN_FOUND "YES")
+    else()
+        set(DOXYGEN_FOUND "NO")
+    endif()
+else()
+    find_package(Doxygen)
+endif()
 if (DOXYGEN_FOUND)
     add_custom_target(
         doxygen
-        COMMAND Doxygen::doxygen ${CMAKE_SOURCE_DIR}/Doxyfile > /dev/null
+        COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_SOURCE_DIR}/Doxyfile > /dev/null
     )
 endif()
 
