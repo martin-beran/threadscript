@@ -175,10 +175,16 @@ else()
     find_package(Doxygen)
 endif()
 if (DOXYGEN_FOUND)
-    add_custom_target(
-        doxygen
-        COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_SOURCE_DIR}/Doxyfile > /dev/null
-    )
+    if (DOXYGEN_VERSION VERSION_GREATER_EQUAL 1.9.3)
+        add_custom_target(
+            doxygen
+            COMMAND
+                ${DOXYGEN_EXECUTABLE} ${CMAKE_SOURCE_DIR}/Doxyfile > /dev/null
+        )
+    else()
+        set(DOXYGEN_FOUND "NO")
+        message(STATUS "Doxygen too old, missing C++20 support")
+    endif()
 endif()
 
 add_custom_target(

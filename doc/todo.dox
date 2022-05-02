@@ -4,6 +4,4 @@
  * using command <tt>\\todo</tt>. If a ToDo is not related to a particular
  * place in C++ code, add it here.
  *
- * \todo Check that the used version of Doxygen is new enough to support
- * C++20 concepts.
  */
