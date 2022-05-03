@@ -63,4 +63,11 @@ extern template class basic_typed_value<value_string,
     allocator_any>;
 extern template class basic_value_string<allocator_any>;
 
+//! The \ref basic_value_array using the configured allocator
+using value_array = basic_value_array<allocator_any>;
+extern template class basic_typed_value<value_array,
+    a_basic_vector<typename basic_value<allocator_any>::value_ptr,
+        allocator_any>,
+    threadscript::impl::name_value_array, allocator_any>;
+
 } // namespace threadscript

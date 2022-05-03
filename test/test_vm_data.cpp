@@ -106,7 +106,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(value_shallow_copy, T, value_types)
 //! \endcond
 
 /*! \file
- * \test \c value_shallow_copy -- Handling thread-safety flag of a type derived
+ * \test \c value_mt_safe -- Handling thread-safety flag of a type derived
  * from threadscript::basic_typed_value */
 //! \cond
 BOOST_AUTO_TEST_CASE_TEMPLATE(value_mt_safe, T, value_types)
@@ -140,6 +140,123 @@ BOOST_AUTO_TEST_CASE(value_string_capacity)
     BOOST_TEST(v->value().capacity() < 40);
     v->value().clear();
     v->value().append(100, 'A');
+    size_t c0 = v->value().capacity();
+    BOOST_TEST(c0 >= v->value().size());
+    std::vector<size_t> cap;
+    for (auto s: {c0 - 1, c0 - 25, c0 / 2 + 1, c0 / 2}) {
+        v->value().resize(s);
+        cap.push_back(v->value().capacity());
+    }
+    for (size_t i = 0; i < cap.size() - 1; ++i)
+        BOOST_TEST(cap[i] == c0);
+    BOOST_TEST(v->value().size() == cap.back());
+}
+//! \endcond
+
+/*! \file
+ * \test \c value_array_default -- Default-constructed value of
+ * threadscript::basic_value_array */
+//! \cond
+BOOST_AUTO_TEST_CASE(value_array_default)
+{
+    ts::allocator_any alloc;
+    auto v = ts::value_array::create(alloc);
+    BOOST_TEST(ts::value_array::static_type_name() == "array"sv);
+    BOOST_TEST(v->type_name() == "array"sv);
+    BOOST_TEST(v->value().empty());
+}
+//! \endcond
+
+/*! \file
+ * \test \c value_array_set -- Setting a value of
+ * threadscript::basic_value_array */
+//! \cond
+BOOST_AUTO_TEST_CASE(value_array_set)
+{
+    ts::allocator_any alloc;
+    auto v = ts::value_array::create(alloc);
+    v->value().push_back(ts::value_int::create(alloc));
+    BOOST_TEST(v->value()[0]->type_name() == "int"sv);
+    BOOST_TEST(v->cvalue()[0]->type_name() == "int"sv);
+    BOOST_TEST(ts::value_array::const_typed_value_ptr(v)->value()[0]->
+               type_name() == "int"sv);
+}
+//! \endcond
+
+/*! \file
+ * \test value_array_shallow_copy -- Copying a value of
+ * threadscript::basic_value_array */
+//! \cond
+BOOST_AUTO_TEST_CASE(value_array_shallow_copy)
+{
+    ts::allocator_any alloc;
+    ts::value::value_ptr untyped = ts::value_array::create(alloc);
+    auto a = dynamic_pointer_cast<ts::value_array>(untyped);
+    size_t n = 10;
+    for (size_t i = 0; i < n; ++i) {
+        auto v = ts::value_unsigned::create(alloc);
+        v->value() = i;
+        a->value(). push_back(v);
+    }
+    auto untyped_copy = untyped->shallow_copy(alloc);
+    static_assert(std::is_same_v<decltype(untyped_copy), ts::value::value_ptr>);
+    auto ac = dynamic_pointer_cast<ts::value_array>(untyped_copy);
+    BOOST_TEST(a->value().size() == n);
+    BOOST_TEST(ac->value().size() == n);
+    for (size_t i = 0; i < n; ++i)
+        BOOST_TEST(a->value()[i].get() == ac->value()[i].get());
+    auto typed = ts::value_array::create(alloc);
+    for (size_t i = 0; i < n; ++i) {
+        auto v = ts::value_unsigned::create(alloc);
+        v->value() = i;
+        typed->value().push_back(v);
+    }
+    static_assert(std::is_same_v<decltype(typed),
+                  ts::value_array::typed_value_ptr>);
+    auto typed_copy = typed->shallow_copy(alloc);
+    static_assert(std::is_same_v<decltype(typed_copy),
+                  ts::value_array::typed_value_ptr>);
+    BOOST_TEST(typed->value().size() == n);
+    BOOST_TEST(typed_copy->value().size() == n);
+    for (size_t i = 0; i < n; ++i)
+        BOOST_TEST(typed->value().size() == typed_copy->value().size());
+}
+//! \endcond
+
+/*! \file
+ * \test value_array_mt_safe -- Handling thread-safety flag of
+ * threadscript::value_array */
+//! \cond
+BOOST_AUTO_TEST_CASE(value_array_mt_safe)
+{
+    ts::allocator_any alloc;
+    auto v = ts::value_array::create(alloc);
+    BOOST_TEST(!v->mt_safe());
+    v->value().push_back(ts::value_int::create(alloc));
+    v->set_mt_safe();
+    BOOST_TEST(v->mt_safe());
+    BOOST_TEST(v->cvalue().size() == 1);
+    BOOST_TEST(ts::value_array::const_typed_value_ptr(v)->value().size() == 1);
+    BOOST_CHECK_THROW(v->value(), ts::exception::value_mt_unsafe);
+}
+//! \endcond
+
+/*! \file
+ * \test value_array_capacity -- Automatic handling of
+ * threadscript::basic_value_array capacity */
+//! \cond
+BOOST_AUTO_TEST_CASE(value_array_capacity)
+{
+    ts::allocator_any alloc;
+    const size_t c_empty = std::vector<ts::value::value_ptr>{}.capacity();
+    auto v = ts::value_array::create(alloc);
+    BOOST_TEST(v->value().capacity() == c_empty);
+    v->value().resize(100);
+    BOOST_TEST(v->value().capacity() >= v->value().size());
+    v->value().resize(20);
+    BOOST_TEST(v->value().capacity() < 40);
+    v->value().clear();
+    v->value().resize(100);
     size_t c0 = v->value().capacity();
     BOOST_TEST(c0 >= v->value().size());
     std::vector<size_t> cap;

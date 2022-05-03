@@ -248,7 +248,7 @@ template <allocator Allocator> using basic_value_string_base =
 } // namespace impl
 
 //! The value class holding a string value
-/*! \tparam Allocator and allocator type; used internally by the stored string
+/*! \tparam Allocator an allocator type; used internally by the stored string
  * value
  * \test in file test_vm_data.cpp */
 template <impl::allocator Allocator> class basic_value_string final:
@@ -280,10 +280,35 @@ namespace impl {
 inline constexpr char name_value_array[] = "array";
 //! The base class of basic_value_array
 /*!\tparam Allocator an allocator type */
-template <allocator Allocator> using basic_value_array =
+template <allocator Allocator> using basic_value_array_base =
     basic_typed_value<basic_value_array<Allocator>,
         a_basic_vector<typename basic_value<Allocator>::value_ptr, Allocator>,
         name_value_array, Allocator>;
 } // namespace impl
+
+//! The value class holding an array of values
+/*! \tparam Allocator an allocator type; used internally by the stored array
+ * \test in file test_vm_data.cpp */
+template <impl::allocator Allocator> class basic_value_array final:
+    public impl::basic_value_array_base<Allocator>
+{
+    using impl::basic_value_array_base<Allocator>::basic_value_array_base;
+public:
+    using impl::basic_value_array_base<Allocator>::value;
+    //! Gets writable access to the contained \ref data.
+    /*! It handles automatic resizing of storage. Enlarging the capacity is
+     * handled by the underlying \c std::vector. This function shrinks the
+     * capacity if there is a large unused capacity.
+     * \return \ref data
+     * \throw exception::value_read_only if the value is read-only (that is,
+     * marked thread-safe) */
+    typename basic_value_array::value_type& value() {
+        typename basic_value_array::value_type& v =
+            impl::basic_value_array_base<Allocator>::value();
+        if (v.size() <= v.capacity() / 2)
+            v.shrink_to_fit();
+        return v;
+    }
+};
 
 } // namespace threadscript

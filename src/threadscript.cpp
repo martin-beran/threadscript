@@ -28,4 +28,9 @@ template class basic_typed_value<value_string, a_basic_string<allocator_any>,
     threadscript::impl::name_value_string, allocator_any>;
 template class basic_value_string<allocator_any>;
 
+template class basic_typed_value<value_array,
+    a_basic_vector<typename basic_value<allocator_any>::value_ptr,
+        allocator_any>,
+    threadscript::impl::name_value_array, allocator_any>;
+
 } // namespace threadscript
