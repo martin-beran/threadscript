@@ -123,15 +123,15 @@ public:
     [[nodiscard]] std::string_view type_name() const noexcept override final;
     //! Gets read-only access to the contained \ref data.
     /*! \return \ref data */
-    const T& value() const noexcept { return data; }
+    const value_type& value() const noexcept { return data; }
     //! Gets read-only access to the contained \ref data.
     /*! \return \ref data */
-    const T& cvalue() const noexcept { return data; }
+    const value_type& cvalue() const noexcept { return data; }
     //! Gets writable access to the contained \ref data.
     /*! \return \ref data
      * \throw exception::value_read_only if the value is read-only (that is,
      * marked thread-safe) */
-    T& value() {
+    value_type& value() {
         if (this->mt_safe())
             throw exception::value_mt_unsafe();
         return data;
@@ -169,7 +169,7 @@ private:
      * \param[in] a an ignored allocator */
     template <class A> requires (!impl::uses_allocator<T, A>)
     explicit basic_typed_value(tag2 t, const A& a);
-    T data; //!< The stored data of this value
+    value_type data; //!< The stored data of this value
 };
 
 template <impl::allocator Allocator> class basic_value_bool;
@@ -255,6 +255,22 @@ template <impl::allocator Allocator> class basic_value_string final:
     public impl::basic_value_string_base<Allocator>
 {
     using impl::basic_value_string_base<Allocator>::basic_value_string_base;
+public:
+    using impl::basic_value_string_base<Allocator>::value;
+    //! Gets writable access to the contained \ref data.
+    /*! It handles automatic resizing of storage. Enlarging the capacity is
+     * handled by the underlying \c std::string. This function shrinks the
+     * capacity if there is a large unused capacity.
+     * \return \ref data
+     * \throw exception::value_read_only if the value is read-only (that is,
+     * marked thread-safe) */
+    typename basic_value_string::value_type& value() {
+        typename basic_value_string::value_type& v =
+            impl::basic_value_string_base<Allocator>::value();
+        if (v.size() <= v.capacity() / 2)
+            v.shrink_to_fit();
+        return v;
+    }
 };
 
 template <impl::allocator Allocator> class basic_value_array;
@@ -264,7 +280,7 @@ namespace impl {
 inline constexpr char name_value_array[] = "array";
 //! The base class of basic_value_array
 /*!\tparam Allocator an allocator type */
-template <allocator Allocator> using basic_value_array_value =
+template <allocator Allocator> using basic_value_array =
     basic_typed_value<basic_value_array<Allocator>,
         a_basic_vector<typename basic_value<Allocator>::value_ptr, Allocator>,
         name_value_array, Allocator>;

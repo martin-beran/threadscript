@@ -123,3 +123,32 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(value_mt_safe, T, value_types)
     BOOST_CHECK_THROW(v->value(), ts::exception::value_mt_unsafe);
 }
 //! \endcond
+
+/*! \file
+ * \test \c value_string_capacity -- Automatic handling of
+ * threadscript::basic_value_string capacity */
+//! \cond
+BOOST_AUTO_TEST_CASE(value_string_capacity)
+{
+    ts::allocator_any alloc;
+    const size_t c_empty = std::string{}.capacity();
+    auto v = ts::value_string::create(alloc);
+    BOOST_TEST(v->value().capacity() == c_empty);
+    v->value().append(100, 'A');
+    BOOST_TEST(v->value().capacity() >= v->value().size());
+    v->value().resize(20);
+    BOOST_TEST(v->value().capacity() < 40);
+    v->value().clear();
+    v->value().append(100, 'A');
+    size_t c0 = v->value().capacity();
+    BOOST_TEST(c0 >= v->value().size());
+    std::vector<size_t> cap;
+    for (auto s: {c0 - 1, c0 - 25, c0 / 2 + 1, c0 / 2}) {
+        v->value().resize(s);
+        cap.push_back(v->value().capacity());
+    }
+    for (size_t i = 0; i < cap.size() - 1; ++i)
+        BOOST_TEST(cap[i] == c0);
+    BOOST_TEST(v->value().size() == cap.back());
+}
+//! \endcond
