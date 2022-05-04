@@ -37,7 +37,8 @@ if (CLANG_TIDY)
     foreach (S O IN ZIP_LISTS CLANG_TIDY_SRC CLANG_TIDY_OUT)
         add_custom_command(
             OUTPUT ${O}
-            COMMAND ${CLANG_TIDY} ${S} > ${O}
+            # Do not remove output file on error
+            COMMAND ${CLANG_TIDY} ${S} > ${O} | true
             DEPENDS ${S}
         )
     endforeach()
