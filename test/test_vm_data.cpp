@@ -143,7 +143,7 @@ BOOST_AUTO_TEST_CASE(value_string_capacity)
     size_t c0 = v->value().capacity();
     BOOST_TEST(c0 >= v->value().size());
     std::vector<size_t> cap;
-    for (auto s: {c0 - 1, c0 - 25, c0 / 2 + 1, c0 / 2}) {
+    for (auto s: {c0 - 1, c0 - 25, c0 / 3 + 1, c0 / 3}) {
         v->value().resize(s);
         cap.push_back(v->value().capacity());
     }
@@ -260,7 +260,7 @@ BOOST_AUTO_TEST_CASE(value_array_capacity)
     size_t c0 = v->value().capacity();
     BOOST_TEST(c0 >= v->value().size());
     std::vector<size_t> cap;
-    for (auto s: {c0 - 1, c0 - 25, c0 / 2 + 1, c0 / 2}) {
+    for (auto s: {c0 - 1, c0 - 25, c0 / 3 + 1, c0 / 3}) {
         v->value().resize(s);
         cap.push_back(v->value().capacity());
     }

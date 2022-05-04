@@ -260,14 +260,17 @@ public:
     //! Gets writable access to the contained \ref data.
     /*! It handles automatic resizing of storage. Enlarging the capacity is
      * handled by the underlying \c std::string. This function shrinks the
-     * capacity if there is a large unused capacity.
+     * capacity if there is a large unused capacity. Common implementations
+     * double the capacity when reallocating, therefore we reduce the capacity
+     * when only 1/3 of it is used. This prevents frequent reallocations if the
+     * size oscillates around the reallocation boundary.
      * \return \ref data
      * \throw exception::value_read_only if the value is read-only (that is,
      * marked thread-safe) */
     typename basic_value_string::value_type& value() {
         typename basic_value_string::value_type& v =
             impl::basic_value_string_base<Allocator>::value();
-        if (v.size() <= v.capacity() / 2)
+        if (v.size() <= v.capacity() / 3)
             v.shrink_to_fit();
         return v;
     }
@@ -298,14 +301,17 @@ public:
     //! Gets writable access to the contained \ref data.
     /*! It handles automatic resizing of storage. Enlarging the capacity is
      * handled by the underlying \c std::vector. This function shrinks the
-     * capacity if there is a large unused capacity.
+     * capacity if there is a large unused capacity. Common implementations
+     * double the capacity when reallocating, therefore we reduce the capacity
+     * when only 1/3 of it is used. This prevents frequent reallocations if the
+     * size oscillates around the reallocation boundary.
      * \return \ref data
      * \throw exception::value_read_only if the value is read-only (that is,
      * marked thread-safe) */
     typename basic_value_array::value_type& value() {
         typename basic_value_array::value_type& v =
             impl::basic_value_array_base<Allocator>::value();
-        if (v.size() <= v.capacity() / 2)
+        if (v.size() <= v.capacity() / 3)
             v.shrink_to_fit();
         return v;
     }
