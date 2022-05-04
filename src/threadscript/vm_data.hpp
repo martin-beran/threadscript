@@ -162,7 +162,7 @@ private:
      * \param[in] t an ignored parameter used to overload constructors
      * \param[in] a an allocator */
     template <class A> requires impl::uses_allocator<T, A>
-    explicit basic_typed_value(tag2 t,const A& a);
+    explicit basic_typed_value(tag2 t, const A& a);
     //! Creates a default value, used if \a T does not need an allocator.
     /*! \tparam A an allocator type
      * \param[in] t an ignored parameter used to overload constructors
@@ -190,6 +190,8 @@ template <allocator Allocator> using basic_value_bool_base =
 template <impl::allocator Allocator> class basic_value_bool final:
     public impl::basic_value_bool_base<Allocator>
 {
+    static_assert(!impl::uses_allocator<typename basic_value_bool::value_type,
+                  Allocator>);
     using impl::basic_value_bool_base<Allocator>::basic_value_bool_base;
 };
 
@@ -211,6 +213,8 @@ template <allocator Allocator> using basic_value_int_base =
 template <impl::allocator Allocator> class basic_value_int final:
     public impl::basic_value_int_base<Allocator>
 {
+    static_assert(!impl::uses_allocator<typename basic_value_int::value_type,
+                  Allocator>);
     using impl::basic_value_int_base<Allocator>::basic_value_int_base;
 };
 
@@ -232,6 +236,9 @@ template <allocator Allocator> using basic_value_unsigned_base =
 template <impl::allocator Allocator> class basic_value_unsigned final:
     public impl::basic_value_unsigned_base<Allocator>
 {
+    static_assert(
+        !impl::uses_allocator<typename basic_value_unsigned::value_type,
+        Allocator>);
     using impl::basic_value_unsigned_base<Allocator>::basic_value_unsigned_base;
 };
 
@@ -254,6 +261,8 @@ template <allocator Allocator> using basic_value_string_base =
 template <impl::allocator Allocator> class basic_value_string final:
     public impl::basic_value_string_base<Allocator>
 {
+    static_assert(impl::uses_allocator<typename basic_value_string::value_type,
+                  Allocator>);
     using impl::basic_value_string_base<Allocator>::basic_value_string_base;
 public:
     using impl::basic_value_string_base<Allocator>::value;
@@ -295,6 +304,8 @@ template <allocator Allocator> using basic_value_array_base =
 template <impl::allocator Allocator> class basic_value_array final:
     public impl::basic_value_array_base<Allocator>
 {
+    static_assert(impl::uses_allocator<typename basic_value_array::value_type,
+                  Allocator>);
     using impl::basic_value_array_base<Allocator>::basic_value_array_base;
 public:
     using impl::basic_value_array_base<Allocator>::value;
@@ -313,6 +324,52 @@ public:
             impl::basic_value_array_base<Allocator>::value();
         if (v.size() <= v.capacity() / 3)
             v.shrink_to_fit();
+        return v;
+    }
+};
+
+template <impl::allocator Allocator> class basic_value_hash;
+
+namespace impl {
+//! The name of value_hash
+inline constexpr char name_value_hash[] = "hash";
+//! The base class of basic_value_hash
+/*! \tparam Allocator an allocator type */
+template <allocator Allocator> using basic_value_hash_base =
+    basic_typed_value<basic_value_hash<Allocator>,
+        a_basic_hash<a_basic_string<Allocator>,
+            typename basic_value<Allocator>::value_ptr, Allocator>,
+        name_value_hash, Allocator>;
+} // namespace impl
+
+//! The value class holding values hashed by string keys
+/*! \tparam Allocator an allocator type; used internally by the stored
+ * unordered map.
+ * \test in file test_vm_data.cpp
+ * \todo Create tests. */
+template <impl::allocator Allocator> class basic_value_hash final:
+    public impl::basic_value_hash_base<Allocator>
+{
+    static_assert(impl::uses_allocator<typename basic_value_hash::value_type,
+                  Allocator>);
+    using impl::basic_value_hash_base<Allocator>::basic_value_hash_base;
+public:
+    using impl::basic_value_hash_base<Allocator>::value;
+    //! Gets writable access to the contained \ref data.
+    /*! It handles automatic resizing of storage. Reducing the load factor is
+     * handled by the underlying \c std::unordered_hash. This function rehashes
+     * if the load factor decreases significantly. Rehashing increases the load
+     * factor to a value less than the configured maximum. This prevents
+     * frequent rehashing if the size oscillates around the maximum load factor
+     * boundary.
+     * \return \ref data
+     * \throw exception::value_read_only if the value is read-only (that is,
+     * marked thread-safe) */
+    typename basic_value_hash::value_type& value() {
+        typename basic_value_hash::value_type& v =
+            impl::basic_value_hash_base<Allocator>::value();
+        if (v.load_factor() <= v.max_load_factor() / 3)
+            v.rehash(v.size() / v.max_load_factor() / 2 * 3);
         return v;
     }
 };

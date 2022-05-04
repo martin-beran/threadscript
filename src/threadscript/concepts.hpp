@@ -22,9 +22,9 @@ concept allocator = requires (A a, typename A::value_type* p) {
 /*! \tparam T a type
  * \tparam A an allocator type */
 template <class T, class A>
-concept uses_allocator = requires (A a) {
+concept uses_allocator = requires {
     requires allocator<A>;
-    T(a);
+    typename T::allocator_type;
 };
 
 } // namespace threadscript::impl

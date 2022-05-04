@@ -223,7 +223,7 @@ public:
     constexpr default_allocator& operator=(default_allocator&& o) noexcept {
         if (&o != this) {
             std::allocator<T>::operator=(std::move(o));
-            _cfg = o._cfg;
+            _cfg = o._cfg; // NOLINT(bugprone-use-after-move)
         }
         return *this;
     }
@@ -233,12 +233,14 @@ public:
      * \throw std::bad_alloc if allocation is denied by a limit
      * \throw ... any exception thrown by \c std::allocator<T>::allocate() */
     [[nodiscard]] constexpr T* allocate(std::size_t n) {
+        // NOLINTNEXTLINE(bugprone-sizeof-expression)
         if (_cfg && !_cfg->allocate(n * sizeof(T)))
             throw std::bad_alloc();
         try {
             return std::allocator<T>::allocate(n);
         } catch (...) {
             if (_cfg)
+                // NOLINTNEXTLINE(bugprone-sizeof-expression)
                 _cfg->deallocate(n * sizeof(T));
             throw;
         }
@@ -250,6 +252,7 @@ public:
     constexpr void deallocate(T* p, std::size_t n) noexcept {
         std::allocator<T>::deallocate(p, n);
         if (_cfg)
+            // NOLINTNEXTLINE(bugprone-sizeof-expression)
             _cfg->deallocate(n * sizeof(T));
     }
     //! Gets the attached allocator_config object.

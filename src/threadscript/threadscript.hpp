@@ -70,4 +70,11 @@ extern template class basic_typed_value<value_array,
         allocator_any>,
     threadscript::impl::name_value_array, allocator_any>;
 
+//! The \ref basic_value_hash using the configured allocator
+using value_hash = basic_value_hash<allocator_any>;
+extern template class basic_typed_value<value_hash,
+    a_basic_hash<a_string, typename basic_value<allocator_any>::value_ptr,
+        allocator_any>,
+    threadscript::impl::name_value_hash, allocator_any>;
+
 } // namespace threadscript
