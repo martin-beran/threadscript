@@ -198,7 +198,7 @@ BOOST_AUTO_TEST_CASE(value_array_set)
 //! \endcond
 
 /*! \file
- * \test value_array_shallow_copy -- Copying a value of
+ * \test \c value_array_shallow_copy -- Copying a value of
  * threadscript::basic_value_array */
 //! \cond
 BOOST_AUTO_TEST_CASE(value_array_shallow_copy)
@@ -238,7 +238,7 @@ BOOST_AUTO_TEST_CASE(value_array_shallow_copy)
 //! \endcond
 
 /*! \file
- * \test value_array_mt_safe -- Handling thread-safety flag of
+ * \test \c value_array_mt_safe -- Handling thread-safety flag of
  * threadscript::value_array */
 //! \cond
 BOOST_AUTO_TEST_CASE(value_array_mt_safe)
@@ -269,7 +269,7 @@ BOOST_AUTO_TEST_CASE(value_array_allocator)
 //! \endcond
 
 /*! \file
- * \test value_array_capacity -- Automatic handling of
+ * \test \c value_array_capacity -- Automatic handling of
  * threadscript::basic_value_array capacity */
 //! \cond
 BOOST_AUTO_TEST_CASE(value_array_capacity)
@@ -328,7 +328,7 @@ BOOST_AUTO_TEST_CASE(value_hash_set)
 //! \endcond
 
 /*! \file
- * \test value_hash_shallow_copy -- Copying a value of
+ * \test \c value_hash_shallow_copy -- Copying a value of
  * threadscript::basic_value_hash */
 //! \cond
 BOOST_AUTO_TEST_CASE(value_hash_shallow_copy)
@@ -370,7 +370,7 @@ BOOST_AUTO_TEST_CASE(value_hash_shallow_copy)
 //! \endcond
 
 /*! \file
- * \test value_hash_mt_safe -- Handling thread-safety flag of
+ * \test \c value_hash_mt_safe -- Handling thread-safety flag of
  * threadscript::value_hash */
 //! \cond
 BOOST_AUTO_TEST_CASE(value_hash_mt_safe)
@@ -401,7 +401,7 @@ BOOST_AUTO_TEST_CASE(value_hash_allocator)
 //! \endcond
 
 /*! \file
- * \test value_hash_capacity -- Automatic handling of
+ * \test \c value_hash_capacity -- Automatic handling of
  * threadscript::basic_value_hash capacity */
 //! \cond
 BOOST_AUTO_TEST_CASE(value_hash_capacity, *boost::unit_test::tolerance(0.05))
