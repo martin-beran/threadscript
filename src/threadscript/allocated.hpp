@@ -72,16 +72,15 @@ using a_basic_string = std::basic_string<char, std::char_traits<char>,
 //! A hash function for a_basic_string
 /*! It is needed, because the standard library provides a specialization of
  * \c std::hash for \c std::string, but not for instances of template \c
- * std::basic_string that use a custom allocator. */
-struct a_basic_string_hash {
+ * std::basic_string that use a custom allocator.
+ * \tparam Allocator an allocator type */
+template <impl::allocator Allocator> struct a_basic_string_hash {
     //! Computes a hash value.
     /*! The result is the same as for the corresponding \c std::string, because
      * the C++ standard requires the same values of \c std::hash for
      * \c std::string and \c std::string_view.
-     * \tparam Allocator an allocator type
      * \param[in] s a value to be hashed
      * \return the hash value */
-    template <impl::allocator Allocator>
     size_t operator()(const a_basic_string<Allocator>& s) const noexcept {
         return std::hash<std::string_view>{}(s);
     }
@@ -115,7 +114,7 @@ template <class T, bool B = is_a_basic_string<T>> struct hash_for {
 /*! \tparam T an instance of a_basic_string */
 template <class T> struct hash_for<T, true> {
     //! The hash function implementation for a_basic_string
-    using type = a_basic_string_hash;
+    using type = a_basic_string_hash<typename T::allocator_type>;
 };
 
 //! An alias for \c hash_for<T>::type

@@ -210,7 +210,7 @@ BOOST_AUTO_TEST_CASE(value_array_shallow_copy)
     for (size_t i = 0; i < n; ++i) {
         auto v = ts::value_unsigned::create(alloc);
         v->value() = i;
-        a->value(). push_back(v);
+        a->value().push_back(v);
     }
     auto untyped_copy = untyped->shallow_copy(alloc);
     static_assert(std::is_same_v<decltype(untyped_copy), ts::value::value_ptr>);
@@ -233,7 +233,7 @@ BOOST_AUTO_TEST_CASE(value_array_shallow_copy)
     BOOST_TEST(typed->value().size() == n);
     BOOST_TEST(typed_copy->value().size() == n);
     for (size_t i = 0; i < n; ++i)
-        BOOST_TEST(typed->value().size() == typed_copy->value().size());
+        BOOST_TEST(typed->value()[i].get() == typed_copy->value()[i].get());
 }
 //! \endcond
 
@@ -294,5 +294,142 @@ BOOST_AUTO_TEST_CASE(value_array_capacity)
     for (size_t i = 0; i < cap.size() - 1; ++i)
         BOOST_TEST(cap[i] == c0);
     BOOST_TEST(v->value().size() == cap.back());
+}
+//! \endcond
+
+/*! \file
+ * \test \c value_hash_default -- Default-constructed value of
+ * threadscript::basic_value_hash */
+//! \cond
+BOOST_AUTO_TEST_CASE(value_hash_default)
+{
+    ts::allocator_any alloc;
+    auto v = ts::value_hash::create(alloc);
+    BOOST_TEST(ts::value_hash::static_type_name() == "hash"sv);
+    BOOST_TEST(v->type_name() == "hash"sv);
+    BOOST_TEST(v->value().empty());
+}
+//! \endcond
+
+/*! \file
+ * \test \c value_hash_set -- Setting a value of
+ * threadscript::basic_value_hash */
+//! \cond
+BOOST_AUTO_TEST_CASE(value_hash_set)
+{
+    ts::allocator_any alloc;
+    auto v = ts::value_hash::create(alloc);
+    v->value()["int"] = ts::value_int::create(alloc);
+    BOOST_TEST(v->value()["int"]->type_name() == "int"sv);
+    BOOST_TEST(v->cvalue().at("int")->type_name() == "int"sv);
+    BOOST_TEST(ts::value_hash::const_typed_value_ptr(v)->value().at("int")->
+               type_name() == "int"sv);
+}
+//! \endcond
+
+/*! \file
+ * \test value_hash_shallow_copy -- Copying a value of
+ * threadscript::basic_value_hash */
+//! \cond
+BOOST_AUTO_TEST_CASE(value_hash_shallow_copy)
+{
+    ts::allocator_any alloc;
+    ts::value::value_ptr untyped = ts::value_hash::create(alloc);
+    auto a = dynamic_pointer_cast<ts::value_hash>(untyped);
+    size_t n = 10;
+    for (size_t i = 0; i < n; ++i) {
+        auto v = ts::value_unsigned::create(alloc);
+        v->value() = i;
+        a->value()[std::to_string(i).c_str()] = v;
+    }
+    auto untyped_copy = untyped->shallow_copy(alloc);
+    static_assert(std::is_same_v<decltype(untyped_copy), ts::value::value_ptr>);
+    auto ac = dynamic_pointer_cast<ts::value_hash>(untyped_copy);
+    BOOST_TEST(a->value().size() == n);
+    BOOST_TEST(ac->value().size() == n);
+    for (size_t i = 0; i < n; ++i)
+        BOOST_TEST(a->value()[std::to_string(i).c_str()].get() ==
+                   ac->value()[std::to_string(i).c_str()].get());
+    auto typed = ts::value_hash::create(alloc);
+    for (size_t i = 0; i < n; ++i) {
+        auto v = ts::value_unsigned::create(alloc);
+        v->value() = i;
+        typed->value()[std::to_string(i).c_str()] = v;
+    }
+    static_assert(std::is_same_v<decltype(typed),
+                  ts::value_hash::typed_value_ptr>);
+    auto typed_copy = typed->shallow_copy(alloc);
+    static_assert(std::is_same_v<decltype(typed_copy),
+                  ts::value_hash::typed_value_ptr>);
+    BOOST_TEST(typed->value().size() == n);
+    BOOST_TEST(typed_copy->value().size() == n);
+    for (size_t i = 0; i < n; ++i)
+        BOOST_TEST(typed->value()[std::to_string(i).c_str()].get() ==
+                   typed_copy->value()[std::to_string(i).c_str()].get());
+}
+//! \endcond
+
+/*! \file
+ * \test value_hash_mt_safe -- Handling thread-safety flag of
+ * threadscript::value_hash */
+//! \cond
+BOOST_AUTO_TEST_CASE(value_hash_mt_safe)
+{
+    ts::allocator_any alloc;
+    auto v = ts::value_hash::create(alloc);
+    BOOST_TEST(!v->mt_safe());
+    v->value()["int"] = ts::value_int::create(alloc);
+    v->set_mt_safe();
+    BOOST_TEST(v->mt_safe());
+    BOOST_TEST(v->cvalue().size() == 1);
+    BOOST_TEST(ts::value_hash::const_typed_value_ptr(v)->value().size() == 1);
+    BOOST_CHECK_THROW(v->value(), ts::exception::value_mt_unsafe);
+}
+//! \endcond
+
+/*! \file
+ * \test \c value_hash_allocator -- The internal value of
+ * threadscript::basic_value_hash uses the provided allocator. */
+//! \cond
+BOOST_AUTO_TEST_CASE(value_hash_allocator)
+{
+    ts::allocator_config cfg;
+    ts::allocator_any alloc{&cfg};
+    auto v = ts::value_hash::create(alloc);
+    BOOST_TEST(alloc.cfg() == v->value().get_allocator().cfg());
+}
+//! \endcond
+
+/*! \file
+ * \test value_hash_capacity -- Automatic handling of
+ * threadscript::basic_value_hash capacity */
+//! \cond
+BOOST_AUTO_TEST_CASE(value_hash_capacity, *boost::unit_test::tolerance(0.05))
+{
+    ts::allocator_any alloc;
+    auto v = ts::value_hash::create(alloc);
+    size_t n = 100;
+    for (size_t i = 0; i < n; ++i) {
+        auto e = ts::value_unsigned::create(alloc);
+        e->value() = i;
+        v->value()[std::to_string(i).c_str()] = e;
+    }
+    size_t shrinked = 0;
+    auto& val = v->value();
+    auto max_load = val.max_load_factor();
+    for (size_t i = 0; i < n; ++i) {
+        auto load0 = val.load_factor();
+        // v->value() on the next line can trigger rehash
+        // NOLINTNEXTLINE(readability-redundant-string-cstr)
+        v->value().erase(std::to_string(i).c_str());
+        auto load1 = val.load_factor();
+        if (load0 > max_load / 3)
+            BOOST_TEST(load1 <= load0);
+        else {
+            if(++shrinked <= 3)
+                BOOST_TEST(load1 >= 0.5);
+        }
+    }
+    BOOST_TEST(shrinked > 0);
 }
 //! \endcond
