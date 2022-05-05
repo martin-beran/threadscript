@@ -11,6 +11,7 @@
 //! \cond
 #include "threadscript/config.hpp"
 #include "threadscript/config_default.hpp"
+#include "threadscript/default_allocator.hpp"
 #include "threadscript/exception.hpp"
 #include "threadscript/threadscript.hpp"
 
@@ -121,6 +122,19 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(value_mt_safe, T, value_types)
     BOOST_TEST(typename T::const_typed_value_ptr(v)->value() ==
                properties<T>::set_value);
     BOOST_CHECK_THROW(v->value(), ts::exception::value_mt_unsafe);
+}
+//! \endcond
+
+/*! \file
+ * \test \c value_string_allocator -- The internal value of
+ * threadscript::basic_value_string uses the provided allocator. */
+//! \cond
+BOOST_AUTO_TEST_CASE(value_string_allocator)
+{
+    ts::allocator_config cfg;
+    ts::allocator_any alloc{&cfg};
+    auto v = ts::value_string::create(alloc);
+    BOOST_TEST(alloc.cfg() == v->value().get_allocator().cfg());
 }
 //! \endcond
 
@@ -238,6 +252,19 @@ BOOST_AUTO_TEST_CASE(value_array_mt_safe)
     BOOST_TEST(v->cvalue().size() == 1);
     BOOST_TEST(ts::value_array::const_typed_value_ptr(v)->value().size() == 1);
     BOOST_CHECK_THROW(v->value(), ts::exception::value_mt_unsafe);
+}
+//! \endcond
+
+/*! \file
+ * \test \c value_array_allocator -- The internal value of
+ * threadscript::basic_value_array uses the provided allocator. */
+//! \cond
+BOOST_AUTO_TEST_CASE(value_array_allocator)
+{
+    ts::allocator_config cfg;
+    ts::allocator_any alloc{&cfg};
+    auto v = ts::value_array::create(alloc);
+    BOOST_TEST(alloc.cfg() == v->value().get_allocator().cfg());
 }
 //! \endcond
 
