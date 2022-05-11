@@ -12,7 +12,9 @@
 #include "threadscript/config.hpp"
 #include "threadscript/config_default.hpp"
 #include "threadscript/exception.hpp"
+
 #include <memory>
+#include <optional>
 
 namespace threadscript {
 
@@ -28,7 +30,14 @@ namespace threadscript {
  * mt-safe is a stronger constraint than being const. The thread-safety flag
  * cannot be unset, because it may not be possible to trace all places that
  * depend on it.
- * \tparam Allcator the allocator type
+ *
+ * To be able to mark a value as mt-safe, all other values referenced by it
+ * (e.g., by a basic_value_array or basic_value_hash) must be already mt-safe.
+ * The reason is that after marked mt-safe, the value may be shared among
+ * threads. If a thread accesses a referenced value through the shared value,
+ * it must be sure that the referenced value cannot be modified concurrently by
+ * another thread.
+ * \tparam Allocator the allocator type
  * \threadsafe{safe,unsafe}
  * \test in file test_vm_data.cpp */
 template <impl::allocator Allocator> class basic_value:
@@ -51,7 +60,9 @@ public:
     /*! \return the type name */
     [[nodiscard]] virtual std::string_view type_name() const noexcept = 0;
     //! Tests if this value is marked as thread-safe.
-    /*! \return the thread-safety flag */
+    /*! This function just returns the internal mt-safety flag. Any testing if
+     * the value may be marked as mt-safe must be done by set_mt_safe().
+     * \return the thread-safety flag */
     [[nodiscard]] bool mt_safe() const noexcept { return _mt_safe; }
     //! Sets the thread-safety flag of this value.
     /*! This base class function never throws. Overriding function must call
@@ -65,9 +76,14 @@ public:
      * objects as in the source object.
      * \param[in] alloc the allocator used to make the copy and passed to any
      * member object that needs an allocator
+     * \param[in] mt_safe sets the thread-safety flag of the new value to \c
+     * true or \c false; copies the thread-safety flag from the source value if
+     * \c nullopt.
      * \return a copy of this value */
-    value_ptr shallow_copy(const Allocator& alloc) const {
-        return shallow_copy_impl(alloc);
+    value_ptr shallow_copy(const Allocator& alloc,
+                           std::optional<bool> mt_safe = {}) const
+    {
+        return shallow_copy_impl(alloc, mt_safe);
     }
 protected:
     //! Default constructor
@@ -76,14 +92,9 @@ protected:
     //! Virtual default destructor, because this is a polymorphic type
     /*! Protected, because no instances of this class should be created. */
     virtual ~basic_value() = default;
-    //! Copies this value, but not referenced values.
-    /*! It makes a deep copy of the representation of this value itself, but
-     * any pointers to other basic_value objects will reference the same
-     * objects as in the source object.
-     * \param[in] alloc the allocator used to make the copy and passed to any
-     * member object that needs an allocator
-     * \return a copy of this value */
-    virtual value_ptr shallow_copy_impl(const Allocator& alloc) const = 0;
+    //! \copydoc basic_value<Allocator>::shallow_copy()
+    virtual value_ptr shallow_copy_impl(const Allocator& alloc,
+                                        std::optional<bool> mt_safe) const = 0;
 private:
     bool _mt_safe = false; //!< Whether this value is thread-safe
 };
@@ -133,18 +144,13 @@ public:
      * marked thread-safe) */
     value_type& value() {
         if (this->mt_safe())
-            throw exception::value_mt_unsafe();
+            throw exception::value_read_only();
         return data;
     }
-    //! Copies this value, but not referenced values.
-    /*! It makes a deep copy of the representation of this value itself, but
-     * any pointers to other basic_value objects will reference the same
-     * objects as in the source object.
-     * \param[in] alloc the allocator used to make the copy and passed to any
-     * member object that needs an allocator
-     * \return a copy of this value */
-    typed_value_ptr shallow_copy(const Allocator& alloc) const {
-        return static_pointer_cast<Derived>(shallow_copy_impl(alloc));
+    //! \copydoc basic_value<Allocator>::shallow_copy()
+    typed_value_ptr shallow_copy(const Allocator& alloc,
+                                 std::optional<bool> mt_safe = {}) const {
+        return static_pointer_cast<Derived>(shallow_copy_impl(alloc, mt_safe));
     }
     //! Creates a default value.
     /*! \param[in] t an ignored parameter used to overload constructors and to
@@ -154,7 +160,8 @@ public:
     basic_typed_value(tag t, const Allocator& alloc);
 protected:
     typename basic_value<Allocator>::value_ptr
-        shallow_copy_impl(const Allocator& alloc) const override;
+        shallow_copy_impl(const Allocator& alloc,
+                          std::optional<bool> mt_safe) const override;
 private:
     struct tag2 {}; //!< Used to distiguish between constructors
     //! Creates a default value, used if \a T needs an allocator.
@@ -326,6 +333,10 @@ public:
             v.shrink_to_fit();
         return v;
     }
+    //! \copybrief impl::basic_value_array_base<Allocator>::set_mt_safe()
+    /*! \throw exception::value_mt_unsafe if the array contains at least one
+     * value that is not mt-safe. */
+    void set_mt_safe() override;
 };
 
 template <impl::allocator Allocator> class basic_value_hash;
@@ -372,6 +383,10 @@ public:
             v.rehash(v.size() / v.max_load_factor() / 2 * 3);
         return v;
     }
+    //! \copybrief impl::basic_value_hash_base<Allocator>::set_mt_safe()
+    /*! \throw exception::value_mt_unsafe if the array contains at least one
+     * value that is not mt-safe. */
+    void set_mt_safe() override;
 };
 
 } // namespace threadscript

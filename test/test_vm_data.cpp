@@ -107,6 +107,52 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(value_shallow_copy, T, value_types)
 //! \endcond
 
 /*! \file
+ * \test value_shallow_copy_mt_safe -- Setting thread-safety flag when copying
+ * a value of a type dedived from threadscript::basic_typed_value */
+//! \cond
+BOOST_AUTO_TEST_CASE_TEMPLATE(value_shallow_copy_mt_safe, T, value_types)
+{
+    ts::allocator_any alloc;
+    ts::value::value_ptr value = T::create(alloc);
+    dynamic_pointer_cast<T>(value)->value() = properties<T>::set_value;
+    {
+        auto copy = value->shallow_copy(alloc);
+        BOOST_TEST(!copy->mt_safe());
+    }
+    {
+        auto copy = value->shallow_copy(alloc, std::nullopt);
+        BOOST_TEST(!copy->mt_safe());
+    }
+    {
+        auto copy = value->shallow_copy(alloc, false);
+        BOOST_TEST(!copy->mt_safe());
+    }
+    {
+        auto copy = value->shallow_copy(alloc, true);
+        BOOST_TEST(copy->mt_safe());
+    }
+    value->set_mt_safe();
+    {
+        auto copy = value->shallow_copy(alloc);
+        BOOST_TEST(copy->mt_safe());
+    }
+    {
+        auto copy = value->shallow_copy(alloc, std::nullopt);
+        BOOST_TEST(copy->mt_safe());
+    }
+    {
+        auto copy = value->shallow_copy(alloc, false);
+        BOOST_TEST(!copy->mt_safe());
+    }
+    {
+        auto copy = value->shallow_copy(alloc, true);
+        BOOST_TEST(copy->mt_safe());
+    }
+}
+
+//! \endcond
+
+/*! \file
  * \test \c value_mt_safe -- Handling thread-safety flag of a type derived
  * from threadscript::basic_typed_value */
 //! \cond
@@ -121,7 +167,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(value_mt_safe, T, value_types)
     BOOST_TEST(v->cvalue() == properties<T>::set_value);
     BOOST_TEST(typename T::const_typed_value_ptr(v)->value() ==
                properties<T>::set_value);
-    BOOST_CHECK_THROW(v->value(), ts::exception::value_mt_unsafe);
+    BOOST_CHECK_THROW(v->value(), ts::exception::value_read_only);
 }
 //! \endcond
 
@@ -246,12 +292,16 @@ BOOST_AUTO_TEST_CASE(value_array_mt_safe)
     ts::allocator_any alloc;
     auto v = ts::value_array::create(alloc);
     BOOST_TEST(!v->mt_safe());
+    v->value().push_back(nullptr);
     v->value().push_back(ts::value_int::create(alloc));
+    BOOST_CHECK_THROW(v->set_mt_safe(), ts::exception::value_mt_unsafe);
+    BOOST_TEST(!v->mt_safe());
+    v->value().at(1)->set_mt_safe();
     v->set_mt_safe();
     BOOST_TEST(v->mt_safe());
-    BOOST_TEST(v->cvalue().size() == 1);
-    BOOST_TEST(ts::value_array::const_typed_value_ptr(v)->value().size() == 1);
-    BOOST_CHECK_THROW(v->value(), ts::exception::value_mt_unsafe);
+    BOOST_TEST(v->cvalue().size() == 2);
+    BOOST_TEST(ts::value_array::const_typed_value_ptr(v)->value().size() == 2);
+    BOOST_CHECK_THROW(v->value(), ts::exception::value_read_only);
 }
 //! \endcond
 
@@ -378,12 +428,16 @@ BOOST_AUTO_TEST_CASE(value_hash_mt_safe)
     ts::allocator_any alloc;
     auto v = ts::value_hash::create(alloc);
     BOOST_TEST(!v->mt_safe());
+    v->value()["null"] = nullptr;
     v->value()["int"] = ts::value_int::create(alloc);
+    BOOST_CHECK_THROW(v->set_mt_safe(), ts::exception::value_mt_unsafe);
+    BOOST_TEST(!v->mt_safe());
+    v->value()["int"]->set_mt_safe();
     v->set_mt_safe();
     BOOST_TEST(v->mt_safe());
-    BOOST_TEST(v->cvalue().size() == 1);
-    BOOST_TEST(ts::value_hash::const_typed_value_ptr(v)->value().size() == 1);
-    BOOST_CHECK_THROW(v->value(), ts::exception::value_mt_unsafe);
+    BOOST_TEST(v->cvalue().size() == 2);
+    BOOST_TEST(ts::value_hash::const_typed_value_ptr(v)->value().size() == 2);
+    BOOST_CHECK_THROW(v->value(), ts::exception::value_read_only);
 }
 //! \endcond
 
