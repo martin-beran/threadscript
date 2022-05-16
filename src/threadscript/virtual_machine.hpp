@@ -12,7 +12,7 @@
 
 namespace threadscript {
 
-template <class Allocator> class basic_state;
+template <class A> class basic_state;
 
 //! The ThreadScript virtual machine
 /*! An object of this class represents a single instance of the ThreadScript
@@ -26,15 +26,15 @@ template <class Allocator> class basic_state;
  * or its (possibly rebound) copy, in the VM. Allocators of type
  * default_allocator sharing the same allocator_config satisfy this
  * requirement.
- * \tparam Allocator the allocator used by this VM
+ * \tparam A the allocator used by this VM
  * \threadsafe{safe,safe}
  * \test in file test_virtual_machine.cpp */
-template <class Allocator> class basic_virtual_machine {
+template <class A> class basic_virtual_machine {
 public:
     //! Default constructor
     /*! \param[in] alloc the allocator to be used by this VM */
     // \NOLINTNEXTLINE(modernize-pass-by-value)
-    explicit basic_virtual_machine(const Allocator& alloc): alloc(alloc) {}
+    explicit basic_virtual_machine(const A& alloc): alloc(alloc) {}
     //! No copying
     basic_virtual_machine(const basic_virtual_machine&) = delete;
     //! No moving
@@ -49,7 +49,7 @@ public:
     basic_virtual_machine& operator=(basic_virtual_machine&&) = delete;
     //! Gets the allocator used by this VM.
     /*! \return a copy of the allocator object */
-    [[nodiscard]] Allocator get_allocator() const noexcept { return alloc; }
+    [[nodiscard]] A get_allocator() const noexcept { return alloc; }
     //! Gets the number of states (threads) attached to this VM.
     /*! \return the number of attached basic_state objects */
     [[nodiscard]] size_t num_states() const noexcept {
@@ -57,22 +57,22 @@ public:
     }
 private:
     //! The allocator used by this VM.
-    [[no_unique_address]] Allocator alloc;
+    [[no_unique_address]] A alloc;
     //! The number of basic_state objects attached to this VM
     std::atomic<size_t> _num_states{0};
     //! Needs access to num_states
-    friend class basic_state<Allocator>;
+    friend class basic_state<A>;
 };
 
 //! The state of a single thread in a basic_virtual_machine
-/*! \tparam Allocator the allocator type used by this thread; it must be the
+/*! \tparam A the allocator type used by this thread; it must be the
  * same as the allocator used by the VM
  * \threadsafe{safe,unsafe}
  * \test in file test_virtual_machine.cpp */
-template <class Allocator> class basic_state {
+template <class A> class basic_state {
 public:
     //! The type of the virtual machine containing this state.
-    using vm_t = basic_virtual_machine<Allocator>;
+    using vm_t = basic_virtual_machine<A>;
     //! The constructor registers basic_state in \a vm.
     /*! \param[in] vm the virtual machine which this state is attached to. */
     explicit basic_state(vm_t& vm): vm(vm), alloc(vm.get_allocator()) {
@@ -92,10 +92,10 @@ public:
     basic_state& operator=(basic_state&&) = delete;
     //! Get the allocator used by this state.
     /*! \return a copy of the allocator object */
-    [[nodiscard]] Allocator get_allocator() const noexcept { return alloc; }
+    [[nodiscard]] A get_allocator() const noexcept { return alloc; }
     vm_t& vm; //!< The virtual machine 
 private:
-    [[no_unique_address]] Allocator alloc; //!< The allocator used by this state
+    [[no_unique_address]] A alloc; //!< The allocator used by this state
 };
 
 } // namespace threadscript

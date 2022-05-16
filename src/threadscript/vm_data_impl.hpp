@@ -10,44 +10,40 @@ namespace threadscript {
 
 /*** basic_value ************************************************************/
 
-template <impl::allocator Allocator>
-void basic_value<Allocator>::set_mt_safe()
+template <impl::allocator A>
+void basic_value<A>::set_mt_safe()
 {
     _mt_safe = true;
 }
 
 /*** basic_typed_value ******************************************************/
 
-template <class Derived, class T, const char* Name, impl::allocator Allocator>
-basic_typed_value<Derived, T, Name, Allocator>::basic_typed_value(tag,
-                                                      const Allocator& alloc):
+template <class Derived, class T, const char* Name, impl::allocator A>
+basic_typed_value<Derived, T, Name, A>::basic_typed_value(tag, const A& alloc):
     basic_typed_value(tag2{}, alloc)
 {
 }
 
 //! \cond
-template <class Derived, class T, const char* Name, impl::allocator Allocator>
+template <class Derived, class T, const char* Name, impl::allocator A>
 template <class A> requires impl::uses_allocator<T, A>
-basic_typed_value<Derived, T, Name, Allocator>::basic_typed_value(tag2,
-                                                                  const A& a):
+basic_typed_value<Derived, T, Name, A>::basic_typed_value(tag2, const A& a):
     data{a}
 {
 }
 
-template <class Derived, class T, const char* Name, impl::allocator Allocator>
+template <class Derived, class T, const char* Name, impl::allocator A>
 template <class A> requires (!impl::uses_allocator<T, A>)
-basic_typed_value<Derived, T, Name, Allocator>::basic_typed_value(tag2,
-                                                                  const A&):
+basic_typed_value<Derived, T, Name, A>::basic_typed_value(tag2, const A&):
     data{}
 {
 }
 //! \endcond
 
-template <class Derived, class T, const char* Name, impl::allocator Allocator>
-auto basic_typed_value<Derived, T, Name, Allocator>::shallow_copy_impl(
-                                                    const Allocator& alloc,
+template <class Derived, class T, const char* Name, impl::allocator A>
+auto basic_typed_value<Derived, T, Name, A>::shallow_copy_impl(const A& alloc,
                                                     std::optional<bool> mt_safe)
-    const -> typename basic_value<Allocator>::value_ptr
+    const -> typename basic_value<A>::value_ptr
 {
     auto p = create(alloc);
     p->value() = value();
@@ -56,9 +52,9 @@ auto basic_typed_value<Derived, T, Name, Allocator>::shallow_copy_impl(
     return p;
 }
 
-template <class Derived, class T, const char* Name, impl::allocator Allocator>
-std::string_view
-basic_typed_value<Derived, T, Name, Allocator>::type_name() const noexcept
+template <class Derived, class T, const char* Name, impl::allocator A>
+std::string_view basic_typed_value<Derived, T, Name, A>::type_name()
+    const noexcept
 {
     // It is here and not in the declaration of class basic_typed_value,
     // because Derived must be a complete type here
@@ -68,24 +64,21 @@ basic_typed_value<Derived, T, Name, Allocator>::type_name() const noexcept
 
 /*** basic_value_array *******************************************************/
 
-template <impl::allocator Allocator>
-void basic_value_array<Allocator>::set_mt_safe()
+template <impl::allocator A> void basic_value_array<A>::set_mt_safe()
 {
     for (auto&& v: this->cvalue())
         if (v && !v->mt_safe())
             throw exception::value_mt_unsafe();
-    return impl::basic_value_array_base<Allocator>::set_mt_safe();
-}
+    return impl::basic_value_array_base<A>::set_mt_safe(); }
 
 /*** basic_value_hash ********************************************************/
 
-template <impl::allocator Allocator>
-void basic_value_hash<Allocator>::set_mt_safe()
+template <impl::allocator A> void basic_value_hash<A>::set_mt_safe()
 {
     for (auto&& v: this->cvalue())
         if (v.second && !v.second->mt_safe())
             throw exception::value_mt_unsafe();
-    return impl::basic_value_hash_base<Allocator>::set_mt_safe();
+    return impl::basic_value_hash_base<A>::set_mt_safe();
 }
 
 } // namespace threadscript

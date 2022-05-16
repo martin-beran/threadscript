@@ -18,7 +18,7 @@
 
 namespace threadscript {
 
-//! The base class for all value types that can be referenced by a symbol table
+//! The base class for all value types that can be referenced by a symbol_table
 /*! It is the base of a hierarchy of polymorphic value classes, therefore it
  * has a virtual destructor. All value types are derived from value_base,
  * except \c null, which is represented by a \c nullptr value of a
@@ -37,11 +37,11 @@ namespace threadscript {
  * threads. If a thread accesses a referenced value through the shared value,
  * it must be sure that the referenced value cannot be modified concurrently by
  * another thread.
- * \tparam Allocator the allocator type
+ * \tparam A the allocator type
  * \threadsafe{safe,unsafe}
  * \test in file test_vm_data.cpp */
-template <impl::allocator Allocator> class basic_value:
-    public std::enable_shared_from_this<basic_value<Allocator>> {
+template <impl::allocator A> class basic_value:
+    public std::enable_shared_from_this<basic_value<A>> {
 public:
     //! The shared pointer type to values represented by basic_value objects
     /*! Value \c nullptr is permitted and represents a \c null value. */
@@ -80,8 +80,8 @@ public:
      * true or \c false; copies the thread-safety flag from the source value if
      * \c nullopt.
      * \return a copy of this value */
-    value_ptr shallow_copy(const Allocator& alloc,
-                           std::optional<bool> mt_safe = {}) const
+    value_ptr shallow_copy(const A& alloc, std::optional<bool> mt_safe = {})
+        const
     {
         return shallow_copy_impl(alloc, mt_safe);
     }
@@ -92,8 +92,8 @@ protected:
     //! Virtual default destructor, because this is a polymorphic type
     /*! Protected, because no instances of this class should be created. */
     virtual ~basic_value() = default;
-    //! \copydoc basic_value<Allocator>::shallow_copy()
-    virtual value_ptr shallow_copy_impl(const Allocator& alloc,
+    //! \copydoc basic_value<A>::shallow_copy()
+    virtual value_ptr shallow_copy_impl(const A& alloc,
                                         std::optional<bool> mt_safe) const = 0;
 private:
     bool _mt_safe = false; //!< Whether this value is thread-safe
@@ -105,10 +105,10 @@ private:
  * \tparam Derived the derived value type (it is expected to be \c final)
  * \tparam T the type of the internal stored \ref data
  * \tparam Name the type name used by the ThreadScript engine
- * \tparam Allocator the allocator to be used by \ref data (if needed).
+ * \tparam A the allocator to be used by \ref data (if needed).
  * \test in file test_vm_data.cpp */
-template <class Derived, class T, const char* Name, impl::allocator Allocator>
-class basic_typed_value: public basic_value<Allocator> {
+template <class Derived, class T, const char* Name, impl::allocator A>
+class basic_typed_value: public basic_value<A> {
 protected:
     struct tag {}; //!< Used to distiguish between constructors
 public:
@@ -126,7 +126,7 @@ public:
     //! Creates a new default value.
     /*! \param[in] alloc an allocator
      * \return a shared pointer to the created value */
-    static typed_value_ptr create(const Allocator& alloc) {
+    static typed_value_ptr create(const A& alloc) {
         return std::allocate_shared<Derived>(alloc, tag{}, alloc);
     }
     //! Gets the type name of this value.
@@ -147,9 +147,10 @@ public:
             throw exception::value_read_only();
         return data;
     }
-    //! \copydoc basic_value<Allocator>::shallow_copy()
-    typed_value_ptr shallow_copy(const Allocator& alloc,
-                                 std::optional<bool> mt_safe = {}) const {
+    //! \copydoc basic_value<A>::shallow_copy()
+    typed_value_ptr shallow_copy(const A& alloc,
+                                 std::optional<bool> mt_safe = {}) const
+    {
         return static_pointer_cast<Derived>(shallow_copy_impl(alloc, mt_safe));
     }
     //! Creates a default value.
@@ -157,10 +158,10 @@ public:
      * prevent using this constructor directly
      * \param[in] alloc an allocator to be used by \ref data; ignored if \a T
      * does not need an allocator */
-    basic_typed_value(tag t, const Allocator& alloc);
+    basic_typed_value(tag t, const A& alloc);
 protected:
-    typename basic_value<Allocator>::value_ptr
-        shallow_copy_impl(const Allocator& alloc,
+    typename basic_value<A>::value_ptr
+        shallow_copy_impl(const A& alloc,
                           std::optional<bool> mt_safe) const override;
 private:
     struct tag2 {}; //!< Used to distiguish between constructors
@@ -179,100 +180,98 @@ private:
     value_type data; //!< The stored data of this value
 };
 
-template <impl::allocator Allocator> class basic_value_bool;
+template <impl::allocator A> class basic_value_bool;
 
 namespace impl {
 //! The name of basic_value_bool
 inline constexpr char name_value_bool[] = "bool";
 //! The base class of basic_value_bool
-/*! \tparam Allocator an allocator type */
-template <allocator Allocator> using basic_value_bool_base =
-    basic_typed_value<basic_value_bool<Allocator>, bool, name_value_bool,
-        Allocator>;
+/*! \tparam A an allocator type */
+template <allocator A> using basic_value_bool_base =
+    basic_typed_value<basic_value_bool<A>, bool, name_value_bool, A>;
 } // namespace impl
 
 //! The value class holding a Boolean value
-/*! \tparam Allocator an allocator type; unused
+/*! \tparam A an allocator type; unused
  * \test in file test_vm_data.cpp */
-template <impl::allocator Allocator> class basic_value_bool final:
-    public impl::basic_value_bool_base<Allocator>
+template <impl::allocator A> class basic_value_bool final:
+    public impl::basic_value_bool_base<A>
 {
     static_assert(!impl::uses_allocator<typename basic_value_bool::value_type,
-                  Allocator>);
-    using impl::basic_value_bool_base<Allocator>::basic_value_bool_base;
+                  A>);
+    using impl::basic_value_bool_base<A>::basic_value_bool_base;
 };
 
-template <impl::allocator Allocator> class basic_value_int;
+template <impl::allocator A> class basic_value_int;
 
 namespace impl {
 //! The name of basic_value_int
 inline constexpr char name_value_int[] = "int";
 //! The base class of basic_value_int
-/*! \tparam Allocator an allocator type */
-template <allocator Allocator> using basic_value_int_base =
-    basic_typed_value<basic_value_int<Allocator>, config::value_int_type,
-        name_value_int, Allocator>;
+/*! \tparam A an allocator type */
+template <allocator A> using basic_value_int_base =
+    basic_typed_value<basic_value_int<A>, config::value_int_type,
+        name_value_int, A>;
 } // namespace impl
 
 //! The value class holding a signed integer value
-/*! \tparam Allocator an allocator type; unused
+/*! \tparam A an allocator type; unused
  * \test in file test_vm_data.cpp */
-template <impl::allocator Allocator> class basic_value_int final:
-    public impl::basic_value_int_base<Allocator>
+template <impl::allocator A> class basic_value_int final:
+    public impl::basic_value_int_base<A>
 {
     static_assert(!impl::uses_allocator<typename basic_value_int::value_type,
-                  Allocator>);
-    using impl::basic_value_int_base<Allocator>::basic_value_int_base;
+                  A>);
+    using impl::basic_value_int_base<A>::basic_value_int_base;
 };
 
-template <impl::allocator Allocator> class basic_value_unsigned;
+template <impl::allocator A> class basic_value_unsigned;
 
 namespace impl {
 //! The name of value_unsigned
 inline constexpr char name_value_unsigned[] = "unsigned";
 //! The base class of basic_value_unsigned
-/*! \tparam Allocator an allocator type */
-template <allocator Allocator> using basic_value_unsigned_base =
-    basic_typed_value<basic_value_unsigned<Allocator>,
-        config::value_unsigned_type, name_value_unsigned, Allocator>;
+/*! \tparam A an allocator type */
+template <allocator A> using basic_value_unsigned_base =
+    basic_typed_value<basic_value_unsigned<A>, config::value_unsigned_type,
+        name_value_unsigned, A>;
 } // namespace impl
 
 //! The value class holding an unsigned integer value
-/*! \tparam Allocator an allocator type; unused
+/*! \tparam A an allocator type; unused
  * \test in file test_vm_data.cpp */
-template <impl::allocator Allocator> class basic_value_unsigned final:
-    public impl::basic_value_unsigned_base<Allocator>
+template <impl::allocator A> class basic_value_unsigned final:
+    public impl::basic_value_unsigned_base<A>
 {
     static_assert(
-        !impl::uses_allocator<typename basic_value_unsigned::value_type,
-        Allocator>);
-    using impl::basic_value_unsigned_base<Allocator>::basic_value_unsigned_base;
+        !impl::uses_allocator<typename basic_value_unsigned::value_type, A>);
+    using impl::basic_value_unsigned_base<A>::basic_value_unsigned_base;
 };
 
-template <impl::allocator Allocator> class basic_value_string;
+template <impl::allocator A> class basic_value_string;
 
 namespace impl {
 //! The  name of value_string
 inline constexpr char name_value_string[] = "string";
 //! The base class of basic_value_string
-/*! \tparam Allocator an allocator type */
-template <allocator Allocator> using basic_value_string_base =
-    basic_typed_value<basic_value_string<Allocator>, a_basic_string<Allocator>,
-        name_value_string, Allocator>;
+/*! \tparam A an allocator type */
+template <allocator A> using basic_value_string_base =
+    basic_typed_value<basic_value_string<A>, a_basic_string<A>,
+        name_value_string, A>;
 } // namespace impl
 
 //! The value class holding a string value
-/*! \tparam Allocator an allocator type; used internally by the stored string
+/*! \tparam A an allocator type; used internally by the stored string
  * value
  * \test in file test_vm_data.cpp */
-template <impl::allocator Allocator> class basic_value_string final:
-    public impl::basic_value_string_base<Allocator>
+template <impl::allocator A> class basic_value_string final:
+    public impl::basic_value_string_base<A>
 {
-    static_assert(impl::uses_allocator<typename basic_value_string::value_type,
-                  Allocator>);
-    using impl::basic_value_string_base<Allocator>::basic_value_string_base;
+    static_assert(
+              impl::uses_allocator<typename basic_value_string::value_type, A>);
+    using impl::basic_value_string_base<A>::basic_value_string_base;
 public:
-    using impl::basic_value_string_base<Allocator>::value;
+    using impl::basic_value_string_base<A>::value;
     //! Gets writable access to the contained \ref data.
     /*! It handles automatic resizing of storage. Enlarging the capacity is
      * handled by the underlying \c std::string. This function shrinks the
@@ -285,37 +284,37 @@ public:
      * marked thread-safe) */
     typename basic_value_string::value_type& value() {
         typename basic_value_string::value_type& v =
-            impl::basic_value_string_base<Allocator>::value();
+            impl::basic_value_string_base<A>::value();
         if (v.size() <= v.capacity() / 3)
             v.shrink_to_fit();
         return v;
     }
 };
 
-template <impl::allocator Allocator> class basic_value_array;
+template <impl::allocator A> class basic_value_array;
 
 namespace impl {
 //! The name of value_array
 inline constexpr char name_value_array[] = "array";
 //! The base class of basic_value_array
-/*!\tparam Allocator an allocator type */
-template <allocator Allocator> using basic_value_array_base =
-    basic_typed_value<basic_value_array<Allocator>,
-        a_basic_vector<typename basic_value<Allocator>::value_ptr, Allocator>,
-        name_value_array, Allocator>;
+/*!\tparam A an allocator type */
+template <allocator A> using basic_value_array_base =
+    basic_typed_value<basic_value_array<A>,
+        a_basic_vector<typename basic_value<A>::value_ptr, A>,
+        name_value_array, A>;
 } // namespace impl
 
 //! The value class holding an array of values
-/*! \tparam Allocator an allocator type; used internally by the stored array
+/*! \tparam A an allocator type; used internally by the stored array
  * \test in file test_vm_data.cpp */
-template <impl::allocator Allocator> class basic_value_array final:
-    public impl::basic_value_array_base<Allocator>
+template <impl::allocator A> class basic_value_array final:
+    public impl::basic_value_array_base<A>
 {
-    static_assert(impl::uses_allocator<typename basic_value_array::value_type,
-                  Allocator>);
-    using impl::basic_value_array_base<Allocator>::basic_value_array_base;
+    static_assert(
+            impl::uses_allocator<typename basic_value_array::value_type, A>);
+    using impl::basic_value_array_base<A>::basic_value_array_base;
 public:
-    using impl::basic_value_array_base<Allocator>::value;
+    using impl::basic_value_array_base<A>::value;
     //! Gets writable access to the contained \ref data.
     /*! It handles automatic resizing of storage. Enlarging the capacity is
      * handled by the underlying \c std::vector. This function shrinks the
@@ -328,44 +327,43 @@ public:
      * marked thread-safe) */
     typename basic_value_array::value_type& value() {
         typename basic_value_array::value_type& v =
-            impl::basic_value_array_base<Allocator>::value();
+            impl::basic_value_array_base<A>::value();
         if (v.size() <= v.capacity() / 3)
             v.shrink_to_fit();
         return v;
     }
-    //! \copybrief impl::basic_value_array_base<Allocator>::set_mt_safe()
+    //! \copybrief impl::basic_value_array_base<A>::set_mt_safe()
     /*! \throw exception::value_mt_unsafe if the array contains at least one
      * value that is not mt-safe. */
     void set_mt_safe() override;
 };
 
-template <impl::allocator Allocator> class basic_value_hash;
+template <impl::allocator A> class basic_value_hash;
 
 namespace impl {
 //! The name of value_hash
 inline constexpr char name_value_hash[] = "hash";
 //! The base class of basic_value_hash
-/*! \tparam Allocator an allocator type */
-template <allocator Allocator> using basic_value_hash_base =
-    basic_typed_value<basic_value_hash<Allocator>,
-        a_basic_hash<a_basic_string<Allocator>,
-            typename basic_value<Allocator>::value_ptr, Allocator>,
-        name_value_hash, Allocator>;
+/*! \tparam A an allocator type */
+template <allocator A> using basic_value_hash_base =
+    basic_typed_value<basic_value_hash<A>,
+        a_basic_hash<a_basic_string<A>, typename basic_value<A>::value_ptr, A>,
+        name_value_hash, A>;
 } // namespace impl
 
 //! The value class holding values hashed by string keys
-/*! \tparam Allocator an allocator type; used internally by the stored
+/*! \tparam A an allocator type; used internally by the stored
  * unordered map.
  * \test in file test_vm_data.cpp
  * \todo Create tests. */
-template <impl::allocator Allocator> class basic_value_hash final:
-    public impl::basic_value_hash_base<Allocator>
+template <impl::allocator A> class basic_value_hash final:
+    public impl::basic_value_hash_base<A>
 {
-    static_assert(impl::uses_allocator<typename basic_value_hash::value_type,
-                  Allocator>);
-    using impl::basic_value_hash_base<Allocator>::basic_value_hash_base;
+    static_assert(
+            impl::uses_allocator<typename basic_value_hash::value_type, A>);
+    using impl::basic_value_hash_base<A>::basic_value_hash_base;
 public:
-    using impl::basic_value_hash_base<Allocator>::value;
+    using impl::basic_value_hash_base<A>::value;
     //! Gets writable access to the contained \ref data.
     /*! It handles automatic resizing of storage. Reducing the load factor is
      * handled by the underlying \c std::unordered_hash. This function rehashes
@@ -378,12 +376,12 @@ public:
      * marked thread-safe) */
     typename basic_value_hash::value_type& value() {
         typename basic_value_hash::value_type& v =
-            impl::basic_value_hash_base<Allocator>::value();
+            impl::basic_value_hash_base<A>::value();
         if (v.load_factor() <= v.max_load_factor() / 3)
             v.rehash(v.size() / v.max_load_factor() / 2 * 3);
         return v;
     }
-    //! \copybrief impl::basic_value_hash_base<Allocator>::set_mt_safe()
+    //! \copybrief impl::basic_value_hash_base<A>::set_mt_safe()
     /*! \throw exception::value_mt_unsafe if the array contains at least one
      * value that is not mt-safe. */
     void set_mt_safe() override;
