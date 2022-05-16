@@ -31,7 +31,7 @@ public:
             alloc.deallocate(p, 1);
     }
 private:
-    Allocator alloc; //!< The stored allocator
+    [[no_unique_address]] Allocator alloc; //!< The stored allocator
 };
 
 //! An allocater-aware replacement of \c std::unique_ptr

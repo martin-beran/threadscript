@@ -57,7 +57,7 @@ public:
     }
 private:
     //! The allocator used by this VM.
-    Allocator alloc;
+    [[no_unique_address]] Allocator alloc;
     //! The number of basic_state objects attached to this VM
     std::atomic<size_t> _num_states{0};
     //! Needs access to num_states
@@ -95,7 +95,7 @@ public:
     [[nodiscard]] Allocator get_allocator() const noexcept { return alloc; }
     vm_t& vm; //!< The virtual machine 
 private:
-    Allocator alloc; //!< The allocator used by this state
+    [[no_unique_address]] Allocator alloc; //!< The allocator used by this state
 };
 
 } // namespace threadscript

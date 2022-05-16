@@ -4,7 +4,7 @@
  * \brief Data structures of the ThreadScript virtual machine
  *
  * These classes implement various data structures used to store ThreadScript
- * data and execution state, e.g., values, variables, symbol tables, or stacks.
+ * data.
  */
 
 #include "threadscript/allocated.hpp"
