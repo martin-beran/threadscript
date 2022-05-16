@@ -26,15 +26,15 @@ basic_typed_value<Derived, T, Name, A>::basic_typed_value(tag, const A& alloc):
 
 //! \cond
 template <class Derived, class T, const char* Name, impl::allocator A>
-template <class A> requires impl::uses_allocator<T, A>
-basic_typed_value<Derived, T, Name, A>::basic_typed_value(tag2, const A& a):
+template <class Alloc> requires impl::uses_allocator<T, Alloc>
+basic_typed_value<Derived, T, Name, A>::basic_typed_value(tag2, const Alloc& a):
     data{a}
 {
 }
 
 template <class Derived, class T, const char* Name, impl::allocator A>
-template <class A> requires (!impl::uses_allocator<T, A>)
-basic_typed_value<Derived, T, Name, A>::basic_typed_value(tag2, const A&):
+template <class Alloc> requires (!impl::uses_allocator<T, Alloc>)
+basic_typed_value<Derived, T, Name, A>::basic_typed_value(tag2, const Alloc&):
     data{}
 {
 }

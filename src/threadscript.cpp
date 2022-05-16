@@ -3,6 +3,7 @@
  */
 
 #include "threadscript/threadscript.hpp"
+#include "threadscript/symbol_table_impl.hpp"
 #include "threadscript/vm_data_impl.hpp"
 
 namespace threadscript {
@@ -37,5 +38,7 @@ template class basic_typed_value<value_hash,
     a_basic_hash<a_string, typename basic_value<allocator_any>::value_ptr,
         allocator_any>,
     threadscript::impl::name_value_hash, allocator_any>;
+
+template class basic_symbol_table<allocator_any>;
 
 } // namespace threadscript

@@ -166,17 +166,17 @@ protected:
 private:
     struct tag2 {}; //!< Used to distiguish between constructors
     //! Creates a default value, used if \a T needs an allocator.
-    /*! \tparam A an allocator type
+    /*! \tparam Alloc an allocator type
      * \param[in] t an ignored parameter used to overload constructors
      * \param[in] a an allocator */
-    template <class A> requires impl::uses_allocator<T, A>
-    explicit basic_typed_value(tag2 t, const A& a);
+    template <class Alloc> requires impl::uses_allocator<T, Alloc>
+    explicit basic_typed_value(tag2 t, const Alloc& a);
     //! Creates a default value, used if \a T does not need an allocator.
-    /*! \tparam A an allocator type
+    /*! \tparam Alloc an allocator type
      * \param[in] t an ignored parameter used to overload constructors
      * \param[in] a an ignored allocator */
-    template <class A> requires (!impl::uses_allocator<T, A>)
-    explicit basic_typed_value(tag2 t, const A& a);
+    template <class Alloc> requires (!impl::uses_allocator<T, Alloc>)
+    explicit basic_typed_value(tag2 t, const Alloc& a);
     value_type data; //!< The stored data of this value
 };
 
@@ -354,8 +354,7 @@ template <allocator A> using basic_value_hash_base =
 //! The value class holding values hashed by string keys
 /*! \tparam A an allocator type; used internally by the stored
  * unordered map.
- * \test in file test_vm_data.cpp
- * \todo Create tests. */
+ * \test in file test_vm_data.cpp */
 template <impl::allocator A> class basic_value_hash final:
     public impl::basic_value_hash_base<A>
 {

@@ -8,6 +8,7 @@
 
 #include "threadscript/config.hpp"
 #include "threadscript/config_default.hpp"
+#include "threadscript/symbol_table.hpp"
 #include "threadscript/virtual_machine.hpp"
 #include "threadscript/vm_data.hpp"
 
@@ -76,5 +77,9 @@ extern template class basic_typed_value<value_hash,
     a_basic_hash<a_string, typename basic_value<allocator_any>::value_ptr,
         allocator_any>,
     threadscript::impl::name_value_hash, allocator_any>;
+
+//! The symbol_table using the configured allocator
+using symbol_table = basic_symbol_table<allocator_any>;
+extern template class basic_symbol_table<allocator_any>;
 
 } // namespace threadscript
