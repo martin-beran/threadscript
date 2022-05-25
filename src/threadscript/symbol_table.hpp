@@ -19,8 +19,7 @@ namespace threadscript {
  * \note The parent is referenced by a plain pointer, because it is expected
  * that the hierarchy of virtual machine / thread / function ensures that a
  * parent symbol table always outlives its child symbol tables.
- * \test in file test_symbol_table.cpp
- * \todo Create tests */
+ * \test in file test_symbol_table.cpp */
 template <impl::allocator A> class basic_symbol_table {
     //! Checks that the move constructor and assignments are \c noexcept
     /*! \note These static asserts cannot be placed directly in symbol_table,
