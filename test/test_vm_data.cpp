@@ -1,4 +1,4 @@
-/* \file
+/*! \file
  * \brief Tests of value types.
  * It tests threadscript::basic_value, threadscript::basic_typed_value, and
  * derived value classes for specific data types:

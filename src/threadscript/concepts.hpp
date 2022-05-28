@@ -1,6 +1,6 @@
 #pragma once
 
-/* \file
+/*! \file
  * \brief Various concept used in ThreadScript sources
  */
 

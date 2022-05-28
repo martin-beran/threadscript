@@ -1,4 +1,4 @@
-/* \file
+/*! \file
  * \brief Tests of class threadscript::basic_symbol_table
  */
 
