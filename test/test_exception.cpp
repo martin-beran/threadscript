@@ -18,6 +18,38 @@ namespace ts = threadscript;
 namespace ex = ts::exception;
 
 /*! \file
+ * \test \c file_location_none -- Using threadscript::file_location without
+ * line and column */
+//! \cond
+BOOST_AUTO_TEST_CASE(file_location_none)
+{
+    ts::file_location loc;
+    BOOST_TEST(loc.line == loc.unknown);
+    BOOST_TEST(loc.column == loc.unknown);
+    BOOST_TEST(loc.to_string() == ":");
+    std::ostringstream os;
+    os << loc;
+    BOOST_TEST(os.str() == loc.to_string());
+}
+//! \endcond
+
+/*! \file
+ * \test file_location -- Using threadscript::file_location with line and
+ * column */
+//! \cond
+BOOST_AUTO_TEST_CASE(file_location)
+{
+    ts::file_location loc(123, 9);
+    BOOST_TEST(loc.line == 123);
+    BOOST_TEST(loc.column == 9);
+    BOOST_TEST(loc.to_string() == "123:9");
+    std::ostringstream os;
+    os << loc;
+    BOOST_TEST(os.str() == loc.to_string());
+}
+//! \endcond
+
+/*! \file
  * \test \c src_location_none -- Using threadscript::src_location without file,
  * line, and column */
 //! \cond

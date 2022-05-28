@@ -9,13 +9,19 @@
 
 namespace threadscript {
 
+/*** file_location ***********************************************************/
+
+std::string file_location::to_string() const
+{
+    return (line == unknown ? std::string{} : std::to_string(line)) + ":" +
+        (column == unknown ? std::string{} : std::to_string(column));
+}
+
 /*** src_location ************************************************************/
 
 std::string src_location::to_string() const
 {
-    return file + ":" +
-        (line == unknown ? std::string{} : std::to_string(line)) + ":" +
-        (column == unknown ? std::string{} : std::to_string(column));
+    return file + ":" + file_location::to_string();
 }
 
 /*** frame_location **********************************************************/

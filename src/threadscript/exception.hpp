@@ -16,30 +16,19 @@
 
 namespace threadscript {
 
-//! Location in the source code
+//! Location in a single source file
 /*! \test in file test_exception.cpp */
-struct src_location {
+struct file_location {
     //! An empty value, used for line and column numbers.
     static constexpr unsigned unknown = 0;
     //! Stores a location.
-    /*! \param[in] file a file name
-     * \param[in] line a line number
-     * \param[in] column a column number */
-    explicit src_location(std::string_view file, unsigned line = unknown,
-                          unsigned column = unknown):
-        file(file), line(line), column(column) {}
-    //! Stores a location without a file name.
     /*! \param[in] line a line number
      * \param[in] column a column number */
-    explicit src_location(unsigned line = unknown, unsigned column = unknown):
-        src_location({}, line, column) {}
-    //! Gets a source location as a string
-    /*! \return the source location */
+    explicit file_location(unsigned line = unknown, unsigned column = unknown):
+        line(line), column(column) {}
+    //! Gets a file location as a string
+    /*! \return the file location */
     [[nodiscard]] std::string to_string() const;
-    //! Name of the script source file
-    /*! The empty string if the source location is not in a file, e.g.,
-     * source code from the standard input or from a string. */
-    std::string file;
     //! The line containing the error
     /*! Line numbers start from 1; \ref unknown means that the line number
      * cannot be determined. */
@@ -48,6 +37,40 @@ struct src_location {
     /*! Column numbers start from 1; \ref unknown means that the exact
      * character position cannot be * determined. */
     unsigned column = unknown;
+    //! Writes a source file to a stream.
+    /*! It writes the result of to_string().
+     * \param[in] os an output stream
+     * \param[in] v a source location value to write
+     * \return \c os */
+    friend std::ostream& operator<<(std::ostream& os, const file_location& v) {
+        os << v.to_string();
+        return os;
+    }
+};
+
+//! Location in the source code
+/*! It adds a file name to file_location.
+ * \test in file test_exception.cpp */
+struct src_location: file_location {
+    //! Stores a location.
+    /*! \param[in] file a file name
+     * \param[in] line a line number
+     * \param[in] column a column number */
+    explicit src_location(std::string_view file, unsigned line = unknown,
+                          unsigned column = unknown):
+        file_location(line, column), file(file) {}
+    //! Stores a location without a file name.
+    /*! \param[in] line a line number
+     * \param[in] column a column number */
+    explicit src_location(unsigned line = unknown, unsigned column = unknown):
+        file_location(line, column) {}
+    //! Gets a source location as a string
+    /*! \return the source location */
+    [[nodiscard]] std::string to_string() const;
+    //! Name of the script source file
+    /*! The empty string if the source location is not in a file, e.g.,
+     * source code from the standard input or from a string. */
+    std::string file;
     //! Writes a source location to a stream.
     /*! It writes the result of to_string().
      * \param[in] os an output stream
@@ -60,7 +83,8 @@ struct src_location {
 };
 
 //! Location on the stack
-/*! \test in file test_exception.cpp */
+/*! It adds a function name to src_location.
+ * \test in file test_exception.cpp */
 struct frame_location: src_location {
     //! Stores a stack frame information.
     /*! \param[in] function a function name
