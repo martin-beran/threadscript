@@ -45,7 +45,7 @@
  * \arg Each sequence of member declarations belonging to the same access
  * specifier is organized in the order: types, const member variables,
  * constructors, destructor, copy and move assignment, other member functions,
- * non-const member variables.
+ * non-const member variables, friends.
  *
  * \section Order_of_declarations Order of declarations
  *
