@@ -30,6 +30,7 @@ template <impl::allocator A> class basic_symbol_table {
         static_assert(std::is_nothrow_move_assignable_v<basic_symbol_table>);
     };
 public:
+    using allocator_type = A; //!< The allocator type used by this class
     using key_type = a_basic_string<A>; //!< Key type, which is a name
     using value_type = typename basic_value<A>::value_ptr; //!< Value type
     //! The type used as a storage for contents of the symbol table

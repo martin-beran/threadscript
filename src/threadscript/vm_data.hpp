@@ -43,6 +43,7 @@ namespace threadscript {
 template <impl::allocator A> class basic_value:
     public std::enable_shared_from_this<basic_value<A>> {
 public:
+    using allocator_type = A; //!< The allocator type used by this class
     //! The shared pointer type to values represented by basic_value objects
     /*! Value \c nullptr is permitted and represents a \c null value. */
     using value_ptr = std::shared_ptr<basic_value>;
@@ -164,7 +165,8 @@ protected:
         shallow_copy_impl(const A& alloc,
                           std::optional<bool> mt_safe) const override;
 private:
-    struct tag2 {}; //!< Used to distiguish between constructors
+    //! Used to distiguish between constructors
+    struct tag2 {};
     //! Creates a default value, used if \a T needs an allocator.
     /*! \tparam Alloc an allocator type
      * \param[in] t an ignored parameter used to overload constructors

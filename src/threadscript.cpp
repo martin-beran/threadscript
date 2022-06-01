@@ -41,4 +41,8 @@ template class basic_typed_value<value_hash,
 
 template class basic_symbol_table<allocator_any>;
 
+template class basic_code_node<allocator_any>;
+
+template class basic_script<allocator_any>;
+
 } // namespace threadscript

@@ -1,0 +1,55 @@
+/*! \page Architecture Architecture
+ *
+ * \section Architecture_Memory_allocation Memory allocation
+ *
+ * All ThreadScript classes (e.g., the virtual machine, script code, data,
+ * symbol tables) are templates parametrized by an allocator type, which must
+ * satisfy concept threadscript::impl::allocator. The default allocator type
+ * template
+ * threadscript::config::allocator_type, parametrized by the allocated type, is
+ * defined in the build configuration file (config_default.hpp by default).
+ * Normally an instance threadscript::allocator_any of this template is passed
+ * around and rebound to various allocated types as needed.
+ *
+ * The is a convention (inspired by standard library types like \c
+ * std::basic_string and \c std::string) of using names containing \c basic_
+ * for templates parametrized by an allocator type and corresponding names
+ * without \c basic_ for instances using threadscript::allocator_any and
+ * declared and explicitly instantiated usually in threadscript.hpp and
+ * threadscript.cpp. For example, there is template
+ * threadscript::basic_virtual_machine and its instance
+ * threadscript::virtual_machine. The same convention is used for some typedefs
+ * for (container) classes from the standard library that use allocators. The
+ * typedefs are declared in allocated.hpp (e.g., threadscript::a_basic_string)
+ * and instantiated in threadscript.hpp and threadscript.cpp (e.g.,
+ * threadscript::a_string). These classes are generally used instead of classes
+ * using the default allocator (like \c std::string).
+ *
+ * An exception from using allocators is the exception class hierarchy in
+ * namespace threadscript::exception and classes used by exception classes,
+ * e.g., threadscript::frame_location. There are two reasons: easier passing of
+ * exception between ThreadScript and other code, and the possibility to
+ * allocate an exception in a case of an error caused by an allocator.
+ *
+ * \section Architecture_Exceptions Exceptions
+ *
+ * ThreadScript reports errors by throwing exception classes derived from
+ * threadscript::exception::base. These exceptions contain a description of an
+ * error and its location in the form of a stack trace.
+ *
+ * \section Architecture_Virtual_machine Virtual machine
+ *
+ * The main class representing a virtual machine is
+ * threadscript::virtual_machine. It is an isolated context, containing any
+ * number of threads (threadscript::state). Script code threadscript::script is
+ * created by one threads or from outside the VM, but then it can be shared by
+ * all threads. The VM contains also a global threadscript::symbol_table of
+ * values (derived from threadscript::value) shared among threads. Each thread
+ * contains a threadscript::symbol_table of global values private to the
+ * thread.
+ *
+ * \section Architecture_Values Values and symbol tables
+ * \section Architecture_Code Script code and parsing
+ * \section Architecture_Execution Execution of a script
+ * \section Architecture_API ThreadScript API
+ */

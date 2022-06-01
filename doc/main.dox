@@ -6,6 +6,8 @@
  * License: <a href="../LICENSE.html">LICENSE.md</a>
  *
  * The initial places to start exploring ThreadScript sources are
+ * \arg \ref Architecture &ndash; the main document that describes the
+ * architecture of ThreadScript
  * \arg the top-level source code directory \link ../src src/\endlink
  * \arg namespace \ref threadscript
  * \arg header file threadscript/threadscript.hpp
@@ -38,7 +40,8 @@
  * \arg \c test -- Runs tests by command \c ctest.
  * \section Tests Tests
  *
- * Tests of C++ code are implemented using Boost::Test in directory
- * \link ../test test/\endlink.
+ * Tests of C++ code are implemented using <a
+ * href="https://www.boost.org/doc/libs/release/libs/test/">Boost::Test</a> in
+ * directory \link ../test test/\endlink.
  * Tests are built and executed by CMake's CTest.
  */

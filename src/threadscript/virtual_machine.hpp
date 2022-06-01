@@ -12,7 +12,7 @@
 
 namespace threadscript {
 
-template <class A> class basic_state;
+template <impl::allocator A> class basic_state;
 
 //! The ThreadScript virtual machine
 /*! An object of this class represents a single instance of the ThreadScript
@@ -29,8 +29,9 @@ template <class A> class basic_state;
  * \tparam A the allocator used by this VM
  * \threadsafe{safe,safe}
  * \test in file test_virtual_machine.cpp */
-template <class A> class basic_virtual_machine {
+template <impl::allocator A> class basic_virtual_machine {
 public:
+    using allocator_type = A; //!< The allocator type used by this class
     //! Default constructor
     /*! \param[in] alloc the allocator to be used by this VM */
     // \NOLINTNEXTLINE(modernize-pass-by-value)
@@ -69,8 +70,9 @@ private:
  * same as the allocator used by the VM
  * \threadsafe{safe,unsafe}
  * \test in file test_virtual_machine.cpp */
-template <class A> class basic_state {
+template <impl::allocator A> class basic_state {
 public:
+    using allocator_type = A; //!< The allocator type used by this class
     //! The type of the virtual machine containing this state.
     using vm_t = basic_virtual_machine<A>;
     //! The constructor registers basic_state in \a vm.
