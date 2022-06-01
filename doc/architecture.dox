@@ -1,5 +1,24 @@
 /*! \page Architecture Architecture
  *
+ * \section Architecture_Goals Goals
+ *
+ * \arg A simple interpreted scripting language
+ * \arg Embeddable
+ * \arg Usable as a configuration and ruleset implementation language for
+ * multithreaded programs, including network servers, proxies, and packet
+ * processors.
+ * \arg Extensible by adding functionality implemented in native code.
+ * \arg Native C++ API, using modern C++, currently C++20
+ * \arg Multithreading with safe sharing of data among threads
+ * \arg Deterministic memory and resource management compatible with C++: smart
+ * pointers, no garbage collector, RAII
+ * \arg Including comprehensive tests
+ * \arg Development documentation, structured documentation of source code
+ * \arg Multiplatform: using only the standard library and Boost, eliminate
+ * usage of other library and OS-specific API as much as practical, a build
+ * system based on CMake
+ * \arg Free and open source
+ *
  * \section Architecture_Memory_allocation Memory allocation
  *
  * All ThreadScript classes (e.g., the virtual machine, script code, data,
@@ -41,15 +60,47 @@
  *
  * The main class representing a virtual machine is
  * threadscript::virtual_machine. It is an isolated context, containing any
- * number of threads (threadscript::state). Script code threadscript::script is
- * created by one threads or from outside the VM, but then it can be shared by
- * all threads. The VM contains also a global threadscript::symbol_table of
- * values (derived from threadscript::value) shared among threads. Each thread
- * contains a threadscript::symbol_table of global values private to the
- * thread.
+ * number of interpreter threads (threadscript::state). Different VMs share
+ * nothing and may be freely executed in parallel. Interpreter threads may be
+ * arbitrarily mapped to threads of an underlying platform. The only condition
+ * is that a single interpterer thread must not be accessed by multiple
+ * platform threads simultaneously without synchronization. Script code
+ * threadscript::script is created by one threads or from outside the VM, but
+ * then it can be shared by all threads. The VM contains also a global
+ * threadscript::symbol_table of values (derived from threadscript::value)
+ * shared among threads. Each thread contains a threadscript::symbol_table of
+ * global values private to the thread.
  *
  * \section Architecture_Values Values and symbol tables
+ *
+ * All values accessible by a script are represented by classes derived from
+ * threadscript::value. There are some built-in scalar types
+ * (threadscript::value_bool, threadscript::value_int,
+ * threadscript::value_unsigned, threadscript::value_string), arrays
+ * (threadscript::value array), and hashes (threadscript::value_hash). New
+ * types can be added as extensions implemeted as additional native C++ classes
+ * derived from threadscript::value.
+ *
+ * Memory management of values uses reference counting and is implemented by \c
+ * std::shared_ptr and \c std::weak_ptr. There are no provisions for automatic
+ * breaking of reference cycles.
+ *
+ * Variables are stored as named references to values in symbol tables
+ * (threadscript::symbol_table). Symbol tables are chained, a name not found in
+ * a symbol table is recursively searched in its parent and parent's ancestors.
+ * At any time, each interpreter thread sees at least three symbol tables:
+ * \arg the symbol table containing local variables of the current function
+ * \arg the symbol table of global variables local to the current thread (the
+ * parent of the function local variables)
+ * \arg the global symbol table containing variables shared by all threads (the
+ * parent of the thread global variables, not having a parent itself)
+ *
  * \section Architecture_Code Script code and parsing
+ *
+ * Each parsed ThreadScript source file is represented by
+ * a threadscript::script object. It owns a tree of threadscript::code_node
+ * objects, which represent code of the script.
+ *
  * \section Architecture_Execution Execution of a script
  * \section Architecture_API ThreadScript API
  */

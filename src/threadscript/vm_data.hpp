@@ -75,8 +75,8 @@ public:
     /*! It makes a deep copy of the representation of this value itself, but
      * any pointers to other basic_value objects will reference the same
      * objects as in the source object.
-     * \param[in] alloc the allocator used to make the copy and passed to any
-     * member object that needs an allocator
+     * \param[in] alloc the allocator, whose copy is then passed to any member
+     * object that needs an allocator
      * \param[in] mt_safe sets the thread-safety flag of the new value to \c
      * true or \c false; copies the thread-safety flag from the source value if
      * \c nullopt.
