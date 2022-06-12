@@ -4,6 +4,7 @@
 
 #include "threadscript/threadscript.hpp"
 #include "threadscript/symbol_table_impl.hpp"
+#include "threadscript/code_impl.hpp"
 #include "threadscript/vm_data_impl.hpp"
 
 namespace threadscript {
@@ -42,7 +43,17 @@ template class basic_typed_value<value_hash,
 template class basic_symbol_table<allocator_any>;
 
 template class basic_code_node<allocator_any>;
+//! \cond
+template
+std::ostream& operator<< <allocator_any>(std::ostream&,
+                                         const basic_code_node<allocator_any>&);
+//! \endcond
 
 template class basic_script<allocator_any>;
+//! \cond
+template
+std::ostream& operator<< <allocator_any>(std::ostream&,
+                                         const basic_script<allocator_any>&);
+//! \endcond
 
 } // namespace threadscript

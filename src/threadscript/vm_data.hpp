@@ -142,7 +142,7 @@ public:
     //! Gets writable access to the contained \ref data.
     /*! \return \ref data
      * \throw exception::value_read_only if the value is read-only (that is,
-     * marked thread-safe) */
+     * marked mt-safe) */
     value_type& value() {
         if (this->mt_safe())
             throw exception::value_read_only();

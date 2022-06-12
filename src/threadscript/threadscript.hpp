@@ -86,9 +86,19 @@ extern template class basic_symbol_table<allocator_any>;
 //! A parsed script tree node using the configured allocator
 using code_node = basic_code_node<allocator_any>;
 extern template class basic_code_node<allocator_any>;
+//! \cond
+extern template
+std::ostream& operator<< <allocator_any>(std::ostream&,
+                                         const basic_code_node<allocator_any>&);
+//! \endcond
 
 //! Script code using the configured allocator
 using script = basic_script<allocator_any>;
 extern template class basic_script<allocator_any>;
+//! \cond
+extern template
+std::ostream& operator<< <allocator_any>(std::ostream&,
+                                         const basic_script<allocator_any>&);
+//! \endcond
 
 } // namespace threadscript

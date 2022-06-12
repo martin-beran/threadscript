@@ -30,6 +30,13 @@
  * Normally an instance threadscript::allocator_any of this template is passed
  * around and rebound to various allocated types as needed.
  *
+ * Templates parametrized by an allocator type store the allocator type in
+ * member type alias \c allocator_type, e.g.,
+ * threadscript::basic_virtual_machine::allocator_type. If an allocator
+ * instance is stored in the object, then it can be obtained by member function
+ * \c get_allocator(), e.g.,
+ * threadscript::basic_virtual_machine::get_allocator().
+ *
  * The is a convention (inspired by standard library types like \c
  * std::basic_string and \c std::string) of using names containing \c basic_
  * for templates parametrized by an allocator type and corresponding names
@@ -74,12 +81,27 @@
  * \section Architecture_Values Values and symbol tables
  *
  * All values accessible by a script are represented by classes derived from
- * threadscript::value. There are some built-in scalar types
- * (threadscript::value_bool, threadscript::value_int,
- * threadscript::value_unsigned, threadscript::value_string), arrays
- * (threadscript::value array), and hashes (threadscript::value_hash). New
- * types can be added as extensions implemeted as additional native C++ classes
- * derived from threadscript::value.
+ * threadscript::value. Concrete types of values available for scripts should
+ * be derived from threadscript::basic_typed_value, unless special care is
+ * taken to ensure thread-safety semantics enforced by
+ * threadscript::basic_typed_value::value().
+ *
+ * A normal writable value is accessible to a single thread only, so no locking
+ * is required. If access to a value is needed in multiple threads, the value
+ * must be marked thread-safe by threadscript::basic_value::set_mt_safe().
+ * Classes derived from threadscript::basic_typed_value ensure thread-safety by
+ * restricting access to read-only operations for values marked mt-safe. Access
+ * to a mt-unsafe value via a mt-safe value is prevented by requiring members
+ * of mt-safe containers (threadscript::value_array, threadscript::value_hash)
+ * to be also mt-safe. If modification of a data structure shared by multiple
+ * threads is required, a class derived from threadscript::value must be
+ * implemented that handles any necessary synchronization.
+ *
+ * There are some built-in scalar types (threadscript::value_bool,
+ * threadscript::value_int, threadscript::value_unsigned,
+ * threadscript::value_string), arrays (threadscript::value array), and hashes
+ * (threadscript::value_hash). New types can be added as extensions implemeted
+ * as additional native C++ classes derived from threadscript::value.
  *
  * Memory management of values uses reference counting and is implemented by \c
  * std::shared_ptr and \c std::weak_ptr. There are no provisions for automatic

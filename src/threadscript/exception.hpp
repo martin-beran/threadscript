@@ -29,6 +29,10 @@ struct file_location {
     //! Gets a file location as a string
     /*! \return the file location */
     [[nodiscard]] std::string to_string() const;
+    //! Compares locations for equality
+    /*! \param[in] o another location
+     * \return whether the locations are equal */
+    bool operator==(const file_location& o) const noexcept = default;
     //! The line containing the error
     /*! Line numbers start from 1; \ref unknown means that the line number
      * cannot be determined. */
