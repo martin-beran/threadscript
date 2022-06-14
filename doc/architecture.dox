@@ -28,7 +28,9 @@
  * threadscript::config::allocator_type, parametrized by the allocated type, is
  * defined in the build configuration file (config_default.hpp by default).
  * Normally an instance threadscript::allocator_any of this template is passed
- * around and rebound to various allocated types as needed.
+ * around and rebound to various allocated types as needed. As described in the
+ * documentation of threadscript::virtual_machine, all allocators used in the
+ * context of a single virtual machine must be able to cooperate.
  *
  * Templates parametrized by an allocator type store the allocator type in
  * member type alias \c allocator_type, e.g.,

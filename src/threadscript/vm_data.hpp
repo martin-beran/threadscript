@@ -18,6 +18,9 @@
 
 namespace threadscript {
 
+template <impl::allocator A> class basic_state;
+template <impl::allocator A> class basic_symbol_table;
+
 //! The base class for all value types that can be referenced by a symbol_table
 /*! It is the base of a hierarchy of polymorphic value classes, therefore it
  * has a virtual destructor. All value types are derived from value_base,
@@ -71,6 +74,28 @@ public:
      * \throw exception::value_mt_unsafe if this value does not satisfy
      * conditions for being thread-safe */
     virtual void set_mt_safe();
+    //! Evaluates the value and returns the result.
+    /*! For "normal" values, it return the value itself. For values
+     * representing code (basic_value_script and basic_value_function), it runs
+     * the script or calls the function and returns the result.
+     * \param[in] thread the current thread
+     * \param[in] lookup the (const) symbol table used for symbol lookups
+     * \param[in] sym the (non-const) symbol tables where new  symbols can be
+     * added. Usually, \c sym[0] is the same symbol table as \a lookup, which
+     * contains the local variables of the current function; \c sym[1] are the
+     * global variables of the current thread; \c sym[2], if it exists, is a
+     * new symbol table that will eventually become shared by all threads of
+     * the virtual machine
+     * \param[in,out] args function arguments
+     * \return the result of evaluation
+     * \throw a class derived from exception::base if evaluation fails; other
+     * exceptions are wrapped in exception::wrapped
+     * \todo Analyze and possibly implement a change of std::vector to
+     * a_basic_vector in parameters */
+    virtual value_ptr eval(basic_state<A>& thread,
+        const basic_symbol_table<A>& lookup,
+        const std::vector<std::reference_wrapper<basic_symbol_table<A>>>& sym,
+        std::vector<value_ptr> args) const;
     //! Copies this value, but not referenced values.
     /*! It makes a deep copy of the representation of this value itself, but
      * any pointers to other basic_value objects will reference the same

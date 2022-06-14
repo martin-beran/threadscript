@@ -5,6 +5,7 @@
  */
 
 #include "threadscript/config.hpp"
+#include "threadscript/symbol_table.hpp"
 #include "threadscript/vm_data.hpp"
 
 #include <atomic>
@@ -32,6 +33,8 @@ template <impl::allocator A> class basic_state;
 template <impl::allocator A> class basic_virtual_machine {
 public:
     using allocator_type = A; //!< The allocator type used by this class
+    //! The default maximum stack depth
+    static constexpr size_t default_max_stack = 1000;
     //! Default constructor
     /*! \param[in] alloc the allocator to be used by this VM */
     // \NOLINTNEXTLINE(modernize-pass-by-value)
@@ -59,6 +62,12 @@ public:
 private:
     //! The allocator used by this VM.
     [[no_unique_address]] A alloc;
+    //! Global variables shared by all threads
+    /*! It is a shared pointer to a symbol table, so that the global symbol
+     * table can be replaced without synchronization of all thread. Existing
+     * threads will continue to use the old symbol table until they request the
+     * new one. */
+    std::shared_ptr<basic_symbol_table<A>> sh_vars;
     //! The number of basic_state objects attached to this VM
     std::atomic<size_t> _num_states{0};
     //! Needs access to num_states
@@ -66,8 +75,7 @@ private:
 };
 
 //! The state of a single thread in a basic_virtual_machine
-/*! \tparam A the allocator type used by this thread; it must be the
- * same as the allocator used by the VM
+/*! \tparam A the allocator type used by this thread
  * \threadsafe{safe,unsafe}
  * \test in file test_virtual_machine.cpp */
 template <impl::allocator A> class basic_state {
@@ -97,7 +105,25 @@ public:
     [[nodiscard]] A get_allocator() const noexcept { return alloc; }
     vm_t& vm; //!< The virtual machine 
 private:
+    //! A stack frame
+    /*! For simplicity, it uses frame_location, which does not use custom
+     * allocators. The memory used by a stack is indirectly limited by
+     * max_stack
+     * \todo Use custom allocators for stack frames. */
+    struct stack_frame {
+        frame_location location; //!< Location in the script source
+        basic_symbol_table<A> l_vars; //!< Local variables of this stack frame
+    };
+    //! A stack
+    /*! The outermost function level (the bottom of the stack) is at index 0.
+     * The innermost function level (the top of the stack, the most recently
+     * called function) is at \c back(). */
+    using stack_t = a_basic_vector<stack_frame, A>;
     [[no_unique_address]] A alloc; //!< The allocator used by this state
+    //! The maximum stack depth for this thread
+    size_t max_stack = basic_virtual_machine<A>::default_max_stack;
+    stack_t stack; //!< The stack of this thread
+    basic_symbol_table<A> t_vars; //!< Global variables of this thread
 };
 
 } // namespace threadscript
