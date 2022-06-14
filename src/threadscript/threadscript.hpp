@@ -71,6 +71,7 @@ extern template class basic_typed_value<value_array,
     a_basic_vector<typename basic_value<allocator_any>::value_ptr,
         allocator_any>,
     threadscript::impl::name_value_array, allocator_any>;
+extern template class basic_value_array<allocator_any>;
 
 //! The \ref basic_value_hash using the configured allocator
 using value_hash = basic_value_hash<allocator_any>;
@@ -78,12 +79,13 @@ extern template class basic_typed_value<value_hash,
     a_basic_hash<a_string, typename basic_value<allocator_any>::value_ptr,
         allocator_any>,
     threadscript::impl::name_value_hash, allocator_any>;
+extern template class basic_value_hash<allocator_any>;
 
 //! The symbol_table using the configured allocator
 using symbol_table = basic_symbol_table<allocator_any>;
 extern template class basic_symbol_table<allocator_any>;
 
-//! A parsed script tree node using the configured allocator
+//! The \ref basic_code_node using the configured allocator
 using code_node = basic_code_node<allocator_any>;
 extern template class basic_code_node<allocator_any>;
 //! \cond
@@ -92,7 +94,7 @@ std::ostream& operator<< <allocator_any>(std::ostream&,
                                          const basic_code_node<allocator_any>&);
 //! \endcond
 
-//! Script code using the configured allocator
+//! The \ref basic_script using the configured allocator
 using script = basic_script<allocator_any>;
 extern template class basic_script<allocator_any>;
 //! \cond
@@ -100,5 +102,26 @@ extern template
 std::ostream& operator<< <allocator_any>(std::ostream&,
                                          const basic_script<allocator_any>&);
 //! \endcond
+
+//! The \ref basic_value_function using the configured allocator
+using value_function = basic_value_function<allocator_any>;
+extern template class basic_typed_value<basic_value_function<allocator_any>,
+    std::shared_ptr<code_node>, threadscript::impl::name_value_function,
+    allocator_any>;
+extern template class basic_value_function<allocator_any>;
+
+//! The \ref basic_value_script using the configured allocator
+using value_script = basic_value_script<allocator_any>;
+extern template class basic_typed_value<basic_value_script<allocator_any>,
+    std::shared_ptr<script>, threadscript::impl::name_value_script,
+    allocator_any>;
+extern template class basic_value_script<allocator_any>;
+
+//! The \ref basic_value_native_fun using the configured allocator
+using value_native_fun = basic_value_native_fun<allocator_any>;
+extern template class basic_typed_value<basic_value_native_fun<allocator_any>,
+    threadscript::impl::empty, threadscript::impl::name_value_native_fun,
+    allocator_any>;
+extern template class basic_value_native_fun<allocator_any>;
 
 } // namespace threadscript

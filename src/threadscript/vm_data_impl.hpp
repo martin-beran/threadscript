@@ -5,6 +5,7 @@
  */
 
 #include "threadscript/vm_data.hpp"
+#include "threadscript/code.hpp"
 
 namespace threadscript {
 
@@ -13,7 +14,7 @@ namespace threadscript {
 template <impl::allocator A>
 auto basic_value<A>::eval(basic_state<A>&, const basic_symbol_table<A>&,
     const std::vector<std::reference_wrapper<basic_symbol_table<A>>>&,
-    std::vector<value_ptr>) const -> value_ptr
+    std::vector<value_ptr>) -> value_ptr
 {
     return this->shared_from_this();
 }
@@ -66,7 +67,8 @@ std::string_view basic_typed_value<Derived, T, Name, A>::type_name()
 {
     // It is here and not in the declaration of class basic_typed_value,
     // because Derived must be a complete type here
-    static_assert(std::is_final_v<Derived>);
+    static_assert(std::is_final_v<Derived> ||
+                  std::is_same_v<Derived, basic_value_native_fun<A>>);
     return Name;
 }
 

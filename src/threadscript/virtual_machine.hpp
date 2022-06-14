@@ -85,7 +85,10 @@ public:
     using vm_t = basic_virtual_machine<A>;
     //! The constructor registers basic_state in \a vm.
     /*! \param[in] vm the virtual machine which this state is attached to. */
-    explicit basic_state(vm_t& vm): vm(vm), alloc(vm.get_allocator()) {
+    explicit basic_state(vm_t& vm):
+        vm(vm), alloc(vm.get_allocator()),
+        t_vars(vm.get_allocator(), vm.sh_vars.get())
+    {
         ++vm._num_states;
     }
     //! No copying
@@ -111,6 +114,11 @@ private:
      * max_stack
      * \todo Use custom allocators for stack frames. */
     struct stack_frame {
+        //! Creates a stack frame.
+        /*! \param[in] alloc the allocator used by this stack frame
+         * \param[in] thread the thread containing this fram */
+        explicit stack_frame(const A& alloc, basic_state& thread):
+            l_vars(alloc, &thread.t_vars) {}
         frame_location location; //!< Location in the script source
         basic_symbol_table<A> l_vars; //!< Local variables of this stack frame
     };

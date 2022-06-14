@@ -34,11 +34,13 @@ template class basic_typed_value<value_array,
     a_basic_vector<typename basic_value<allocator_any>::value_ptr,
         allocator_any>,
     threadscript::impl::name_value_array, allocator_any>;
+template class basic_value_array<allocator_any>;
 
 template class basic_typed_value<value_hash,
     a_basic_hash<a_string, typename basic_value<allocator_any>::value_ptr,
         allocator_any>,
     threadscript::impl::name_value_hash, allocator_any>;
+template class basic_value_hash<allocator_any>;
 
 template class basic_symbol_table<allocator_any>;
 
@@ -55,5 +57,20 @@ template
 std::ostream& operator<< <allocator_any>(std::ostream&,
                                          const basic_script<allocator_any>&);
 //! \endcond
+
+template class basic_typed_value<basic_value_function<allocator_any>,
+    std::shared_ptr<code_node>, threadscript::impl::name_value_function,
+    allocator_any>;
+template class basic_value_function<allocator_any>;
+
+template class basic_typed_value<basic_value_script<allocator_any>,
+    std::shared_ptr<script>, threadscript::impl::name_value_script,
+    allocator_any>;
+template class basic_value_script<allocator_any>;
+
+template class basic_typed_value<basic_value_native_fun<allocator_any>,
+    threadscript::impl::empty, threadscript::impl::name_value_native_fun,
+    allocator_any>;
+template class basic_value_native_fun<allocator_any>;
 
 } // namespace threadscript

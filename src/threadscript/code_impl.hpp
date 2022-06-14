@@ -151,4 +151,39 @@ std::ostream& operator<<(std::ostream& os, const basic_script<A>& script)
     return os;
 }
 
+/*** basic_value_function ****************************************************/
+
+template <impl::allocator A> typename basic_value<A>::value_ptr
+basic_value_function<A>::eval(basic_state<A>& /*thread*/,
+        const basic_symbol_table<A>& /*lookup*/,
+        const std::vector<std::reference_wrapper<basic_symbol_table<A>>>& /*sym*/,
+        std::vector<typename basic_value<A>::value_ptr> /*args*/)
+{
+    // TODO
+    return nullptr;
+}
+
+/*** basic_value_script ******************************************************/
+
+template <impl::allocator A> typename basic_value<A>::value_ptr
+basic_value_script<A>::eval(basic_state<A>& /*thread*/,
+        const basic_symbol_table<A>& /*lookup*/,
+        const std::vector<std::reference_wrapper<basic_symbol_table<A>>>& /*sym*/,
+        std::vector<typename basic_value<A>::value_ptr> /*args*/)
+{
+    // TODO
+    return nullptr;
+}
+
+/*** basic_value_native_fun **************************************************/
+
+template <impl::allocator A> typename basic_value<A>::value_ptr
+basic_value_native_fun<A>::eval(basic_state<A>&,
+        const basic_symbol_table<A>&,
+        const std::vector<std::reference_wrapper<basic_symbol_table<A>>>&,
+        std::vector<typename basic_value<A>::value_ptr>)
+{
+    return nullptr;
+}
+
 } // namespace threadscript

@@ -15,6 +15,7 @@
 
 #include <memory>
 #include <optional>
+#include <typeinfo>
 
 namespace threadscript {
 
@@ -60,6 +61,11 @@ public:
     basic_value& operator=(const basic_value&) = delete;
     //! No moving
     basic_value& operator=(basic_value&&) = delete;
+    //! Gets the dynamic type of this value
+    /*! \return the type info */
+    [[nodiscard]] const std::type_info& type() const noexcept {
+        return typeid(*this);
+    }
     //! Gets the value type name
     /*! \return the type name */
     [[nodiscard]] virtual std::string_view type_name() const noexcept = 0;
@@ -95,7 +101,7 @@ public:
     virtual value_ptr eval(basic_state<A>& thread,
         const basic_symbol_table<A>& lookup,
         const std::vector<std::reference_wrapper<basic_symbol_table<A>>>& sym,
-        std::vector<value_ptr> args) const;
+        std::vector<value_ptr> args);
     //! Copies this value, but not referenced values.
     /*! It makes a deep copy of the representation of this value itself, but
      * any pointers to other basic_value objects will reference the same
@@ -204,7 +210,7 @@ private:
      * \param[in] a an ignored allocator */
     template <class Alloc> requires (!impl::uses_allocator<T, Alloc>)
     explicit basic_typed_value(tag2 t, const Alloc& a);
-    value_type data; //!< The stored data of this value
+    [[no_unique_address]] value_type data; //!< The stored data of this value
 };
 
 template <impl::allocator A> class basic_value_bool;

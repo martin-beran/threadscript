@@ -180,4 +180,93 @@ private:
     friend std::ostream& operator<< <A>(std::ostream&, const basic_script<A>&);
 };
 
+template <impl::allocator A> class basic_value_function;
+
+namespace impl {
+//! The name of basic_value_function
+inline constexpr char name_value_function[] = "function";
+//! The base class of basic_value_function
+/*! \tparam A an allocator type */
+template <allocator A> using basic_value_function_base =
+    basic_typed_value<basic_value_function<A>,
+        std::shared_ptr<basic_code_node<A>>, name_value_function, A>;
+} //namespace impl
+
+//! The value class holding a reference to a script function
+template <impl::allocator A> class basic_value_function final:
+    public impl::basic_value_function_base<A>
+{
+    static_assert(
+        !impl::uses_allocator<typename basic_value_function::value_type, A>);
+    using impl::basic_value_function_base<A>::basic_value_function_base;
+public:
+    //! Calls the referenced function.
+    /*! \copydetails basic_value::eval() */
+    typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
+        const basic_symbol_table<A>& lookup,
+        const std::vector<std::reference_wrapper<basic_symbol_table<A>>>& sym,
+        std::vector<typename basic_value<A>::value_ptr> args) override;
+};
+
+template <impl::allocator A> class basic_value_script;
+
+namespace impl {
+//! The name of basic_value_script
+inline constexpr char name_value_script[] = "script";
+//! The base class of basic_value_script
+/*! \tparam A an allocator type */
+template <allocator A> using basic_value_script_base =
+    basic_typed_value<basic_value_script<A>,
+        std::shared_ptr<basic_script<A>>, name_value_script, A>;
+} //namespace impl
+
+//! The value class holding a reference to a script
+template <impl::allocator A> class basic_value_script final:
+    public impl::basic_value_script_base<A>
+{
+    static_assert(
+        !impl::uses_allocator<typename basic_value_script::value_type, A>);
+    using impl::basic_value_script_base<A>::basic_value_script_base;
+public:
+    //! Runs the referenced script.
+    /*! \copydetails basic_value::eval() */
+    typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
+        const basic_symbol_table<A>& lookup,
+        const std::vector<std::reference_wrapper<basic_symbol_table<A>>>& sym,
+        std::vector<typename basic_value<A>::value_ptr> args) override;
+};
+
+template <impl::allocator A> class basic_value_native_fun;
+
+namespace impl {
+//! The name of basic_value_native_fun
+inline constexpr char name_value_native_fun[] = "native_fun";
+//! An empty value
+/*! Used as the basic_typed_value::value_type type of basic_value_native_fun */
+struct empty {};
+//! The base class of basic_value_native_fun
+/*! \tparam A an allocator type */
+template <allocator A> using basic_value_native_fun_base =
+    basic_typed_value<basic_value_native_fun<A>, empty, name_value_native_fun,
+        A>;
+} // namespace impl
+
+//! The value class holding a reference to a function implemented by native C++
+/*! This is the abstract base class for native function. Each derived type
+ * should override member function eval(). */
+template <impl::allocator A> class basic_value_native_fun:
+    public impl::basic_value_native_fun_base<A>
+{
+    static_assert(
+        !impl::uses_allocator<typename basic_value_native_fun::value_type, A>);
+    using impl::basic_value_native_fun_base<A>::basic_value_native_fun_base;
+public:
+    //! Evaluates the value to \c nullptr.
+    /*! \copydetails basic_value::eval() */
+    typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
+        const basic_symbol_table<A>& lookup,
+        const std::vector<std::reference_wrapper<basic_symbol_table<A>>>& sym,
+        std::vector<typename basic_value<A>::value_ptr> args) override;
+};
+
 } //namespace threadscript

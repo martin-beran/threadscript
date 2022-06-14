@@ -95,8 +95,9 @@ struct frame_location: src_location {
         \param[in] file a file name
         \param[in] line a line number
         \param[in] column a column number */
-    frame_location(std::string_view function, std::string_view file,
-                   unsigned line = unknown, unsigned column = unknown):
+    explicit frame_location(std::string_view function = {},
+                            std::string_view file = {},
+                            unsigned line = unknown, unsigned column = unknown):
         src_location(file, line, column), function(function) {}
     //! Gets a frame record as a string
     /*! \return the frame location */
@@ -126,7 +127,7 @@ public:
      * the stack trace is empty. */
     [[nodiscard]] frame_location location() const & noexcept {
         if (empty())
-            return {"", ""};
+            return frame_location{"", ""};
         else
             return front();
     }
@@ -135,7 +136,7 @@ public:
      * the stack trace is empty. */
     [[nodiscard]] frame_location location() && noexcept {
         if (empty())
-            return {"", ""};
+            return frame_location{"", ""};
         else
             return std::move(front());
     }
