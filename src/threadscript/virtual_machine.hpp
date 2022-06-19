@@ -106,6 +106,11 @@ public:
     //! Get the allocator used by this state.
     /*! \return a copy of the allocator object */
     [[nodiscard]] A get_allocator() const noexcept { return alloc; }
+    //! Gets the stack trace generated from the current \ref stack.
+    /*! If creation of the stack trace throws an exception, an empty stack
+     * trace is returned.
+     * \return the stack trace */
+    [[nodiscard]] stack_trace current_stack() const noexcept;
     vm_t& vm; //!< The virtual machine 
 private:
     //! A stack frame
@@ -125,8 +130,19 @@ private:
     //! A stack
     /*! The outermost function level (the bottom of the stack) is at index 0.
      * The innermost function level (the top of the stack, the most recently
-     * called function) is at \c back(). */
-    using stack_t = a_basic_vector<stack_frame, A>;
+     * called function) is at \c back().
+     * Adding and removing stack frames must be done by push_frame() and
+     * pop_frame(). */
+    using stack_t = a_basic_deque<stack_frame, A>;
+    //! Pushes a new stack frame to \ref stack.
+    /*! \param[in] frame the new stack frame
+     * \return a reference to the pushed stack frame
+     * \throw exception::op_recursion if the new frame would exceed max_stack */
+    stack_frame& push_frame(stack_frame&& frame);
+    //! Pops the top element from the stack.
+    /*! It handles freeing memory consumed by the stack. The stack must not be
+     * empty. */
+    void pop_frame() noexcept;
     [[no_unique_address]] A alloc; //!< The allocator used by this state
     //! The maximum stack depth for this thread
     size_t max_stack = basic_virtual_machine<A>::default_max_stack;

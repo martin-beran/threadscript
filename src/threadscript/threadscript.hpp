@@ -4,6 +4,11 @@
  * \brief The main header file of the ThreadScript interpreter
  *
  * This header must be included by each program that embeds ThreadScript.
+ *
+ * \todo Move Declarations of template specializations that use
+ * threadscript::allocator_any and explicit instantiations from
+ * threadscript.hpp and threadscript.cpp to files where primary templates are
+ * declared.
  */
 
 #include "threadscript/config.hpp"
@@ -26,6 +31,10 @@ using a_string = a_basic_string<allocator_any>;
 //! A vector type using the configured allocator
 /*! \tparam T a type of vector elements */
 template <class T> using a_vector = a_basic_vector<T, allocator_any>;
+
+//! A deque type using the configured allocator
+/*! \tparam T a type of deque elements */
+template <class T> using a_deque = a_basic_deque<T, allocator_any>;
 
 //! The virtual machine class using the configured allocator
 using virtual_machine = basic_virtual_machine<allocator_any>;

@@ -12,12 +12,16 @@
 namespace threadscript {
 
 template <impl::allocator A> class basic_script;
+template <impl::allocator A> class basic_value_script;
+template <impl::allocator A> class basic_value_function;
+template <impl::allocator A> class basic_value_native_fun;
 
 //! A single node in a tree representing a parsed script
 /*! \tparam A the allocator type
- * \note Raw pointers are used for child nodes internally, so that an addional
- * copy of allocator \a A does not have to be stored in each node or pointer.
- */
+ * \threadsafe{safe, unsafe}
+ * \note Raw pointers are used for child nodes internally, so that an
+ * additional copy of allocator \a A does not have to be stored in each node or
+ * pointer. */
 template <impl::allocator A> class basic_code_node {
     struct tag {}; //!< Used to control access to a public constructor
 public:
@@ -34,12 +38,14 @@ public:
     /*! \param[in] t an ignored parameter used to prevent using this
      * constructor directly
      * \param[in] alloc the allocator used by members
+     * \param[in] file the file name of the owner script
      * \param[in] location the location in the current script file,
      * represented by the owher basic_script
      * \param[in] name the name of this node
      * \param[in] value the value of this node */
-    basic_code_node(tag t, const A& alloc, const file_location& location,
-                    std::string_view name, value_t value);
+    basic_code_node(tag t, const A& alloc, const a_basic_string<A>& file,
+                    const file_location& location, std::string_view name,
+                    value_t value);
     //! No copying
     basic_code_node(const basic_code_node&) = delete;
     //! No moving
@@ -62,16 +68,33 @@ public:
      * \return whether \c this and \a o are equal
      * \todo Compare \ref value for equality */
     bool operator==(const basic_code_node& o) const noexcept;
-    //! Writes the node to a stream.
-    /*! It is used by operator<<(std::ostream&, const basic_code_node<A>&).
-     * \param[in] os an output stream
-     * \param[in] indent the number of spaces used for indentation */
-    void write(std::ostream& os, size_t indent) const;
 private:
     //! A private (raw) pointer to a code node
     using priv_ptr = basic_code_node*;
     //! A private (raw) pointer to a const code node
     using priv_const_ptr = const basic_code_node*;
+    //! Evaluates the node and returns the result.
+    /*! If \ref value is \c std::nullopt, it is first resolved using \a lookup
+     * and \ref name. Then, the (resolved) value is evaluated by its
+     * basic_value::eval().
+     * \param[in] thread the current thread
+     * \param[in] lookup the (const) symbol table used for symbol lookups
+     * \param[in] sym the (non-const) symbol tables where new  symbols can be
+     * added; see parameter \a sym of basic_value::eval() for more information
+     * \return the result of evaluation
+     * \throw a class derived from exception::base if evaluation fails; other
+     * exceptions are wrapped in exception::wrapped */
+    typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
+        const basic_symbol_table<A>& lookup,
+        const std::vector<std::reference_wrapper<basic_symbol_table<A>>>& sym);
+    //! Writes the node to a stream.
+    /*! It is used by operator<<(std::ostream&, const basic_code_node<A>&).
+     * \param[in] os an output stream
+     * \param[in] indent the number of spaces used for indentation */
+    void write(std::ostream& os, size_t indent) const;
+    //! The script file name
+    /*! It always references basic_script::_file of the owner script. */
+    const a_basic_string<A>& _file;
     file_location location; //!< Location in the script source file
     a_basic_string<A> name; //!< Node name
     //! Child nodes
@@ -103,7 +126,8 @@ std::ostream& operator<<(std::ostream& os, const basic_script<A>& script);
 //! The representation of a single parsed script file
 /*! It owns a tree of basic_code_node objects representing the whole parsed
  * content of the file
- * \tparam A the allocator type */
+ * \tparam A the allocator type
+ * \threadsafe{safe, unsafe} */
 template <impl::allocator A> class basic_script:
     public std::enable_shared_from_this<basic_script<A>>
 {
@@ -169,6 +193,21 @@ public:
      * \param[in] o another script
      * \return whether \c this and \a o are equal */
     bool operator==(const basic_script& o) const noexcept;
+    //! Evaluates the script and returns the result.
+    /*! If _root is \c nullptr, then \c nullptr is returned. Otherwise, the
+     * root node is evaluated by calling its basic_code_node::eval().
+     * Evaluating a script adds a new stack frame, therefore outside any
+     * function, local variables refer to a script-local symbol table.
+     * \param[in] thread the current thread
+     * \param[in] lookup the (const) symbol table used for symbol lookups
+     * \param[in] sym the (non-const) symbol tables where new  symbols can be
+     * added; see parameter \a sym of basic_value::eval() for more information
+     * \return the result of evaluation
+     * \throw a class derived from exception::base if evaluation fails; other
+     * exceptions are wrapped in exception::wrapped */
+    typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
+        const basic_symbol_table<A>& lookup,
+        const std::vector<std::reference_wrapper<basic_symbol_table<A>>>& sym);
 private:
     //! The script file name
     a_basic_string<A> _file;
@@ -178,9 +217,17 @@ private:
     typename node_type::priv_ptr _root = nullptr;
     //! <tt>operator<< \<A>()</tt> needs access to private members.
     friend std::ostream& operator<< <A>(std::ostream&, const basic_script<A>&);
+    //! basic_value_script needs access to _root
+    friend class basic_value_script<A>;
 };
 
-template <impl::allocator A> class basic_value_function;
+//! Common handling of funtion calls
+/*! This class provides common functionality needed by basic_value_function and
+ * classes derived from basic_value_native_fun. It handles adjusting the stack
+ * and processing function call arguments. */
+template <impl::allocator A> class basic_call_context {
+    // TODO
+};
 
 namespace impl {
 //! The name of basic_value_function
@@ -189,7 +236,7 @@ inline constexpr char name_value_function[] = "function";
 /*! \tparam A an allocator type */
 template <allocator A> using basic_value_function_base =
     basic_typed_value<basic_value_function<A>,
-        std::shared_ptr<basic_code_node<A>>, name_value_function, A>;
+        typename basic_script<A>::node_ptr, name_value_function, A>;
 } //namespace impl
 
 //! The value class holding a reference to a script function
@@ -199,16 +246,14 @@ template <impl::allocator A> class basic_value_function final:
     static_assert(
         !impl::uses_allocator<typename basic_value_function::value_type, A>);
     using impl::basic_value_function_base<A>::basic_value_function_base;
-public:
+protected:
     //! Calls the referenced function.
     /*! \copydetails basic_value::eval() */
     typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
         const basic_symbol_table<A>& lookup,
         const std::vector<std::reference_wrapper<basic_symbol_table<A>>>& sym,
-        std::vector<typename basic_value<A>::value_ptr> args) override;
+        const basic_code_node<A>& node) override;
 };
-
-template <impl::allocator A> class basic_value_script;
 
 namespace impl {
 //! The name of basic_value_script
@@ -227,16 +272,16 @@ template <impl::allocator A> class basic_value_script final:
     static_assert(
         !impl::uses_allocator<typename basic_value_script::value_type, A>);
     using impl::basic_value_script_base<A>::basic_value_script_base;
-public:
+protected:
     //! Runs the referenced script.
-    /*! \copydetails basic_value::eval() */
+    /*! If there is no associated basic_script \c nullptr is returned.
+     * Otherwise, basic_script::eval() of the associated script is called.
+     * \copydetails basic_value::eval() */
     typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
         const basic_symbol_table<A>& lookup,
         const std::vector<std::reference_wrapper<basic_symbol_table<A>>>& sym,
-        std::vector<typename basic_value<A>::value_ptr> args) override;
+        const basic_code_node<A>& node) override;
 };
-
-template <impl::allocator A> class basic_value_native_fun;
 
 namespace impl {
 //! The name of basic_value_native_fun
@@ -260,13 +305,13 @@ template <impl::allocator A> class basic_value_native_fun:
     static_assert(
         !impl::uses_allocator<typename basic_value_native_fun::value_type, A>);
     using impl::basic_value_native_fun_base<A>::basic_value_native_fun_base;
-public:
+protected:
     //! Evaluates the value to \c nullptr.
     /*! \copydetails basic_value::eval() */
     typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
         const basic_symbol_table<A>& lookup,
         const std::vector<std::reference_wrapper<basic_symbol_table<A>>>& sym,
-        std::vector<typename basic_value<A>::value_ptr> args) override;
+        const basic_code_node<A>& node) override;
 };
 
 } //namespace threadscript

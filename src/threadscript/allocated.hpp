@@ -7,6 +7,7 @@
 
 #include "threadscript/concepts.hpp"
 
+#include <deque>
 #include <memory>
 #include <unordered_map>
 #include <vector>
@@ -92,6 +93,13 @@ template <impl::allocator A> struct a_basic_string_hash {
 template <class T, impl::allocator A>
 using a_basic_vector = std::vector<T,
     typename std::allocator_traits<A>::template rebind_alloc<T>>;
+
+//! An instance of template \c std::deque using an allocator
+/*! \tparam T a type of deque elements
+ * \tparam A an allocator type */
+template <class T, impl::allocator A>
+using a_basic_deque = std::deque<T,
+    typename std::allocator_traits<A>::template rebind_alloc<char>>;
 
 namespace impl {
 

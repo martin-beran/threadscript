@@ -5,6 +5,7 @@
  */
 
 #include <memory>
+#include <type_traits>
 
 namespace threadscript::impl {
 
@@ -26,5 +27,9 @@ concept uses_allocator = requires {
     requires allocator<A>;
     typename T::allocator_type;
 };
+
+//! Requirements for a template argument of threadscript::finally
+template <class F>
+concept finally_fun = std::is_nothrow_invocable_v<F>;
 
 } // namespace threadscript::impl

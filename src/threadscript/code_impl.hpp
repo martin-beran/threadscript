@@ -5,6 +5,8 @@
  */
 
 #include "threadscript/code.hpp"
+#include "threadscript/exception.hpp"
+#include "threadscript/finally.hpp"
 
 namespace threadscript {
 
@@ -12,10 +14,12 @@ namespace threadscript {
 
 template <impl::allocator A>
 basic_code_node<A>::basic_code_node(tag, const A& alloc,
+                                    const a_basic_string<A>& file,
                                     const file_location& location,
                                     std::string_view name,
                                     value_t value):
-    location(location), name(name, alloc), _children(alloc), value(value)
+    _file(file), location(location), name(name, alloc), _children(alloc),
+    value(value)
 {
 }
 
@@ -28,6 +32,36 @@ template <impl::allocator A> basic_code_node<A>::~basic_code_node() {
             traits::destroy(alloc, c);
             alloc.deallocate(c, 1);
         }
+}
+
+template <impl::allocator A> typename basic_value<A>::value_ptr
+basic_code_node<A>::eval(basic_state<A>& thread,
+        const basic_symbol_table<A>& lookup,
+        const std::vector<std::reference_wrapper<basic_symbol_table<A>>>& sym)
+{
+    // Called from a script or function, therefore the stack must be nonempty.
+    assert(!thread.stack.empty());
+    // We do not call another script or function here, therefore only line and
+    // column can change in the location at the top of the stack. Saving just
+    // these values and not file and function names prevents throwing and
+    // eliminates string copying. Object slicing is OK here.
+    finally restore{
+        [&thread, loc = file_location{thread.stack.back().location}]() noexcept
+        {
+            thread.stack.back().location = loc;
+        }
+    };
+    static_cast<file_location&>(thread.stack.back().location) = location;
+    // value ? value : lookup.lookup(name) would make a copy of value
+    // Initialization of the reference extends lifetime of the temporary object
+    // returned by lookup().
+    const value_t& v = value ? value :
+        static_cast<const value_t&>(lookup.lookup(name));
+    if (!v)
+        throw exception::unknown_symbol(name, thread.current_stack());
+    if (!*v)
+        return nullptr;
+    return (*v)->eval(thread, lookup, sym, *this);
 }
 
 template <impl::allocator A>
@@ -112,8 +146,8 @@ auto basic_script<A>::add_node(const node_ptr& parent,
     using traits = std::allocator_traits<decltype(a)>;
     try {
         p = a.allocate(1);
-        traits::construct(a, p, typename node_type::tag{}, alloc, location,
-                          name, value);
+        traits::construct(a, p, typename node_type::tag{}, alloc, _file,
+                          location, name, value);
         constructed = true;
         if (parent) {
             // OK during building script tree
@@ -129,6 +163,21 @@ auto basic_script<A>::add_node(const node_ptr& parent,
         throw;
     }
     return node_ptr{this->shared_from_this(), p};
+}
+
+template <impl::allocator A> typename basic_value<A>::value_ptr
+basic_script<A>::eval(basic_state<A>& thread,
+        const basic_symbol_table<A>& lookup,
+        const std::vector<std::reference_wrapper<basic_symbol_table<A>>>& sym)
+{
+    if (_root) {
+        auto& frame =
+            thread.push_frame(basic_state<A>::stack_frame(alloc, thread));
+        finally pop{[&thread]() noexcept { thread.pop_frame(); }};
+        frame.file = _file;
+        return _root->eval(thread, lookup, sym);
+    }
+    return nullptr;
 }
 
 template <impl::allocator A>
@@ -157,7 +206,7 @@ template <impl::allocator A> typename basic_value<A>::value_ptr
 basic_value_function<A>::eval(basic_state<A>& /*thread*/,
         const basic_symbol_table<A>& /*lookup*/,
         const std::vector<std::reference_wrapper<basic_symbol_table<A>>>& /*sym*/,
-        std::vector<typename basic_value<A>::value_ptr> /*args*/)
+        const basic_code_node<A>& /*node*/)
 {
     // TODO
     return nullptr;
@@ -166,12 +215,13 @@ basic_value_function<A>::eval(basic_state<A>& /*thread*/,
 /*** basic_value_script ******************************************************/
 
 template <impl::allocator A> typename basic_value<A>::value_ptr
-basic_value_script<A>::eval(basic_state<A>& /*thread*/,
-        const basic_symbol_table<A>& /*lookup*/,
-        const std::vector<std::reference_wrapper<basic_symbol_table<A>>>& /*sym*/,
-        std::vector<typename basic_value<A>::value_ptr> /*args*/)
+basic_value_script<A>::eval(basic_state<A>& thread,
+        const basic_symbol_table<A>& lookup,
+        const std::vector<std::reference_wrapper<basic_symbol_table<A>>>& sym,
+        const basic_code_node<A>&)
 {
-    // TODO
+    if (auto script = this->cvalue())
+        return script->eval(thread, lookup, sym);
     return nullptr;
 }
 
@@ -181,7 +231,7 @@ template <impl::allocator A> typename basic_value<A>::value_ptr
 basic_value_native_fun<A>::eval(basic_state<A>&,
         const basic_symbol_table<A>&,
         const std::vector<std::reference_wrapper<basic_symbol_table<A>>>&,
-        std::vector<typename basic_value<A>::value_ptr>)
+        const basic_code_node<A>&)
 {
     return nullptr;
 }

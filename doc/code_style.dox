@@ -28,6 +28,27 @@
  * different threads concurrently. It is always safe to perform non-modifying
  * operations on the same object from multiple threads.
  *
+ * \section File_names File names
+ *
+ * \arg Extension \c .hpp is used for header files
+ * \arg Extension \c .cpp is used for implementation files
+ * \arg Suffix \c _impl.hpp is used for implementations that cannot be directly
+ * compiled to object code. Usually, such files contain definitions of template
+ * (member) functions declared in the respective \c .hpp files.
+ * \arg \c .hpp and \c _impl.hpp files are stored in directory
+ * \link ../src/threadscript src/threadscript/\endlink.
+ * \arg \c .cpp files are stored in directory \link ../src src/\endlink.
+ * \arg Example: Declarations in \c src/threadscript/xyz.hpp would be
+ * implemented in \c src/threadscript/xyz_impl.hpp and/or \c src/xyz.cpp.
+ *
+ * section Namespaces Namespaces
+ *
+ * \arg All ThreadScript source code is contained in the top-level namespace
+ * \ref threadscript.
+ * \arg Nested namespaces are defined for parts of code as needed.
+ * \arg Internal implementation details related to contents of a namespace are
+ * enclosed in its nested namespace \c impl. For example, there are namespaces
+ * \ref threadscript and threadscript::impl.
  * \section Identifiers Identifiers
  *
  * \arg Names of macros are uppercase with words separated by underscores.

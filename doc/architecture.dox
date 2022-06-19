@@ -19,6 +19,12 @@
  * system based on CMake
  * \arg Free and open source
  *
+ * \section Debugging Debugging
+ *
+ * To help in debugging, class threadscript::DEBUG is available to generate
+ * temporary debugging mesages. Such debugging messages should not be left in
+ * source code indefinitely and they should be removed as soon as not needed.
+ *
  * \section Architecture_Memory_allocation Memory allocation
  *
  * All ThreadScript classes (e.g., the virtual machine, script code, data,
@@ -64,6 +70,10 @@
  * ThreadScript reports errors by throwing exception classes derived from
  * threadscript::exception::base. These exceptions contain a description of an
  * error and its location in the form of a stack trace.
+ *
+ * A RAII function wrapper class threadscript::finally is provided for
+ * performing cleanup actions when a scope is terminated, either normally or by
+ * an exception.
  *
  * \section Architecture_Virtual_machine Virtual machine
  *
