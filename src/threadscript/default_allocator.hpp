@@ -3,12 +3,12 @@
 /*! \file
  * \brief The default allocator class
  *
- * This file is usually not included. File threadscript/config.hpp is usually
+ * This file is usually not included. File threadscript/configure.hpp is usually
  * included instead and types threadscript::config::allocator_type and
  * threadscript::allocator_any are used as default allocators.
  */
 
-#include "threadscript/config.hpp"
+#include "threadscript/configure.hpp"
 
 #include <atomic>
 #include <locale>

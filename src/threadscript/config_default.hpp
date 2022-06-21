@@ -8,12 +8,16 @@
  * name, edit it as needed, and set CMake variable \c CONFIG_FILE_HPP to the
  * name of the new file.
  *
- * This file must not be included directly. Instead, use
+ * <b>This file must not be included directly.</b> Instead, use
  * \code
- * #include "threadscript/config.hpp"
+ * #include "threadscript/configure.hpp"
  * \endcode
  * This includes the correct configuration file as selected by CMake.
  */
+
+#ifndef THREADSCRIPT_INCLUDED_BY_CONFIGURE_HPP
+#error This file may be included only by threadscript/configure.hpp
+#endif
 
 #include <cstddef>
 #include <cstdint>

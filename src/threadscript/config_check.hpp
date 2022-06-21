@@ -13,7 +13,7 @@
 // This include is ignored in a normal build, because this file is included by
 // threadscript/config.hpp. It is here only to provide configuration
 // declarations for an editor.
-#include "threadscript/config.hpp"
+#include "threadscript/configure.hpp"
 
 #include <type_traits>
 

@@ -2,7 +2,6 @@
  * \brief Implementation part of default_allocator.hpp
  */
 
-#include "threadscript/config.hpp"
 #include "threadscript/default_allocator.hpp"
 
 namespace threadscript {

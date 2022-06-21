@@ -11,8 +11,7 @@
  * declared.
  */
 
-#include "threadscript/config.hpp"
-#include "threadscript/config_default.hpp"
+#include "threadscript/configure.hpp"
 #include "threadscript/code.hpp"
 #include "threadscript/symbol_table.hpp"
 #include "threadscript/virtual_machine.hpp"

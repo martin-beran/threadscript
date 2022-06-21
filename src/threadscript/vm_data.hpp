@@ -9,8 +9,7 @@
 
 #include "threadscript/allocated.hpp"
 #include "threadscript/concepts.hpp"
-#include "threadscript/config.hpp"
-#include "threadscript/config_default.hpp"
+#include "threadscript/configure.hpp"
 #include "threadscript/exception.hpp"
 
 #include <memory>

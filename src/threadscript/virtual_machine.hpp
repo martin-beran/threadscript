@@ -4,7 +4,7 @@
  * \brief Main classes of the ThreadScript virtual machine
  */
 
-#include "threadscript/config.hpp"
+#include "threadscript/configure.hpp"
 #include "threadscript/symbol_table.hpp"
 #include "threadscript/vm_data.hpp"
 

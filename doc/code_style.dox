@@ -27,6 +27,8 @@
  * argument specifies thread safety when modifying a single object from
  * different threads concurrently. It is always safe to perform non-modifying
  * operations on the same object from multiple threads.
+ * \arg Pieces of code that should be visible to Doxygen, but not to the
+ * compiler, can be wrapped in <tt>\#ifdef \ref DOXYGEN</tt>.
  *
  * \section File_names File names
  *
@@ -78,9 +80,9 @@
  * as their respective declarations.
  *
  * \arg Class members (member functions and static member variables) of each
- * class are defined together, with variables defined first in the
- * lexicographical order and member functions following also in the
- * lexicographical order.
+ * class, which are defined outside of a class body, are defined together, with
+ * variables defined first in the lexicographical order and member functions
+ * following also in the lexicographical order.
  *
  * \section Functions
  *
