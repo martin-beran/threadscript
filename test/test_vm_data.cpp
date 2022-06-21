@@ -9,7 +9,7 @@
  */
 
 //! \cond
-#include "threadscript/config.hpp"
+#include "threadscript/configure.hpp"
 #include "threadscript/config_default.hpp"
 #include "threadscript/default_allocator.hpp"
 #include "threadscript/exception.hpp"

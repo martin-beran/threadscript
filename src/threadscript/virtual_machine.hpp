@@ -13,6 +13,10 @@
 
 namespace threadscript {
 
+template <impl::allocator A> class basic_code_node;
+template <impl::allocator A> class basic_script;
+template <impl::allocator A> class basic_value_function;
+
 template <impl::allocator A> class basic_state;
 
 //! The ThreadScript virtual machine
@@ -148,6 +152,12 @@ private:
     size_t max_stack = basic_virtual_machine<A>::default_max_stack;
     stack_t stack; //!< The stack of this thread
     basic_symbol_table<A> t_vars; //!< Global variables of this thread
+    //! basic_code_node::eval() needs access to basic_state
+    friend class basic_code_node<A>;
+    //! basic_script::eval() needs access to basic_state
+    friend class basic_script<A>;
+    //! basic_value_function::eval() needs access to basic_state
+    friend class basic_value_function<A>;
 };
 
 } // namespace threadscript

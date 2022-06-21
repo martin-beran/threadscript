@@ -68,6 +68,11 @@ public:
      * \return whether \c this and \a o are equal
      * \todo Compare \ref value for equality */
     bool operator==(const basic_code_node& o) const noexcept;
+    //! Writes the node to a stream.
+    /*! It is used by operator<<(std::ostream&, const basic_code_node<A>&).
+     * \param[in] os an output stream
+     * \param[in] indent the number of spaces used for indentation */
+    void write(std::ostream& os, size_t indent) const;
 private:
     //! A private (raw) pointer to a code node
     using priv_ptr = basic_code_node*;
@@ -86,12 +91,8 @@ private:
      * exceptions are wrapped in exception::wrapped */
     typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
         const basic_symbol_table<A>& lookup,
-        const std::vector<std::reference_wrapper<basic_symbol_table<A>>>& sym);
-    //! Writes the node to a stream.
-    /*! It is used by operator<<(std::ostream&, const basic_code_node<A>&).
-     * \param[in] os an output stream
-     * \param[in] indent the number of spaces used for indentation */
-    void write(std::ostream& os, size_t indent) const;
+        const std::vector<std::reference_wrapper<basic_symbol_table<A>>>& sym
+    ) const;
     //! The script file name
     /*! It always references basic_script::_file of the owner script. */
     const a_basic_string<A>& _file;
@@ -103,6 +104,8 @@ private:
     value_t value; //!< Value of the node
     //! The owner basic_script needs access to node internals
     friend class basic_script<A>;
+    //! basic_value_function::eval() needs access to node internals
+    friend class basic_value_function<A>;
 };
 
 //! Writes a textual description of the node to a stream
@@ -207,7 +210,8 @@ public:
      * exceptions are wrapped in exception::wrapped */
     typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
         const basic_symbol_table<A>& lookup,
-        const std::vector<std::reference_wrapper<basic_symbol_table<A>>>& sym);
+        const std::vector<std::reference_wrapper<basic_symbol_table<A>>>& sym
+    ) const;
 private:
     //! The script file name
     a_basic_string<A> _file;
@@ -224,7 +228,9 @@ private:
 //! Common handling of funtion calls
 /*! This class provides common functionality needed by basic_value_function and
  * classes derived from basic_value_native_fun. It handles adjusting the stack
- * and processing function call arguments. */
+ * and processing function call arguments.
+ * \todo use basic_call_context for common handling of function calls in
+ * basic_value_function and classes derived from basic_value_native_fun */
 template <impl::allocator A> class basic_call_context {
     // TODO
 };
@@ -246,13 +252,20 @@ template <impl::allocator A> class basic_value_function final:
     static_assert(
         !impl::uses_allocator<typename basic_value_function::value_type, A>);
     using impl::basic_value_function_base<A>::basic_value_function_base;
+public:
+    //! Name in the local symbol table referencing a vector of parameters
+    /*! The vector is constructed from function call arguments and inserted to
+     * the newly created local symbol table when the function is called. */
+    static constexpr std::string_view symbol_params{"_args"};
 protected:
     //! Calls the referenced function.
-    /*! \copydetails basic_value::eval() */
+    /*! It returns \c nullptr if the internal pointer to a function
+     * implementation basic_code_node is \c nullptr.
+     * \copydetails basic_value::eval() */
     typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
         const basic_symbol_table<A>& lookup,
         const std::vector<std::reference_wrapper<basic_symbol_table<A>>>& sym,
-        const basic_code_node<A>& node) override;
+        const basic_code_node<A>& node, std::string_view fun_name) override;
 };
 
 namespace impl {
@@ -280,7 +293,7 @@ protected:
     typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
         const basic_symbol_table<A>& lookup,
         const std::vector<std::reference_wrapper<basic_symbol_table<A>>>& sym,
-        const basic_code_node<A>& node) override;
+        const basic_code_node<A>& node, std::string_view fun_name) override;
 };
 
 namespace impl {
@@ -311,7 +324,7 @@ protected:
     typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
         const basic_symbol_table<A>& lookup,
         const std::vector<std::reference_wrapper<basic_symbol_table<A>>>& sym,
-        const basic_code_node<A>& node) override;
+        const basic_code_node<A>& node, std::string_view fun_name) override;
 };
 
 } //namespace threadscript

@@ -122,15 +122,19 @@ protected:
      * new symbol table that will eventually become shared by all threads of
      * the virtual machine
      * \param[in] node evaluate in the context of this code node
+     * \param[in] fun_name if this evaluation was initiated by a function call,
+     * then this is the function name; otherwise, it is empty
      * \return the result of evaluation
      * \throw a class derived from exception::base if evaluation fails; other
      * exceptions are wrapped in exception::wrapped */
     virtual value_ptr eval(basic_state<A>& thread,
         const basic_symbol_table<A>& lookup,
         const std::vector<std::reference_wrapper<basic_symbol_table<A>>>& sym,
-        const basic_code_node<A>& node);
+        const basic_code_node<A>& node, std::string_view fun_name);
 private:
     bool _mt_safe = false; //!< Whether this value is thread-safe
+    //! basic_code_node::eval() calls basic_value::eval()
+    friend basic_code_node<A>;
 };
 
 //! The base class for individual value types.

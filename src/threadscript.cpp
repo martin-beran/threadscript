@@ -5,6 +5,7 @@
 #include "threadscript/threadscript.hpp"
 #include "threadscript/symbol_table_impl.hpp"
 #include "threadscript/code_impl.hpp"
+#include "threadscript/virtual_machine_impl.hpp"
 #include "threadscript/vm_data_impl.hpp"
 
 namespace threadscript {
@@ -31,7 +32,8 @@ std::ostream& operator<< <allocator_any>(std::ostream&,
 //! \endcond
 
 template class basic_typed_value<basic_value_function<allocator_any>,
-    std::shared_ptr<code_node>, threadscript::impl::name_value_function,
+    typename basic_script<allocator_any>::node_ptr,
+    threadscript::impl::name_value_function,
     allocator_any>;
 template class basic_value_function<allocator_any>;
 

@@ -29,8 +29,12 @@ void basic_state<A>::pop_frame() noexcept
 {
     assert(!stack.empty());
     stack.pop_back();
-    if (stack.size() <= stack.capacity() / 3)
-        stack.shrink_to_fit();
+    static_assert(std::is_same_v<stack_t, a_basic_deque<stack_frame, A>>);
+    // freeing unused space of std::deque is done automatically and there is no
+    // std::deque::capacity(). Uncomment the following two lines if the stack
+    // implementation is changed from std::deque to std::vector.
+    // if (stack.size() <= stack.capacity() / 3)
+    //    stack.shrink_to_fit();
 }
 
 template <impl::allocator A>

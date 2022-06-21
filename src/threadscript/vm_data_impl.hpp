@@ -14,7 +14,7 @@ namespace threadscript {
 template <impl::allocator A>
 auto basic_value<A>::eval(basic_state<A>&, const basic_symbol_table<A>&,
     const std::vector<std::reference_wrapper<basic_symbol_table<A>>>&,
-    const basic_code_node<A>&) -> value_ptr
+    const basic_code_node<A>&, std::string_view) -> value_ptr
 {
     return this->shared_from_this();
 }
