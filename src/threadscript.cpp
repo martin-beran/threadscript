@@ -9,8 +9,52 @@
 
 namespace threadscript {
 
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// Keep declarations and explicit instantiations grouped by files containing
+// primary templates and keep groups lexicographically ordered by file name.
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+/*** threadscript/code.http **************************************************/
+
+template class basic_code_node<allocator_any>;
+//! \cond
+template
+std::ostream& operator<< <allocator_any>(std::ostream&,
+                                         const basic_code_node<allocator_any>&);
+//! \endcond
+
+template class basic_script<allocator_any>;
+//! \cond
+template
+std::ostream& operator<< <allocator_any>(std::ostream&,
+                                         const basic_script<allocator_any>&);
+//! \endcond
+
+template class basic_typed_value<basic_value_function<allocator_any>,
+    std::shared_ptr<code_node>, threadscript::impl::name_value_function,
+    allocator_any>;
+template class basic_value_function<allocator_any>;
+
+template class basic_typed_value<basic_value_script<allocator_any>,
+    std::shared_ptr<script>, threadscript::impl::name_value_script,
+    allocator_any>;
+template class basic_value_script<allocator_any>;
+
+template class basic_typed_value<basic_value_native_fun<allocator_any>,
+    threadscript::impl::empty, threadscript::impl::name_value_native_fun,
+    allocator_any>;
+template class basic_value_native_fun<allocator_any>;
+
+/*** threadscript/symbol_table.hpp *******************************************/
+
+template class basic_symbol_table<allocator_any>;
+
+/*** threadscript/virtual_machine.hpp ****************************************/
+
 template class basic_virtual_machine<allocator_any>;
 template class basic_state<allocator_any>;
+
+/*** threadscript/vm_data.hpp ************************************************/
 
 template class basic_value<allocator_any>;
 
@@ -41,36 +85,5 @@ template class basic_typed_value<value_hash,
         allocator_any>,
     threadscript::impl::name_value_hash, allocator_any>;
 template class basic_value_hash<allocator_any>;
-
-template class basic_symbol_table<allocator_any>;
-
-template class basic_code_node<allocator_any>;
-//! \cond
-template
-std::ostream& operator<< <allocator_any>(std::ostream&,
-                                         const basic_code_node<allocator_any>&);
-//! \endcond
-
-template class basic_script<allocator_any>;
-//! \cond
-template
-std::ostream& operator<< <allocator_any>(std::ostream&,
-                                         const basic_script<allocator_any>&);
-//! \endcond
-
-template class basic_typed_value<basic_value_function<allocator_any>,
-    std::shared_ptr<code_node>, threadscript::impl::name_value_function,
-    allocator_any>;
-template class basic_value_function<allocator_any>;
-
-template class basic_typed_value<basic_value_script<allocator_any>,
-    std::shared_ptr<script>, threadscript::impl::name_value_script,
-    allocator_any>;
-template class basic_value_script<allocator_any>;
-
-template class basic_typed_value<basic_value_native_fun<allocator_any>,
-    threadscript::impl::empty, threadscript::impl::name_value_native_fun,
-    allocator_any>;
-template class basic_value_native_fun<allocator_any>;
 
 } // namespace threadscript

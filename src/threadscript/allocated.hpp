@@ -99,7 +99,7 @@ using a_basic_vector = std::vector<T,
  * \tparam A an allocator type */
 template <class T, impl::allocator A>
 using a_basic_deque = std::deque<T,
-    typename std::allocator_traits<A>::template rebind_alloc<char>>;
+    typename std::allocator_traits<A>::template rebind_alloc<T>>;
 
 namespace impl {
 

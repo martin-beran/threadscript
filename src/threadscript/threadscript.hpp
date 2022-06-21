@@ -4,11 +4,6 @@
  * \brief The main header file of the ThreadScript interpreter
  *
  * This header must be included by each program that embeds ThreadScript.
- *
- * \todo Move Declarations of template specializations that use
- * threadscript::allocator_any and explicit instantiations from
- * threadscript.hpp and threadscript.cpp to files where primary templates are
- * declared.
  */
 
 #include "threadscript/configure.hpp"
@@ -24,6 +19,13 @@ namespace threadscript {
 namespace impl {
 } // namespace impl
 
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// Keep declarations and explicit instantiations grouped by files containing
+// primary templates and keep groups lexicographically ordered by file name.
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+/*** threadscript/allocated.hpp **********************************************/
+
 //! A string type using the configured allocator
 using a_string = a_basic_string<allocator_any>;
 
@@ -35,6 +37,55 @@ template <class T> using a_vector = a_basic_vector<T, allocator_any>;
 /*! \tparam T a type of deque elements */
 template <class T> using a_deque = a_basic_deque<T, allocator_any>;
 
+/*** threadscript/code.http **************************************************/
+
+//! The \ref basic_code_node using the configured allocator
+using code_node = basic_code_node<allocator_any>;
+extern template class basic_code_node<allocator_any>;
+//! \cond
+extern template
+std::ostream& operator<< <allocator_any>(std::ostream&,
+                                         const basic_code_node<allocator_any>&);
+//! \endcond
+
+//! The \ref basic_script using the configured allocator
+using script = basic_script<allocator_any>;
+extern template class basic_script<allocator_any>;
+//! \cond
+extern template
+std::ostream& operator<< <allocator_any>(std::ostream&,
+                                         const basic_script<allocator_any>&);
+//! \endcond
+
+//! The \ref basic_value_function using the configured allocator
+using value_function = basic_value_function<allocator_any>;
+extern template class basic_typed_value<basic_value_function<allocator_any>,
+    std::shared_ptr<code_node>, threadscript::impl::name_value_function,
+    allocator_any>;
+extern template class basic_value_function<allocator_any>;
+
+//! The \ref basic_value_script using the configured allocator
+using value_script = basic_value_script<allocator_any>;
+extern template class basic_typed_value<basic_value_script<allocator_any>,
+    std::shared_ptr<script>, threadscript::impl::name_value_script,
+    allocator_any>;
+extern template class basic_value_script<allocator_any>;
+
+//! The \ref basic_value_native_fun using the configured allocator
+using value_native_fun = basic_value_native_fun<allocator_any>;
+extern template class basic_typed_value<basic_value_native_fun<allocator_any>,
+    threadscript::impl::empty, threadscript::impl::name_value_native_fun,
+    allocator_any>;
+extern template class basic_value_native_fun<allocator_any>;
+
+/*** threadscript/symbol_table.hpp *******************************************/
+
+//! The symbol_table using the configured allocator
+using symbol_table = basic_symbol_table<allocator_any>;
+extern template class basic_symbol_table<allocator_any>;
+
+/*** threadscript/virtual_machine.hpp ****************************************/
+
 //! The virtual machine class using the configured allocator
 using virtual_machine = basic_virtual_machine<allocator_any>;
 extern template class basic_virtual_machine<allocator_any>;
@@ -42,6 +93,8 @@ extern template class basic_virtual_machine<allocator_any>;
 //! The thread state class using the configured allocator
 using state = basic_state<allocator_any>;
 extern template class basic_state<allocator_any>;
+
+/*** threadscript/vm_data.hpp ************************************************/
 
 //! The \ref basic_value class using the configured allocator
 using value = basic_value<allocator_any>;
@@ -88,48 +141,5 @@ extern template class basic_typed_value<value_hash,
         allocator_any>,
     threadscript::impl::name_value_hash, allocator_any>;
 extern template class basic_value_hash<allocator_any>;
-
-//! The symbol_table using the configured allocator
-using symbol_table = basic_symbol_table<allocator_any>;
-extern template class basic_symbol_table<allocator_any>;
-
-//! The \ref basic_code_node using the configured allocator
-using code_node = basic_code_node<allocator_any>;
-extern template class basic_code_node<allocator_any>;
-//! \cond
-extern template
-std::ostream& operator<< <allocator_any>(std::ostream&,
-                                         const basic_code_node<allocator_any>&);
-//! \endcond
-
-//! The \ref basic_script using the configured allocator
-using script = basic_script<allocator_any>;
-extern template class basic_script<allocator_any>;
-//! \cond
-extern template
-std::ostream& operator<< <allocator_any>(std::ostream&,
-                                         const basic_script<allocator_any>&);
-//! \endcond
-
-//! The \ref basic_value_function using the configured allocator
-using value_function = basic_value_function<allocator_any>;
-extern template class basic_typed_value<basic_value_function<allocator_any>,
-    std::shared_ptr<code_node>, threadscript::impl::name_value_function,
-    allocator_any>;
-extern template class basic_value_function<allocator_any>;
-
-//! The \ref basic_value_script using the configured allocator
-using value_script = basic_value_script<allocator_any>;
-extern template class basic_typed_value<basic_value_script<allocator_any>,
-    std::shared_ptr<script>, threadscript::impl::name_value_script,
-    allocator_any>;
-extern template class basic_value_script<allocator_any>;
-
-//! The \ref basic_value_native_fun using the configured allocator
-using value_native_fun = basic_value_native_fun<allocator_any>;
-extern template class basic_typed_value<basic_value_native_fun<allocator_any>,
-    threadscript::impl::empty, threadscript::impl::name_value_native_fun,
-    allocator_any>;
-extern template class basic_value_native_fun<allocator_any>;
 
 } // namespace threadscript
