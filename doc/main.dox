@@ -5,7 +5,14 @@
  *
  * License: <a href="../LICENSE.html">LICENSE.md</a>
  *
- * The initial places to start exploring ThreadScript sources are
+ * \section Use_ThreadScript Use ThreadScript
+ *
+ * \arg \ref Cmdline_ts Command line interpreter \c ts
+ * \arg \ref LangRef
+ * \arg ref CppAPI C++ API
+ *
+ * \section Develop_ThreadScript Develop ThreadScript
+ *
  * \arg \ref Architecture &ndash; the main document that describes the
  * architecture of ThreadScript
  * \arg the top-level source code directory \link ../src src/\endlink
