@@ -6,7 +6,13 @@
  * \test in file test_parser.cpp
  */
 
+#include "threadscript/finally.hpp"
+
+#include <cassert>
+#include <concepts>
+#include <functional>
 #include <iterator>
+#include <optional>
 
 //! The namespace containing a generic recursive descent parser
 /*! This is not a ThreadScript parser, it is a framework for creating parsers.
@@ -22,7 +28,8 @@ public:
     //! Creates the exception
     /*! \param[in] pos error position
      * \param[in] msg error message */
-    error(I pos, const std::string& msg): runtime_error(msg), _pos(pos) {}
+    explicit error(I pos, const std::string& msg = "Parse error"):
+        runtime_error(msg), _pos(pos) {}
     //! Gets the error position
     /*! \return the position */
     I pos() const { return _pos; }
@@ -30,30 +37,135 @@ private:
     I _pos; //!< Stored error position
 };
 
-//! A grammar that defines a specific parser
-/*! \tparam Term the type of terminal symbols of the grammar */
-template <class Term = char> class grammar {
+enum class rule_result: uint8_t {
+    fail,
+    ok,
+    ok_final,
 };
 
-//! A parsing context is an instance of a parser
-/*! This is the engine that parses an input sequence of terminal symbols
- * according to a \ref grammar.
- * \tparam Term the type of terminal symbols of the grammar */
-template <class Term = char> class context {
+template <class Handler, class Ctx, class It> concept handler =
+    std::is_invocable_r_v<rule_result, Handler, Ctx&, const It&, const It&>;
+
+template <class Ctx, std::forward_iterator It, handler<Ctx, It> F>
+class rule_base;
+
+template <class Ctx, std::forward_iterator It,
+    handler<Ctx, It> Handler =
+        std::function<rule_result(Ctx&, const It&, const It&)>>
+class rule_base {
 public:
-    //! The type of grammar used by this parser
-    using grammar_type = grammar<Term>;
-    //! Creates the parsing context
-    /*! \param[in] rules the grammar rules that control this parser */
-    explicit context(const grammar_type& rules): rules(rules) {}
-    //! Runs the parser
-    /*! It parses the input sequence of terminals between \a begin and \a end.
-     * \param[in] begin the start of the parsed sequence
-     * \param[in] end the end of the parsed sequence
-     * \throw \ref error if parsing fails */
-    template <std::forward_iterator I> void parse(I begin, I end);
+    using context_type = Ctx;
+    using iterator_type = It;
+    using term_type = decltype(*std::declval<It>());
+    using handler_type = Handler;
+    explicit rule_base(Handler hnd = {}): hnd(std::move(hnd)) {}
+    rule_result parse(Ctx& ctx, It& pos, const It& end) {
+        if (ctx.max_depth && ctx.depth >= ctx.max_depth)
+            throw error(pos, ctx.depth_msg);
+        It begin = pos;
+        finally dec_depth{[&d = ctx.depth]() { --d; }};
+        ++ctx.depth;
+        if (auto result = eval(ctx, pos, end); result == rule_result::fail)
+            return result;
+        else
+            switch (attr(ctx, begin, pos)) {
+            case rule_result::fail:
+            case rule_result::ok:
+                return result;
+            case rule_result::ok_final:
+                return rule_result::ok_final;
+            default:
+                assert(false);
+            }
+    }
+    rule_result eval([[maybe_unused]] Ctx& ctx,
+                     [[maybe_unused]] It& begin,
+                     [[maybe_unused]] const It& end)
+    {
+        return rule_result::fail;
+    }
+    rule_result attr(Ctx& ctx, const It& begin, const It& end) {
+        if constexpr (requires { bool(hnd); }) {
+            if (bool(hnd))
+                return hnd(ctx, begin, end);
+            else
+                return rule_result::ok;
+        } else
+            return hnd(ctx, begin, end);
+    }
 private:
-    const grammar_type& rules; //!< The grammar that controls this parser
+    Handler hnd{};
 };
+
+template <class Rule> concept rule = std::derived_from<Rule, rule_base<
+    typename Rule::context_type, typename Rule::iterator_type,
+    typename Rule::handler_type>>;
+
+template <rule Rule> class context {
+public:
+    using rule_type = Rule;
+    using iterator_type = typename Rule::iterator_type;
+    using term_type = typename Rule::term_type;
+    void parse(const Rule& rule, iterator_type& pos, const iterator_type& end) {
+        depth = 0;
+        switch (rule.parse(*this, pos, end)) {
+            case rule_result::fail:
+                if (error_msg)
+                    throw error(pos, error_msg);
+                else
+                    throw error(pos);
+            case rule_result::ok:
+            case rule_result::ok_final:
+                break;
+            default:
+                assert(false);
+        }
+    }
+    std::optional<std::string> error_msg{};
+    std::optional<size_t> max_depth{};
+    size_t depth = 0;
+    std::string depth_msg{"Maximum parsing depth exceeded"};
+};
+
+template <std::forward_iterator It>
+requires requires (It it) { { *it } -> std::same_as<char>; }
+class script_iterator {
+public:
+    explicit script_iterator(It it, size_t line = 1, size_t column = 1):
+        line(line), column(column), it(std::move(it)) {}
+    It get() const { return it; }
+    char operator*() const { return *it; }
+    script_iterator& operator++() {
+        step();
+        ++it;
+        return *this;
+    }
+    script_iterator operator++(int) {
+        step();
+        return script_iterator{it++};
+    }
+    size_t line = 1;
+    size_t column = 1;
+private:
+    void step() {
+        if (*it == '\n') {
+            ++line;
+            column = 1;
+        } else
+            ++column;
+    }
+    It it;
+};
+
+// This namespace contains various reusable parser rules
+namespace rules {
+
+template <class Ctx, class It, class Handler> class fail:
+    rule_base<Ctx, It, Handler>
+{
+    using rule_base<Ctx, It, Handler>::rule_base;
+};
+
+} // namespace rules
 
 } // namespace threadscript::parser
