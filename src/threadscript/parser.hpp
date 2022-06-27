@@ -206,11 +206,11 @@ public:
 
 template <class Ctx, std::forward_iterator It,
     class Handler = default_handler<Ctx, It>>
-class t: public rule_base<t<Ctx, It, Handler>, Ctx, It, Handler> {
-    using rule_base<t, Ctx, It, Handler>::rule_base;
+class any: public rule_base<any<Ctx, It, Handler>, Ctx, It, Handler> {
+    using rule_base<any, Ctx, It, Handler>::rule_base;
 public:
-    explicit t(typename t::term_type& out):
-        t([&out](auto&&, auto&& it, auto&&) {
+    explicit any(typename any::term_type& out):
+        any([&out](auto&&, auto&& it, auto&&) {
               out = *it;
               return rule_result::ok;
           }) {}

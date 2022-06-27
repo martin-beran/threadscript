@@ -84,7 +84,7 @@ BOOST_DATA_TEST_CASE(eof, (std::vector<test::parsed>{
 //! \endcond
 //
 //! \cond
-BOOST_DATA_TEST_CASE(t, (std::vector<test::parsed>{
+BOOST_DATA_TEST_CASE(any, (std::vector<test::parsed>{
                                {"", false, 1, 1},
                                {"nonempty", true, 1, 2},
                                {"\n", true, 2, 1},
@@ -93,7 +93,7 @@ BOOST_DATA_TEST_CASE(t, (std::vector<test::parsed>{
     auto it = tsp::make_script_iterator(sample.text);
     tsp::context ctx;
     char attr = '\0';
-    tsp::rules::t<decltype(ctx), typename decltype(it)::first_type> rule{attr};
+    tsp::rules::any<decltype(ctx), typename decltype(it)::first_type> rule{attr};
     auto begin = it.first;
     if (sample.result) {
         BOOST_CHECK_NO_THROW(ctx.parse(rule, it));
