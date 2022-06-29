@@ -63,7 +63,7 @@ enum class rule_result: uint8_t {
  * \tparam Ctx a parsing context
  * \tparam It an iterator to the input sequence of terminal symbols */
 template <class Handler, class Ctx, class It> concept handler =
-    std::is_invocable_r_v<rule_result, Handler, Ctx&, const It&, const It&>;
+    std::is_invocable_r_v<void, Handler, Ctx&, It, It>;
 
 //! The default handler called when a rule matches
 /*! \tparam Ctx a parsing context
@@ -90,6 +90,8 @@ public:
     using term_type = std::remove_cvref_t<decltype(*std::declval<It>())>;
     //! The type of a handler called when the rule matches
     using handler_type = Handler;
+    //! The result type of parse() and eval()
+    using parse_result = std::pair<rule_result, It>;
     //! Creates the rule with a handler
     /*! \param[in] hnd the handler stored in the rule */
     explicit rule_base(Handler hnd = {}): hnd(std::move(hnd)) {}
@@ -109,7 +111,7 @@ public:
      * \param[in] end the end of input sequence
      * \return[in] the result of matching this rule with the input sequence
      * \throw error if the mximum depth of rule nesting is exceeded */
-    std::pair<rule_result, It> parse(Ctx& ctx, It begin, It end) const {
+    parse_result parse(Ctx& ctx, It begin, It end) const {
         if (ctx.max_depth && ctx.depth >= ctx.max_depth)
             throw error(begin, ctx.depth_msg);
         finally dec_depth{[&d = ctx.depth]() noexcept { --d; }};
@@ -122,7 +124,6 @@ public:
         }
         return result;
     }
-protected:
     //! Parses a part of the input according to the rule.
     /*! This function decides if the input matches the rule. The default
      * implementation does not consume any input and fails (with
@@ -132,9 +133,8 @@ protected:
      * \param[in] end the end of input sequence
      * \return[in] the result of matching this rule with the input sequence,
      * with the same meaning as in parse() */
-    std::pair<rule_result, It> eval([[maybe_unused]] Ctx& ctx,
-                                    [[maybe_unused]] It begin,
-                                    [[maybe_unused]] It end) const
+    parse_result eval([[maybe_unused]] Ctx& ctx, [[maybe_unused]] It begin,
+                      [[maybe_unused]] It end) const
     {
         return {rule_result::fail, begin};
     }
@@ -159,14 +159,20 @@ protected:
     }
 private:
     Handler hnd{}; //!< The stored handler called by attr().
-    //! Needed to manipulate context::depth
-    friend context;
 };
 
 //! A rule, which must be derived from rule_base.
 template <class Rule> concept rule = std::derived_from<Rule, rule_base<
     Rule, typename Rule::context_type, typename Rule::iterator_type,
-    typename Rule::handler_type>>;
+    typename Rule::handler_type>> &&
+    requires (const Rule r, typename Rule::context_type& ctx,
+              const typename Rule::iterator_type it)
+    {
+        typename Rule::parse_result;
+        { r.parse(ctx, it, it) } -> std::same_as<typename Rule::parse_result>;
+        { r.eval(ctx, it, it) } -> std::same_as<typename Rule::parse_result>;
+        { r.attr(ctx, it, it) } -> std::same_as<void>;
+    };
 
 //! A parsing context
 /*! A derived class may be used instead, providing additional functionality
@@ -195,6 +201,7 @@ public:
         depth = 0;
         switch (auto [result, pos] = rule.parse(*this, begin, end); result) {
             case rule_result::fail:
+            case rule_result::fail_final:
                 if (error_msg)
                     throw error(pos, *error_msg);
                 else
@@ -239,6 +246,9 @@ public:
     std::string partial_msg{"Partial match"};
 private:
     size_t depth = 0; //!< The current stack depth of parsing
+    //! Needed to manipulate context::depth
+    template <class Rule, class Ctx, std::forward_iterator It,
+        handler<Ctx, It> Handler> friend class rule_base;
 };
 
 //! An iterator for parsing script source code.
@@ -329,6 +339,7 @@ make_script_iterator(const T& chars)
 }
 
 //! This namespace contains various reusable parser rules
+/*! \test in file test_parser.cpp */
 namespace rules {
 
 //! A rule that always fails.
@@ -351,9 +362,10 @@ class eof: public rule_base<eof<Ctx, It, Handler>, Ctx, It, Handler> {
     using rule_base<eof, Ctx, It, Handler>::rule_base;
 public:
     //! \copydoc rule_base::eval()
-    rule_result eval([[maybe_unused]] Ctx& ctx, It& begin, const It& end) const
+    typename eof::parse_result eval([[maybe_unused]] Ctx& ctx, It begin,
+                                    It end) const
     {
-        return begin == end ? rule_result::ok : rule_result::fail;
+        return {begin == end ? rule_result::ok : rule_result::fail, begin};
     }
 };
 
@@ -369,19 +381,49 @@ public:
     //! Creates the rule
     /*! \param[in] out a place where a matched terminal will be stored */
     explicit any(typename any::term_type& out):
-        any([&out](auto&&, auto&& it, auto&&) {
-              out = *it;
-              return rule_result::ok;
-          }) {}
+        any([&out](auto&&, auto&& it, auto&&) { out = *it; }) {}
     //! \copydoc rule_base::eval()
-    rule_result eval([[maybe_unused]] Ctx& ctx, It& begin, const It& end) const
+    typename any::parse_result eval([[maybe_unused]] Ctx& ctx, It begin,
+                                    It end) const
     {
-        if (begin != end) {
-            ++begin;
-            return rule_result::ok;
-        } else
-            return rule_result::fail;
+        if (begin != end)
+            return {rule_result::ok, ++begin};
+        else
+            return {rule_result::fail, begin};
     }
+};
+
+//! A rule that matches a specific single terminal symbol.
+/*! \tparam Ctx a parsing context
+ * \tparam It an iterator to the input sequence of terminal symbols
+ * \tparam Handler the type of a handler called when the rule matches */
+template <class Ctx, std::forward_iterator It,
+    class Handler = default_handler<Ctx, It>>
+class t: public rule_base<t<Ctx, It, Handler>, Ctx, It, Handler> {
+    //! The alias for the base class
+    using base = rule_base<t<Ctx, It, Handler>, Ctx, It, Handler>;
+public:
+    //! Creates the rule with a handler.
+    /*! \param[in] term the terminal symbol matched by this rule
+     * \param[in] hnd the handler stored in the rule */
+    explicit t(typename t::term_type term, Handler hnd = {}):
+        base(hnd), term(term) {}
+    //! Creates the rule
+    /*! \param[in] term the terminal symbol matched by this rule
+     * \param[in] out a place where a matched terminal will be stored */
+    explicit t(typename t::term_type term, typename t::term_type& out):
+        t(term, [&out](auto&&, auto&& it, auto&&) { out = *it; }) {}
+    //! \copydoc rule_base::eval()
+    typename t::parse_result eval([[maybe_unused]] Ctx& ctx, It begin,
+                                  It end) const
+    {
+        if (begin != end && *begin == term)
+                return {rule_result::ok, ++begin};
+        else
+            return {rule_result::fail, begin};
+    }
+private:
+    typename t::term_type term; //!< The terminal symbol matched by this rule
 };
 
 } // namespace rules

@@ -29,6 +29,24 @@
  * operations on the same object from multiple threads.
  * \arg Pieces of code that should be visible to Doxygen, but not to the
  * compiler, can be wrapped in <tt>\#ifdef \ref DOXYGEN</tt>.
+ * \arg Classes and other parts of code (e.g., namespaces), are linked to the
+ * source files containing tests for them by Doxygen commands like:
+ * \code
+ * \test in file test_vm_data.cpp
+ * \endcode
+ * \arg Each test case is documented by a Doxygen comment and wrapped in
+ * <tt>\\cond...\\endcond</tt>:
+ * \code{.unparsed}
+ * /*! \file
+ *  * \test \c value_default -- Default-constructed value of a type derived from
+ *  * threadscript::basic_typed_value */
+ * //! \cond
+ * BOOST_AUTO_TEST_CASE_TEMPLATE(value_default, T, value_types)
+ * {
+ *     ...
+ * }
+ * //! \endcond
+ * \endcode
  *
  * \section File_names File names
  *
@@ -42,8 +60,10 @@
  * \arg \c .cpp files are stored in directory \link ../src src/\endlink.
  * \arg Example: Declarations in \c src/threadscript/xyz.hpp would be
  * implemented in \c src/threadscript/xyz_impl.hpp and/or \c src/xyz.cpp.
+ * \arg Files containing tests are named with prefix \c test_, e.g.,
+ * test_dummy.cpp
  *
- * section Namespaces Namespaces
+ * \section Namespaces Namespaces
  *
  * \arg All ThreadScript source code is contained in the top-level namespace
  * \ref threadscript.
