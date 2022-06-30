@@ -84,6 +84,7 @@ template <class Rule, class Ctx, std::forward_iterator It,
     handler<Ctx, It> Handler = default_handler<Ctx, It>>
 class rule_base {
 public:
+    using rule_type = Rule; //!< The derived rule type
     using context_type = Ctx; //!< A parsing context
     using iterator_type = It; //!< An iterator to the input
     //! The type of a terminal symbol
@@ -157,8 +158,15 @@ public:
         } else
             hnd(ctx, begin, end);
     }
-private:
-    Handler hnd{}; //!< The stored handler called by attr().
+    //! Sets a new handler
+    /*! \param[in] h the new handler
+     * \return \c *this */
+    Rule& operator[](Handler h) {
+        hnd = std::move(h);
+        return static_cast<Rule&>(*this);
+    }
+    //! The stored handler called by attr().
+    Handler hnd{};
 };
 
 //! A rule, which must be derived from rule_base.
@@ -353,7 +361,9 @@ class fail: public rule_base<fail<Ctx, It, Handler>, Ctx, It, Handler> {
 };
 
 //! A rule that matches the end of input.
-/*! \tparam Ctx a parsing context
+/*! This rule does not consume any input, therefore it must not be used in an
+ * unlimited rules::repeat, because it would create an endless loop.
+ * \tparam Ctx a parsing context
  * \tparam It an iterator to the input sequence of terminal symbols
  * \tparam Handler the type of a handler called when the rule matches */
 template <class Ctx, std::forward_iterator It,
@@ -400,9 +410,9 @@ public:
 template <class Ctx, std::forward_iterator It,
     class Handler = default_handler<Ctx, It>>
 class t: public rule_base<t<Ctx, It, Handler>, Ctx, It, Handler> {
+public:
     //! The alias for the base class
     using base = rule_base<t<Ctx, It, Handler>, Ctx, It, Handler>;
-public:
     //! Creates the rule with a handler.
     /*! \param[in] term the terminal symbol matched by this rule
      * \param[in] hnd the handler stored in the rule */
@@ -426,6 +436,323 @@ private:
     typename t::term_type term; //!< The terminal symbol matched by this rule
 };
 
+//! A rule that matches some number of occurrences of a child rule 
+/*! \tparam Child a child rule type
+ * \tparam Handler the type of a handler called when the rule matches */
+template <rule Child,
+    class Handler = default_handler<typename Child::context_type,
+        typename Child::iterator_type>>
+class repeat: public rule_base<repeat<Child, Handler>,
+    typename Child::context_type, typename Child::iterator_type, Handler>
+{
+public:
+    //! The alias for the base class
+    using base = rule_base<repeat<Child, Handler>,
+        typename Child::context_type, typename Child::iterator_type, Handler>;
+    //! The type of the child rule
+    using child_type = Child;
+    //! It denotes an unlimited maximum number of occurrences of the child node
+    static constexpr size_t unlimited = 0;
+    //! Creates the rule with a handler.
+    /*! \param[in] child the child node
+     * \param[in] min the minimum number of child matches
+     * \param[in] max the maximum number of child matches
+     * \param[in] hnd the handler stored in the rule */
+    explicit repeat(Child child, size_t min = 0, size_t max = unlimited,
+                    Handler hnd = {}):
+        base(hnd), child(std::move(child)), min(min), max(max) {}
+    //! Creates the rule with a handler.
+    /*! \param[in] child the child node
+     * \param[in] hnd the handler stored in the rule
+     * \param[in] min the minimum number of child matches
+     * \param[in] max the maximum number of child matches */
+    repeat(Child child, Handler hnd, size_t min = 0, size_t max = unlimited):
+        repeat(child, min, max, hnd) {}
+    //! Creates the rule.
+    /*! \param[in] child the child rule
+     * \param[in] out a place where \c true will be stored if the child rule
+     * \param[in] min the minimum number of child matches
+     * \param[in] max the maximum number of child matches
+     * maches between \ref min and \ref max times */
+    repeat(Child child, bool& out, size_t min = 0, size_t max = unlimited):
+        repeat(std::move(child), [&out](auto&&, auto&&, auto&&) { out = true; },
+               min, max) {}
+    //! \copydoc rule_base::eval()
+    typename repeat::parse_result eval(typename repeat::context_type& ctx,
+                                       typename repeat::iterator_type begin,
+                                       typename repeat::iterator_type end) const
+    {
+        for (size_t i = 0;; ++i) {
+            switch (auto [result, pos] = child.parse(ctx, begin, end); result) {
+            case rule_result::fail:
+            case rule_result::fail_final:
+                if (i >= min)
+                    return {rule_result::ok, pos};
+                else
+                    return {rule_result::fail, pos};
+            case rule_result::ok:
+            case rule_result::ok_final:
+                if (max == unlimited || i < max - 1)
+                    break;
+                else
+                    return {rule_result::ok, pos};
+            default:
+                assert(false);
+            }
+        }
+    }
+private:
+    Child child; //!< The child node
+    size_t min = 0; //!< The minimum number of matches of the child node
+    size_t max = unlimited; //!< The maximum number of matches of the child node
+};
+
+//! A rule that matches a sequential composition of two child rules
+/*! It matches iff the first child matches an initial part of the input and the
+ * second child matches an immediately following part of the input.
+ * \tparam Child1 the first child rule type
+ * \tparam Child2 the second child rule type
+ * \tparam Handler the type of a handler called when the rule matches */
+template <rule Child1, rule Child2,
+    class Handler = default_handler<typename Child1::context_type,
+        typename Child1::iterator_type>>
+    requires
+        std::same_as<typename Child1::context_type,
+            typename Child2::context_type> &&
+        std::same_as<typename Child1::iterator_type,
+            typename Child2::iterator_type> &&
+        std::same_as<typename Child1::handler_type,
+            typename Child2::handler_type>
+class seq: public rule_base<seq<Child1, Child2, Handler>,
+    typename Child1::context_type, typename Child1::iterator_type, Handler>
+{
+public:
+    //! The alias for the base class
+    using base = rule_base<seq<Child1, Child2, Handler>,
+        typename Child1::context_type, typename Child1::iterator_type, Handler>;
+    //! The type of the first child rule
+    using child1_type = Child1;
+    //! The type of the second child rule
+    using child2_type = Child2;
+    //! Creates the rule with a handler.
+    /*! \param[in] child1 the first child node
+     * \param[in] child2 the second child node
+     * \param[in] hnd the handler stored in the rule */
+    seq(Child1 child1, Child2 child2, Handler hnd = {}):
+        base(hnd), child1(std::move(child1)), child2(std::move(child2)) {}
+    //! Creates the rule.
+    /*! \param[in] child1 the first child node
+     * \param[in] child2 the second child node
+     * \param[in] out a place where \c true will be stored if the sequence of
+     * child rules matches */
+    seq(Child1 child1, Child2 child2, bool& out):
+        seq(std::move(child1), std::move(child2),
+            [&out](auto&&, auto&&, auto&&) { out = true; }) {}
+    //! \copydoc rule_base::eval()
+    typename seq::parse_result eval(typename seq::context_type& ctx,
+                                    typename seq::iterator_type begin,
+                                    typename seq::iterator_type end) const
+    {
+        switch (auto [result1, pos1] = child1.parse(ctx, begin, end); result1) {
+        case rule_result::fail:
+        case rule_result::fail_final:
+            return {result1, pos1};
+        case rule_result::ok:
+        case rule_result::ok_final:
+            switch (auto [result2, pos2] = child2.parse(ctx, pos1, end);
+                    result2)
+            {
+            case rule_result::fail:
+            case rule_result::fail_final:
+                if (result1 == rule_result::ok_final)
+                    result2 = rule_result::fail_final;
+                return {result2, pos2};
+            case rule_result::ok:
+            case rule_result::ok_final:
+                if (result1 == rule_result::ok_final)
+                    result2 = rule_result::ok_final;
+                return {result2, pos2};
+            default:
+                assert(false);
+            }
+        default:
+            assert(false);
+        }
+    }
+private:
+    Child1 child1; //!< The first child node
+    Child2 child2; //!< The second child node
+};
+
+//! A rule that matches an alternative of two child rules
+/*! It matches iff the first or the second child matches. If the first child
+ * matches, matching of the second child is not tried.
+ * \tparam Child1 the first child rule type
+ * \tparam Child2 the second child rule type
+ * \tparam Handler the type of a handler called when the rule matches */
+template <rule Child1, rule Child2,
+    class Handler = default_handler<typename Child1::context_type,
+        typename Child1::iterator_type>>
+    requires
+        std::same_as<typename Child1::context_type,
+            typename Child2::context_type> &&
+        std::same_as<typename Child1::iterator_type,
+            typename Child2::iterator_type> &&
+        std::same_as<typename Child1::handler_type,
+            typename Child2::handler_type>
+class alt: public rule_base<alt<Child1, Child2, Handler>,
+    typename Child1::context_type, typename Child1::iterator_type, Handler>
+{
+public:
+    //! The alias for the base class
+    using base = rule_base<alt<Child1, Child2, Handler>,
+        typename Child1::context_type, typename Child1::iterator_type, Handler>;
+    //! The type of the first child rule
+    using child1_type = Child1;
+    //! The type of the second child rule
+    using child2_type = Child2;
+    //! Creates the rule with a handler.
+    /*! \param[in] child1 the first child node
+     * \param[in] child2 the second child node
+     * \param[in] hnd the handler stored in the rule */
+    alt(Child1 child1, Child2 child2, Handler hnd = {}):
+        base(hnd), child1(std::move(child1)), child2(std::move(child2)) {}
+    //! Creates the rule.
+    /*! \param[in] child1 the first child node
+     * \param[in] child2 the second child node
+     * \param[in] out a place where \c true will be stored if either of the
+     * alternative child rules matches */
+    alt(Child1 child1, Child2 child2, bool& out):
+        alt(std::move(child1), std::move(child2),
+            [&out](auto&&, auto&&, auto&&) { out = true; }) {}
+    //! \copydoc rule_base::eval()
+    typename alt::parse_result eval(typename alt::context_type& ctx,
+                                    typename alt::iterator_type begin,
+                                    typename alt::iterator_type end) const
+    {
+        switch (auto [result1, pos1] = child1.parse(ctx, begin, end); result1) {
+        case rule_result::fail_final:
+            return {rule_result::fail_final};
+        case rule_result::fail:
+            return child2.parse(ctx, pos1, end);
+        case rule_result::ok:
+        case rule_result::ok_final:
+            return {result1, pos1};
+        default:
+            assert(false);
+        }
+    }
+private:
+    Child1 child1; //!< The first child node
+    Child2 child2; //!< The second child node
+};
+
+//! A rule that disables (cuts) the following alternatives in rules::alt
+/*! It this node is a member of a sequence of rule::seq nodes that is a child
+ * of a rule::alt node, than after this node is evaluated (regardless if it
+ * matches or not), the following alternatives in the sequence of rules::alt
+ * nodes will not be matched.
+ * \tparam Child a child rule type */
+template <rule Child>
+class cut: public rule_base<cut<Child>, typename Child::context_type,
+    typename Child::iterator_type, typename Child::handler_type>
+{
+public:
+    //! The alias for the base class
+    using base = rule_base<cut<Child>, typename Child::context_type,
+        typename Child::iterator_type, typename Child::handler_type>;
+    //! The type of the child rule
+    using child_type = Child;
+    //! Creates the rule
+    /*! \param[in] child the child node */
+    explicit cut(Child child): base(), child(std::move(child)) {}
+    //! \copydoc rule_base::eval()
+    typename cut::parse_result eval(typename cut::context_type& ctx,
+                                    typename cut::iterator_type begin,
+                                    typename cut::iterator_type end) const
+    {
+        switch (auto [result, pos] = child.parse(ctx, begin, end); result) {
+        case rule_result::fail:
+        case rule_result::fail_final:
+            return {rule_result::fail_final, pos};
+        case rule_result::ok:
+        case rule_result::ok_final:
+            return {rule_result::ok_final, pos};
+        default:
+            assert(false);
+        }
+    }
+private:
+    Child child; //!< The child node
+};
+
 } // namespace rules
+
+//! Wraps a rule by rules::repeat for 0 or 1 match.
+/*! \tparam Rule a type of the child rule
+ * \param[in] r a child rule
+ * \return a rules::repeat rule containg \a r as the child rule, with the
+ * minimum number of repetitions 0 and maximum 1 */
+template <rule Rule> rules::repeat<Rule> operator-(Rule r)
+{
+    return rules::repeat<Rule>(std::move(r), 0, 1);
+}
+
+//! Wraps a rule by rules::repeat for at least 1 match.
+/*! \tparam Rule a type of the child rule
+ * \param[in] r a child rule
+ * \return a rules::repeat rule containg \a r as the child rule, with the
+ * minimum number of repetitions 1 and maximum unlimited */
+template <rule Rule>
+rules::repeat<Rule, typename Rule::handler_type> operator+(Rule r)
+{
+    return {std::move(r), 1, rules::repeat<Rule>::unlimited};
+}
+
+//! Wraps a rule by rules::repeat for any number of matches.
+/*! \tparam Rule the type of the child rule
+ * \param[in] r the child rule
+ * \return a rules::repeat rule containg \a r as the child rule, with the
+ * minimum number of repetitions 0 and maximum unlimited */
+template <rule Rule>
+rules::repeat<Rule, typename Rule::handler_type> operator*(Rule r)
+{
+    return {std::move(r), 0, rules::repeat<Rule>::unlimited};
+}
+
+//! Creates a sequential composition of two rules.
+/*! \tparam Rule1 the type of the first child rule
+ * \tparam Rule2 the type of the second child rule
+ * \param[in] r1 the first child rule
+ * \param[in] r2 the second child rule
+ * \return a rules::seq rule containing \a r1 and \a r2 as child rules */
+template <rule Rule1, rule Rule2>
+rules::seq<Rule1, Rule2, typename Rule1::handler_type> operator<<(Rule1 r1,
+                                                                  Rule2 r2)
+{
+    return {std::move(r1), std::move(r2)};
+}
+
+//! Creates an alternative composition of two rules.
+/*! \tparam Rule1 the type of the first child rule
+ * \tparam Rule2 the type of the second child rule
+ * \param[in] r1 the first child rule
+ * \param[in] r2 the second child rule
+ * \return a rules::alt rule containing \a r1 and \a r2 as child rules */
+template <rule Rule1, rule Rule2>
+rules::alt<Rule1, Rule2, typename Rule1::handler_type> operator|(Rule1 r1,
+                                                                 Rule2 r2)
+{
+    return {std::move(r1), std::move(r2)};
+}
+
+//! Creates a rule that disables (cuts) the following alternatives in rules::alt
+/*! \tparam Rule the type of the child rule
+ * \param[in] r the child rule
+ * \return a rules::cut rule containing \a r as the child rule. */
+template <rule Rule> rules::cut<Rule> operator!(Rule r)
+{
+    return std::move(r);
+}
 
 } // namespace threadscript::parser
