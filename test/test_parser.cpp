@@ -12,6 +12,7 @@
 
 namespace ts = threadscript;
 namespace tsp = ts::parser;
+namespace rules = tsp::rules;
 
 using namespace std::string_literals;
 
@@ -29,6 +30,22 @@ std::ostream& operator<<(std::ostream& os, const parsed& v)
 {
     os << '"' << v.text << "\"->" << (v.result ? "OK" : "FAIL") <<
         ':' << v.line << ':' << v.column;
+    return os;
+}
+
+struct repeated {
+    std::string text;
+    bool result;
+    size_t cnt;
+    size_t line;
+    size_t column;
+    std::string error = "Parse error";
+};
+
+std::ostream& operator<<(std::ostream& os, const repeated& v)
+{
+    os << '"' << v.text << "\"->" << (v.result ? "OK" : "FAIL") <<
+        '*' << v.cnt << ':' << v.line << ':' << v.column;
     return os;
 }
 
@@ -186,6 +203,175 @@ BOOST_DATA_TEST_CASE(t, (std::vector<test::parsed>{
             BOOST_CHECK_EQUAL(attr, '\0'); // unchanged
         else // failed after rules::t matched
             BOOST_CHECK_EQUAL(attr, sample.text.front());
+    }
+}
+//! \endcond
+
+/*! \file
+ * \test \c repeat_0_1 -- test of threadscript::parser::rules::repeat,
+ * \c operator-(), and \c operator[]() */
+//! \cond
+BOOST_DATA_TEST_CASE(repeat_0_1, (std::vector<test::repeated>{
+                                      {"", true, 0, 1, 1},
+                                      {"b", true, 0, 1, 1},
+                                      {"ba", true, 0, 1, 1},
+                                      {"a", true, 1, 1, 2},
+                                      {"ab", true, 1, 1, 2},
+                                      {"aa", true, 1, 1, 2},
+                                  }))
+{
+    auto it = tsp::make_script_iterator(sample.text);
+    tsp::context ctx;
+    using ctx_t = decltype(ctx);
+    using it_t = typename decltype(it)::first_type;
+    using t = rules::t<ctx_t, it_t>;
+    char c = '\0';
+    size_t cnt = 100;
+    auto set_c = [&c](auto&&, auto&&, auto&& it, auto&&) {
+        c = *it;
+    };
+    auto set_cnt = [&cnt](auto&&, size_t n, auto&&, auto&&) {
+        cnt = n;
+    };
+    auto rule = (-t{'a'}[set_c])[set_cnt];
+    it_t pos;
+    BOOST_REQUIRE_NO_THROW(
+        try {
+            pos = ctx.parse(rule, it, false);
+        } catch (std::exception& e) {
+            BOOST_TEST_INFO("exception: " << e.what());
+            throw;
+        });
+    BOOST_CHECK_EQUAL(cnt, sample.cnt);
+    if (sample.cnt == 0)
+        BOOST_CHECK_EQUAL(c, '\0');
+    else
+        BOOST_CHECK_EQUAL(c, 'a');
+    BOOST_CHECK_EQUAL(pos.line, sample.line);
+    BOOST_CHECK_EQUAL(pos.column, sample.column);
+}
+//! \endcond
+
+/*! \file
+ * \test \c repeat_1_inf -- test of threadscript::parser::rules::repeat,
+ * \c operator+(), and \c operator[]() */
+//! \cond
+BOOST_DATA_TEST_CASE(repeat_1_inf, (std::vector<test::repeated>{
+                                        {"", false, 0, 1, 1},
+                                        {"b", false, 0, 1, 1},
+                                        {"ba", false, 0, 1, 1},
+                                        {"a", true, 1, 1, 2},
+                                        {"ab", true, 1, 1, 2},
+                                        {"aa", true, 2, 1, 3},
+                                        {"aaaaa", true, 5, 1, 6},
+                                        {"aaaaab", true, 5, 1, 6},
+                                        {"aaabaab", true, 3, 1, 4},
+                                        {"aaa\naab", true, 3, 1, 4},
+                                  }))
+{
+    auto it = tsp::make_script_iterator(sample.text);
+    tsp::context ctx;
+    using ctx_t = decltype(ctx);
+    using it_t = typename decltype(it)::first_type;
+    using t = rules::t<ctx_t, it_t>;
+    char c = '\0';
+    size_t cnt = 100;
+    auto set_c = [&c](auto&&, auto&&, auto&& it, auto&&) {
+        c = *it;
+    };
+    auto set_cnt = [&cnt](auto&&, size_t n, auto&&, auto&&) {
+        cnt = n;
+    };
+    auto rule = (+t{'a'}[set_c])[set_cnt];
+    if (sample.result) {
+        it_t pos;
+        BOOST_REQUIRE_NO_THROW(
+            try {
+                pos = ctx.parse(rule, it, false);
+            } catch (std::exception& e) {
+                BOOST_TEST_INFO("exception: " << e.what());
+                throw;
+            });
+        BOOST_CHECK_EQUAL(cnt, sample.cnt);
+        if (sample.cnt == 0)
+            BOOST_CHECK_EQUAL(c, '\0');
+        else
+            BOOST_CHECK_EQUAL(c, 'a');
+        BOOST_CHECK_EQUAL(pos.line, sample.line);
+        BOOST_CHECK_EQUAL(pos.column, sample.column);
+    } else {
+        BOOST_CHECK_EXCEPTION(ctx.parse(rule, it, false),
+            tsp::error<typename decltype(it)::first_type>,
+            ([it, &sample](auto&& e) {
+                BOOST_CHECK_EQUAL(e.what(), sample.error);
+                BOOST_CHECK_EQUAL(e.pos().line, sample.line);
+                BOOST_CHECK_EQUAL(e.pos().column, sample.column);
+                return true;
+            }));
+        BOOST_CHECK_EQUAL(c, '\0'); // unchanged
+        BOOST_CHECK_EQUAL(cnt, 100); // unchanged
+    }
+}
+//! \endcond
+
+/*! \file
+ * \test \c repeat_0_inf -- test of threadscript::parser::rules::repeat,
+ * \c operator*(), and \c operator[]() */
+//! \cond
+BOOST_DATA_TEST_CASE(repeat_0_inf, (std::vector<test::repeated>{
+                                        {"", true, 0, 1, 1},
+                                        {"b", true, 0, 1, 1},
+                                        {"ba", true, 0, 1, 1},
+                                        {"a", true, 1, 1, 2},
+                                        {"ab", true, 1, 1, 2},
+                                        {"aa", true, 2, 1, 3},
+                                        {"aaaaa", true, 5, 1, 6},
+                                        {"aaaaab", true, 5, 1, 6},
+                                        {"aaabaab", true, 3, 1, 4},
+                                        {"aaa\naab", true, 3, 1, 4},
+                                  }))
+{
+    auto it = tsp::make_script_iterator(sample.text);
+    tsp::context ctx;
+    using ctx_t = decltype(ctx);
+    using it_t = typename decltype(it)::first_type;
+    using t = rules::t<ctx_t, it_t>;
+    char c = '\0';
+    size_t cnt = 100;
+    auto set_c = [&c](auto&&, auto&&, auto&& it, auto&&) {
+        c = *it;
+    };
+    auto set_cnt = [&cnt](auto&&, size_t n, auto&&, auto&&) {
+        cnt = n;
+    };
+    auto rule = (*t{'a'}[set_c])[set_cnt];
+    if (sample.result) {
+        it_t pos;
+        BOOST_REQUIRE_NO_THROW(
+            try {
+                pos = ctx.parse(rule, it, false);
+            } catch (std::exception& e) {
+                BOOST_TEST_INFO("exception: " << e.what());
+                throw;
+            });
+        BOOST_CHECK_EQUAL(cnt, sample.cnt);
+        if (sample.cnt == 0)
+            BOOST_CHECK_EQUAL(c, '\0');
+        else
+            BOOST_CHECK_EQUAL(c, 'a');
+        BOOST_CHECK_EQUAL(pos.line, sample.line);
+        BOOST_CHECK_EQUAL(pos.column, sample.column);
+    } else {
+        BOOST_CHECK_EXCEPTION(ctx.parse(rule, it, false),
+            tsp::error<typename decltype(it)::first_type>,
+            ([it, &sample](auto&& e) {
+                BOOST_CHECK_EQUAL(e.what(), sample.error);
+                BOOST_CHECK_EQUAL(e.pos().line, sample.line);
+                BOOST_CHECK_EQUAL(e.pos().column, sample.column);
+                return true;
+            }));
+        BOOST_CHECK_EQUAL(c, '\0'); // unchanged
+        BOOST_CHECK_EQUAL(cnt, 100); // unchanged
     }
 }
 //! \endcond
