@@ -584,6 +584,7 @@ private:
 /*! Parameter \a info of \a Handler has type \c size_t and contains the number
  * of matches of the child rule.
  * \tparam Child a child rule type
+ * \tparam C type \a Child with removed reference, \c const, \c volatile
  * \tparam Handler the type of a handler called when the rule matches */
 template <rule_cvref Child, rule_value<Child> C = std::remove_cvref_t<Child>,
     class Handler = default_handler<typename C::context_type, size_t,
@@ -685,20 +686,30 @@ private:
     friend base;
 };
 
+//! A deduction guide for \ref repeat
+/*! \tparam Child a child rule type */
 template <class Child>
 repeat(Child&&, size_t = {}, size_t = {}) ->
     repeat<Child, std::remove_cvref_t<Child>>;
 
+//! A deduction guide for \ref repeat
+/*! \tparam Child a child rule type
+ * \tparam Handler a handler type */
 template <class Child, class Handler>
     requires (!std::convertible_to<Handler, size_t>)
 repeat(Child&&, size_t, size_t, Handler) ->
     repeat<Child, std::remove_cvref_t<Child>, Handler>;
 
+//! A deduction guide for \ref repeat
+/*! \tparam Child a child rule type
+ * \tparam Handler a handler type */
 template <class Child, class Handler>
     requires (!std::convertible_to<Handler, size_t>)
 repeat(Child&&, Handler, size_t = {}, size_t = {}) ->
     repeat<Child, std::remove_cvref_t<Child>, Handler>;
 
+//! A deduction guide for \ref repeat
+/*! \tparam Child a child rule type */
 template <class Child>
 repeat(Child&&, size_t&, size_t = {}, size_t = {}) ->
     repeat<Child, std::remove_cvref_t<Child>>;
