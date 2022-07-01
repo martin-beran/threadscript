@@ -13,6 +13,7 @@
 #include <functional>
 #include <iterator>
 #include <optional>
+#include <type_traits>
 
 //! The namespace containing a generic recursive descent parser
 /*! This is not a ThreadScript parser, it is a framework for creating parsers.
@@ -133,6 +134,8 @@ template <class Rule, class Ctx, class Info, std::forward_iterator It,
 class rule_base {
 public:
     using rule_type = Rule; //!< The derived rule type
+    //! TThe rule_type without reference, \c const, and \c volatile
+    using value_type = std::remove_cvref_t<Rule>;
     using context_type = Ctx; //!< A parsing context
     using info_type = Info; //!< Information about a parsed part of input
     using iterator_type = It; //!< An iterator to the input
@@ -272,6 +275,7 @@ protected:
 };
 
 //! A rule, which must be derived from rule_base and have a \c parse() function
+/*! \tparam Rule a rule type */
 template <class Rule> concept rule = std::derived_from<Rule, rule_base<
     Rule, typename Rule::context_type, typename Rule::info_type,
     typename Rule::iterator_type, typename Rule::handler_type>> &&
@@ -280,6 +284,22 @@ template <class Rule> concept rule = std::derived_from<Rule, rule_base<
     {
         { r.parse(ctx, it, it) } -> std::same_as<typename Rule::parse_result>;
     };
+
+//! A rule, which can also be a reference, \c const, or \c volatile
+/*! \tparam Rule a rule type */
+template <class Rule> concept rule_cvref = rule<std::remove_cvref_t<Rule>>;
+
+//! Checks that \a RV is a \a Rule without a reference, \c const, \c volatile
+/*! \tparam RV a rule type
+ * \tparam Rule a rule type */
+template <class RV, class Rule>
+concept rule_value = std::same_as<RV, std::remove_cvref_t<Rule>>;
+
+//! Like rebind_handler_t, but accepts a rule as the first argument
+/*! \tparam Rule a rule type, possibly a reference, \c const, or \c volatile
+ * \tparam Info2 a new type of parameter \a info of \a Handler */
+template <rule_cvref Rule, class Info2> using rebind_rhnd_t =
+    rebind_handler_t<typename std::remove_cvref_t<Rule>::handler_type, Info2>;
 
 //! A parsing context
 /*! A derived class may be used instead, providing additional functionality
@@ -446,7 +466,15 @@ make_script_iterator(const T& chars)
 }
 
 //! This namespace contains various reusable parser rules
-/*! \test in file test_parser.cpp */
+/*! Templates of parent rules that have child rules (e.g., rules::repeat,
+ * rules::seq, rules::alt, rules::cut) can accept an rvalue as well as an
+ * lvalue reference to a child node. If rvalue is used, then a copy of the
+ * child rule is stored in the parent rule and remains valid for the lifetime
+ * of the parent rule. If lvalue is used, then a reference to the child rule is
+ * stored in the parent rule. The caller must manage lifetimes of the parent
+ * and the child rule so that the parent's reference to the child does not
+ * become dangling.
+ * \test in file test_parser.cpp */
 namespace rules {
 
 //! A rule that always fails.
@@ -557,17 +585,16 @@ private:
  * of matches of the child rule.
  * \tparam Child a child rule type
  * \tparam Handler the type of a handler called when the rule matches */
-template <rule Child,
-    class Handler = default_handler<typename Child::context_type, size_t,
-        typename Child::iterator_type>>
-class repeat final: public rule_base<repeat<Child, Handler>,
-    typename Child::context_type, size_t, typename Child::iterator_type,
-    Handler>
+template <rule_cvref Child, rule_value<Child> C = std::remove_cvref_t<Child>,
+    class Handler = default_handler<typename C::context_type, size_t,
+        typename C::iterator_type>>
+class repeat final: public rule_base<repeat<Child, C, Handler>,
+    typename C::context_type, size_t, typename C::iterator_type, Handler>
 {
 public:
     //! The alias for the base class
-    using base = rule_base<repeat<Child, Handler>,
-        typename Child::context_type, size_t, typename Child::iterator_type,
+    using base = rule_base<repeat<Child, C, Handler>,
+        typename C::context_type, size_t, typename C::iterator_type,
         Handler>;
     //! The type of the child rule
     using child_type = Child;
@@ -577,17 +604,24 @@ public:
     /*! \param[in] child the child node
      * \param[in] min the minimum number of child matches
      * \param[in] max the maximum number of child matches
-     * \param[in] hnd the handler stored in the rule */
+     * \param[in] hnd the handler stored in the rule
+     * \note Template magic ensures that \a Handler is not deduced to an
+     * integral type when called without an explicit \a Handler, e.g., from
+     * \c operator-(). */
+    template <class = void> requires (!std::convertible_to<Handler, size_t>)
     explicit repeat(Child child, size_t min = 0, size_t max = unlimited,
                     Handler hnd = {}):
-        base(hnd), child(std::move(child)), min(min), max(max) {}
+        base(hnd), _child(std::forward<Child>(child)), min(min), max(max) {}
     //! Creates the rule with a handler.
     /*! \param[in] child the child node
      * \param[in] hnd the handler stored in the rule
      * \param[in] min the minimum number of child matches
-     * \param[in] max the maximum number of child matches */
+     * \param[in] max the maximum number of child matches
+     * \note Template magic ensures that \a Handler is not deduced to an
+     * integral type when called without an explicit \a Handler. */
+    template <class = void> requires (!std::convertible_to<Handler, size_t>)
     repeat(Child child, Handler hnd, size_t min = 0, size_t max = unlimited):
-        repeat(child, min, max, hnd) {}
+        repeat(std::forward<Child>(child), min, max, hnd) {}
     //! Creates the rule.
     /*! \param[in] child the child rule
      * \param[in] out a place where the number of matches will be stored if the
@@ -596,11 +630,14 @@ public:
      * \param[in] max the maximum number of child matches
      * maches between \ref min and \ref max times */
     repeat(Child child, size_t& out, size_t min = 0, size_t max = unlimited):
-        repeat(std::move(child),
+        repeat(std::forward<Child>(child),
                [&out](auto&&, size_t info, auto&&, auto&&) {
                    out = info;
                },
                min, max) {}
+    //! Gets the child node.
+    /*! \return the child */
+    const Child& child() const noexcept { return _child; }
 protected:
     //! \copydoc rule_base::parse_internal()
     typename repeat::parse_result
@@ -618,7 +655,8 @@ protected:
                                        typename repeat::iterator_type end) const
     {
         for (size_t i = 0;; ++i) {
-            switch (auto [result, pos] = child.parse(ctx, begin, end); result) {
+            switch (auto [result, pos] = _child.parse(ctx, begin, end); result)
+            {
             case rule_result::fail:
             case rule_result::fail_final:
                 if (i >= min) {
@@ -640,12 +678,30 @@ protected:
         }
     }
 private:
-    Child child; //!< The child node
+    Child _child; //!< The child node
     size_t min = 0; //!< The minimum number of matches of the child node
     size_t max = unlimited; //!< The maximum number of matches of the child node
     //! rule_base needs access to overriden member functions
     friend base;
 };
+
+template <class Child>
+repeat(Child&&, size_t = {}, size_t = {}) ->
+    repeat<Child, std::remove_cvref_t<Child>>;
+
+template <class Child, class Handler>
+    requires (!std::convertible_to<Handler, size_t>)
+repeat(Child&&, size_t, size_t, Handler) ->
+    repeat<Child, std::remove_cvref_t<Child>, Handler>;
+
+template <class Child, class Handler>
+    requires (!std::convertible_to<Handler, size_t>)
+repeat(Child&&, Handler, size_t = {}, size_t = {}) ->
+    repeat<Child, std::remove_cvref_t<Child>, Handler>;
+
+template <class Child>
+repeat(Child&&, size_t&, size_t = {}, size_t = {}) ->
+    repeat<Child, std::remove_cvref_t<Child>>;
 
 //! A rule that matches a sequential composition of two child rules
 /*! It matches iff the first child matches an initial part of the input and the
@@ -653,7 +709,7 @@ private:
  * \tparam Child1 the first child rule type
  * \tparam Child2 the second child rule type
  * \tparam Handler the type of a handler called when the rule matches */
-template <rule Child1, rule Child2,
+template <rule_cvref Child1, rule_cvref Child2,
     class Handler = default_handler<typename Child1::context_type, empty,
         typename Child1::iterator_type>>
     requires
@@ -736,7 +792,7 @@ private:
  * \tparam Child1 the first child rule type
  * \tparam Child2 the second child rule type
  * \tparam Handler the type of a handler called when the rule matches */
-template <rule Child1, rule Child2,
+template <rule_cvref Child1, rule_cvref Child2,
     class Handler = default_handler<typename Child1::context_type, empty,
         typename Child1::iterator_type>>
     requires
@@ -805,7 +861,7 @@ private:
  * matches or not), the following alternatives in the sequence of rules::alt
  * nodes will not be matched.
  * \tparam Child a child rule type */
-template <rule Child>
+template <rule_cvref Child>
 class cut final:
     public rule_base<cut<Child>, typename Child::context_type, empty,
         typename Child::iterator_type, typename Child::handler_type>
@@ -850,11 +906,11 @@ private:
  * \param[in] r a child rule
  * \return a rules::repeat rule containg \a r as the child rule, with the
  * minimum number of repetitions 0 and maximum 1 */
-template <rule Rule>
-rules::repeat<Rule, rebind_handler_t<typename Rule::handler_type, size_t>>
-operator-(Rule r)
+template <rule_cvref Rule>
+rules::repeat<Rule, std::remove_cvref_t<Rule>, rebind_rhnd_t<Rule, size_t>>
+operator-(Rule&& r)
 {
-    return rules::repeat<Rule>(std::move(r), 0, 1);
+    return rules::repeat{std::forward<Rule>(r), 0, 1};
 }
 
 //! Wraps a rule by rules::repeat for at least 1 match.
@@ -862,11 +918,12 @@ operator-(Rule r)
  * \param[in] r a child rule
  * \return a rules::repeat rule containg \a r as the child rule, with the
  * minimum number of repetitions 1 and maximum unlimited */
-template <rule Rule>
-rules::repeat<Rule, rebind_handler_t<typename Rule::handler_type, size_t>>
-operator+(Rule r)
+template <rule_cvref Rule>
+rules::repeat<Rule, std::remove_cvref_t<Rule>, rebind_rhnd_t<Rule, size_t>>
+operator+(Rule&& r)
 {
-    return rules::repeat<Rule>{std::move(r), 1, rules::repeat<Rule>::unlimited};
+    return rules::repeat{std::forward<Rule>(r), 1,
+        rules::repeat<Rule>::unlimited};
 }
 
 //! Wraps a rule by rules::repeat for any number of matches.
@@ -874,11 +931,12 @@ operator+(Rule r)
  * \param[in] r the child rule
  * \return a rules::repeat rule containg \a r as the child rule, with the
  * minimum number of repetitions 0 and maximum unlimited */
-template <rule Rule>
-rules::repeat<Rule, rebind_handler_t<typename Rule::handler_type, size_t>>
-operator*(Rule r)
+template <rule_cvref Rule>
+rules::repeat<Rule, std::remove_cvref_t<Rule>, rebind_rhnd_t<Rule, size_t>>
+operator*(Rule&& r)
 {
-    return rules::repeat<Rule>{std::move(r), 0, rules::repeat<Rule>::unlimited};
+    return rules::repeat{std::forward<Rule>(r), 0,
+        rules::repeat<Rule>::unlimited};
 }
 
 //! Creates a sequential composition of two rules.
@@ -887,11 +945,11 @@ operator*(Rule r)
  * \param[in] r1 the first child rule
  * \param[in] r2 the second child rule
  * \return a rules::seq rule containing \a r1 and \a r2 as child rules */
-template <rule Rule1, rule Rule2>
-rules::seq<Rule1, Rule2, rebind_handler_t<typename Rule1::handler_type, empty>>
+template <rule Rule1, rule_cvref Rule2>
+rules::seq<Rule1, Rule2, rebind_rhnd_t<Rule1, empty>>
 operator<<(Rule1 r1, Rule2 r2)
 {
-    return {std::move(r1), std::move(r2)};
+    return rules::seq{std::move(r1), std::move(r2)};
 }
 
 //! Creates an alternative composition of two rules.
@@ -900,21 +958,21 @@ operator<<(Rule1 r1, Rule2 r2)
  * \param[in] r1 the first child rule
  * \param[in] r2 the second child rule
  * \return a rules::alt rule containing \a r1 and \a r2 as child rules */
-template <rule Rule1, rule Rule2>
-rules::alt<Rule1, Rule2, rebind_handler_t<typename Rule1::handler_type, empty>>
+template <rule_cvref Rule1, rule_cvref Rule2>
+rules::alt<Rule1, Rule2, rebind_rhnd_t<Rule1, empty>>
 operator|(Rule1 r1, Rule2 r2)
 {
-    return {std::move(r1), std::move(r2)};
+    return rules::alt{std::move(r1), std::move(r2)};
 }
 
 //! Creates a rule that disables (cuts) the following alternatives in rules::alt
 /*! \tparam Rule the type of the child rule
  * \param[in] r the child rule
  * \return a rules::cut rule containing \a r as the child rule. */
-template <rule Rule, rebind_handler_t<typename Rule::handler_type, empty>>
+template <rule_cvref Rule, rebind_rhnd_t<Rule, empty>>
 rules::cut<Rule> operator!(Rule r)
 {
-    return std::move(r);
+    return rules::cut{std::move(r)};
 }
 
 } // namespace threadscript::parser

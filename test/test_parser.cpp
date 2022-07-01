@@ -375,3 +375,67 @@ BOOST_DATA_TEST_CASE(repeat_0_inf, (std::vector<test::repeated>{
     }
 }
 //! \endcond
+
+/*! \file
+ * \test \c repeat_child_rref -- tests that if an rvalue child is passed to
+ * threadscript::parser::rules::repeat, then a copy is stored */
+//! \cond
+BOOST_AUTO_TEST_CASE(repeat_child_rref)
+{
+    using it_t = std::string::iterator;
+    using any = rules::any<tsp::context, it_t>;
+    {
+        auto a = any{};
+        auto rule = -std::move(a);
+        using rule_t = decltype(rule);
+        static_assert(!std::is_reference_v<typename rule_t::child_type>);
+        BOOST_TEST(&a != &rule.child());
+    }
+    {
+        auto a = any{};
+        auto rule = +std::move(a);
+        using rule_t = decltype(rule);
+        static_assert(!std::is_reference_v<typename rule_t::child_type>);
+        BOOST_TEST(&a != &rule.child());
+    }
+    {
+        auto a = any{};
+        auto rule = *std::move(a);
+        using rule_t = decltype(rule);
+        static_assert(!std::is_reference_v<typename rule_t::child_type>);
+        BOOST_TEST(&a != &rule.child());
+    }
+}
+//! \endcond
+
+/*! \file
+ * \test \c repeat_child_lref -- tests that if an lvalue child is passed to
+ * threadscript::parser::rules::repeat, then a reference is stored */
+//! \cond
+BOOST_AUTO_TEST_CASE(repeat_child_lref)
+{
+    using it_t = std::string::iterator;
+    using any = rules::any<tsp::context, it_t>;
+    {
+        auto a = any{};
+        auto rule = -a;
+        using rule_t = decltype(rule);
+        static_assert(std::is_reference_v<typename rule_t::child_type>);
+        BOOST_TEST(&a == &rule.child());
+    }
+    {
+        auto a = any{};
+        auto rule = +a;
+        using rule_t = decltype(rule);
+        static_assert(std::is_reference_v<typename rule_t::child_type>);
+        BOOST_TEST(&a == &rule.child());
+    }
+    {
+        auto a = any{};
+        auto rule = *a;
+        using rule_t = decltype(rule);
+        static_assert(std::is_reference_v<typename rule_t::child_type>);
+        BOOST_TEST(&a == &rule.child());
+    }
+}
+//! \endcond
