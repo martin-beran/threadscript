@@ -719,26 +719,26 @@ repeat(Child&&, size_t&, size_t = {}, size_t = {}) ->
  * second child matches an immediately following part of the input.
  * \tparam Child1 the first child rule type
  * \tparam Child2 the second child rule type
+ * \tparam C1 type \a Child1 with removed reference, \c const, \c volatile
+ * \tparam C2 type \a Child2 with removed reference, \c const, \c volatile
  * \tparam Handler the type of a handler called when the rule matches */
 template <rule_cvref Child1, rule_cvref Child2,
-    class Handler = default_handler<typename Child1::context_type, empty,
-        typename Child1::iterator_type>>
+    rule_value<Child1> C1 = std::remove_cvref_t<Child1>,
+    rule_value<Child2> C2 = std::remove_cvref_t<Child2>,
+    class Handler = default_handler<typename C1::context_type, empty,
+        typename C1::iterator_type>>
     requires
-        std::same_as<typename Child1::context_type,
-            typename Child2::context_type> &&
-        std::same_as<typename Child1::iterator_type,
-            typename Child2::iterator_type> &&
-        std::same_as<typename Child1::handler_type,
-            typename Child2::handler_type>
-class seq final: public rule_base<seq<Child1, Child2, Handler>,
-    typename Child1::context_type, empty, typename Child1::iterator_type,
+        std::same_as<typename C1::context_type, typename C2::context_type> &&
+        std::same_as<typename C1::iterator_type, typename C2::iterator_type> &&
+        std::same_as<typename C1::handler_type, typename C2::handler_type>
+class seq final: public rule_base<seq<Child1, Child2, C1, C2, Handler>,
+    typename C1::context_type, empty, typename C1::iterator_type,
     Handler>
 {
 public:
     //! The alias for the base class
-    using base = rule_base<seq<Child1, Child2, Handler>,
-        typename Child1::context_type, empty, typename Child1::iterator_type,
-        Handler>;
+    using base = rule_base<seq<Child1, Child2, C1, C2, Handler>,
+        typename C1::context_type, empty, typename C1::iterator_type, Handler>;
     //! The type of the first child rule
     using child1_type = Child1;
     //! The type of the second child rule
@@ -748,15 +748,22 @@ public:
      * \param[in] child2 the second child node
      * \param[in] hnd the handler stored in the rule */
     seq(Child1 child1, Child2 child2, Handler hnd = {}):
-        base(hnd), child1(std::move(child1)), child2(std::move(child2)) {}
+        base(hnd), _child1(std::forward<Child1>(child1)),
+        _child2(std::forward<Child2>(child2)) {}
     //! Creates the rule.
     /*! \param[in] child1 the first child node
      * \param[in] child2 the second child node
      * \param[in] out a place where \c true will be stored if the sequence of
      * child rules matches */
     seq(Child1 child1, Child2 child2, bool& out):
-        seq(std::move(child1), std::move(child2),
+        seq(std::forward<Child1>(child1), std::forward<Child2>(child2),
             [&out](auto&&, auto&&, auto&&, auto&&) { out = true; }) {}
+    //! Gets the first child node.
+    /*! \return the child */
+    const Child1& child1() const noexcept { return _child1; }
+    //! Gets the second child node.
+    /*! \return the child */
+    const Child2& child2() const noexcept { return _child2; }
 protected:
     //! \copydoc rule_base::eval()
     typename seq::parse_result eval(typename seq::context_type& ctx,
@@ -764,13 +771,14 @@ protected:
                                     typename seq::iterator_type begin,
                                     typename seq::iterator_type end) const
     {
-        switch (auto [result1, pos1] = child1.parse(ctx, begin, end); result1) {
+        switch (auto [result1, pos1] = _child1.parse(ctx, begin, end); result1)
+        {
         case rule_result::fail:
         case rule_result::fail_final:
             return {result1, pos1};
         case rule_result::ok:
         case rule_result::ok_final:
-            switch (auto [result2, pos2] = child2.parse(ctx, pos1, end);
+            switch (auto [result2, pos2] = _child2.parse(ctx, pos1, end);
                     result2)
             {
             case rule_result::fail:
@@ -791,11 +799,36 @@ protected:
         }
     }
 private:
-    Child1 child1; //!< The first child node
-    Child2 child2; //!< The second child node
+    Child1 _child1; //!< The first child node
+    Child2 _child2; //!< The second child node
     //! rule_base needs access to overriden member functions
     friend base;
 };
+
+//! A deduction guide for \ref seq
+/*! \tparam Child1 a first child rule type
+ * \tparam Child2 a second child rule type */
+template <class Child1, class Child2>
+seq(Child1&&, Child2&&) ->
+    seq<Child1, Child2, std::remove_cvref_t<Child1>,
+        std::remove_cvref_t<Child2>>;
+
+//! A deduction guide for \ref seq
+/*! \tparam Child1 a first child rule type
+ * \tparam Child2 a second child rule type
+ * \tparam Handler a handler type */
+template <class Child1, class Child2, class Handler>
+seq(Child1&&, Child2&&, Handler) ->
+    seq<Child1, Child2, std::remove_cvref_t<Child1>,
+        std::remove_cvref_t<Child2>, Handler>;
+
+//! A deduction guide for \ref seq
+/*! \tparam Child1 a first child rule type
+ * \tparam Child2 a second child rule type */
+template <class Child1, class Child2>
+seq(Child1&&, Child2&&, bool&) ->
+    seq<Child1, Child2, std::remove_cvref_t<Child1>,
+        std::remove_cvref_t<Child2>>;
 
 //! A rule that matches an alternative of two child rules
 /*! It matches iff the first or the second child matches. If the first child
@@ -957,10 +990,11 @@ operator*(Rule&& r)
  * \param[in] r2 the second child rule
  * \return a rules::seq rule containing \a r1 and \a r2 as child rules */
 template <rule Rule1, rule_cvref Rule2>
-rules::seq<Rule1, Rule2, rebind_rhnd_t<Rule1, empty>>
-operator<<(Rule1 r1, Rule2 r2)
+rules::seq<Rule1, Rule2, std::remove_cvref_t<Rule1>, std::remove_cvref_t<Rule2>,
+    rebind_rhnd_t<Rule1, empty>>
+operator<<(Rule1&& r1, Rule2&& r2)
 {
-    return rules::seq{std::move(r1), std::move(r2)};
+    return rules::seq{std::forward<Rule1>(r1), std::forward<Rule2>(r2)};
 }
 
 //! Creates an alternative composition of two rules.
