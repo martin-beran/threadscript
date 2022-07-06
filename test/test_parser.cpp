@@ -75,7 +75,7 @@ BOOST_AUTO_TEST_CASE(fail)
 //! \endcond
 
 /*! \file
- * \test \c fail -- test of threadscript::parser::rules::eof */
+ * \test \c eof -- test of threadscript::parser::rules::eof */
 //! \cond
 BOOST_DATA_TEST_CASE(eof, (std::vector<test::parsed>{
                                {"", true, 1, 1},
@@ -106,7 +106,7 @@ BOOST_DATA_TEST_CASE(eof, (std::vector<test::parsed>{
 //! \endcond
 
 /*! \file
- * \test \c any -- test of threadscript::parser::rules::eof */
+ * \test \c any -- test of threadscript::parser::rules::any */
 //! \cond
 BOOST_DATA_TEST_CASE(any, (std::vector<test::parsed>{
                                {"", false, 1, 1},
@@ -209,7 +209,8 @@ BOOST_DATA_TEST_CASE(t, (std::vector<test::parsed>{
 
 /*! \file
  * \test \c repeat_0_1 -- test of threadscript::parser::rules::repeat,
- * \c operator-(), and \c operator[]() */
+ * \c threadscript::parser::operator-(), and
+ * \c threadscript::parser::operator[]() */
 //! \cond
 BOOST_DATA_TEST_CASE(repeat_0_1, (std::vector<test::repeated>{
                                       {"", true, 0, 1, 1},
@@ -254,7 +255,8 @@ BOOST_DATA_TEST_CASE(repeat_0_1, (std::vector<test::repeated>{
 
 /*! \file
  * \test \c repeat_1_inf -- test of threadscript::parser::rules::repeat,
- * \c operator+(), and \c operator[]() */
+ * \c threadscript::parser::operator+(), and
+ * \c threadscript::parser::operator[]() */
 //! \cond
 BOOST_DATA_TEST_CASE(repeat_1_inf, (std::vector<test::repeated>{
                                         {"", false, 0, 1, 1},
@@ -316,7 +318,8 @@ BOOST_DATA_TEST_CASE(repeat_1_inf, (std::vector<test::repeated>{
 
 /*! \file
  * \test \c repeat_0_inf -- test of threadscript::parser::rules::repeat,
- * \c operator*(), and \c operator[]() */
+ * \c threadscript::parser::operator*(), and
+ * \c threadscript::parser::operator[]() */
 //! \cond
 BOOST_DATA_TEST_CASE(repeat_0_inf, (std::vector<test::repeated>{
                                         {"", true, 0, 1, 1},
