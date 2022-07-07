@@ -47,14 +47,20 @@ enum class rule_result: uint8_t {
     //! The rule matches, but an alternative can be tried later
     ok,
     //! The rule does not match and an alternative cannot be tried
-    /*! It disables the following alternatives. This is normally used by a node
-     * to signal to its parent disjunction node that parent's remaining
-     * alternatives should not be evaluated. */
-    fail_final,
+    /*! It disables the following alternatives. This is normally used by a
+     * sequence node (rules::seq)
+     * to signal to its parent disjunction node (rules::alt) that parent's
+     * remaining alternatives should not be evaluated. */
+    fail_final_seq,
+    //! The rule does not match and an alternative cannot be tried
+    /*! It disables the following alternatives. This is normally used by a
+     * disjunction node (rules::alt) to signal to its parent disjunction node
+     * that parent's remaining alternatives should not be evaluated. */
+    fail_final_alt,
     //! The matches, and an alternative will not be tried.
     /*! It disables the following alternatives. This is normally used by a node
      * to signal to its parent sequence node that if a later node in the
-     * sequence fails, the sequence should return fail_final instead of
+     * sequence fails, the sequence should return fail_final_seq instead of
      * rule_result::fail to its parent disjunction node. */
     ok_final,
 };
@@ -220,8 +226,9 @@ public:
      *
      * If the rule matches, it returns rule_result::ok or rule_result::ok_final
      * and the iterator denoting the end of the matched part of input. If the
-     * rule does not match, it returns rule_result::fail or
-     * rule_result::fail_final and the position where matching failed.
+     * rule does not match, it returns rule_result::fail,
+     * rule_result::fail_final_seq, or rule_result::fail_final_alt and the
+     * position where matching failed.
      * \param[in,out] ctx the parsing context; may be modified by the function
      * \param[in,out] up a temporary context of a parent rule; \c nullptr if
      * this rule has no parent
@@ -415,7 +422,8 @@ public:
         switch (auto [result, pos] = rule.parse(*this, up, begin, end); result)
         {
             case rule_result::fail:
-            case rule_result::fail_final:
+            case rule_result::fail_final_seq:
+            case rule_result::fail_final_alt:
                 if (error_msg)
                     throw error(pos, *error_msg);
                 else
@@ -854,7 +862,8 @@ protected:
                     result)
             {
             case rule_result::fail:
-            case rule_result::fail_final:
+            case rule_result::fail_final_seq:
+            case rule_result::fail_final_alt:
                 if (i >= min) {
                     tmp = i;
                     return {rule_result::ok, pos};
@@ -981,18 +990,24 @@ protected:
         switch (auto [result1, pos1] = _child1.parse(ctx, &self, begin, end);
                 result1)
         {
+        case rule_result::fail_final_alt:
+            result1 = rule_result::fail;
+            [[fallthrough]];
         case rule_result::fail:
-        case rule_result::fail_final:
+        case rule_result::fail_final_seq:
             return {result1, pos1};
         case rule_result::ok:
         case rule_result::ok_final:
             switch (auto [result2, pos2] = _child2.parse(ctx, &self, pos1, end);
                     result2)
             {
+            case rule_result::fail_final_alt:
+                result2 = rule_result::fail;
+                [[fallthrough]];
             case rule_result::fail:
-            case rule_result::fail_final:
+            case rule_result::fail_final_seq:
                 if (result1 == rule_result::ok_final)
-                    result2 = rule_result::fail_final;
+                    result2 = rule_result::fail_final_seq;
                 return {result2, pos2};
             case rule_result::ok:
             case rule_result::ok_final:
@@ -1118,14 +1133,29 @@ protected:
         switch (auto [result1, pos1] = _child1.parse(ctx, &self, begin, end);
                 result1)
         {
-        case rule_result::fail_final:
-            return {rule_result::fail_final, pos1};
+        case rule_result::fail_final_seq:
+        case rule_result::fail_final_alt:
+            return {rule_result::fail_final_alt, pos1};
         case rule_result::fail:
-            return _child2.parse(ctx, &self, begin, end);
+            switch (auto [result2, pos2] = _child2.parse(ctx, &self, begin,
+                                                         end); result2)
+            {
+            case rule_result::fail_final_seq:
+                result2 = rule_result::fail_final_alt;
+                [[fallthrough]];
+            case rule_result::fail_final_alt:
+            case rule_result::fail:
+                return {result2, pos2};
+            case rule_result::ok:
+            case rule_result::ok_final:
+                return {rule_result::ok, pos2};
+            default:
+                assert(false);
+            }
         case rule_result::ok:
         case rule_result::ok_final:
             tmp = 1;
-            return {result1, pos1};
+            return {rule_result::ok, pos1};
         default:
             assert(false);
         }
@@ -1163,10 +1193,13 @@ template <class Child1, class Child2, class Up>
 alt(Child1&&, Child2&&, Up*, size_t&) -> alt<Child1, Child2, Up>;
 
 //! A rule that disables (cuts) the following alternatives in rules::alt
-/*! It this node is a member of a sequence of rule::seq nodes that is a child
- * of a rule::alt node, than after this node is evaluated (regardless if it
- * matches or not), the following alternatives in the sequence of rules::alt
- * nodes will not be matched.
+/*! If this node is a member of a sequence of rule::seq nodes that is a child
+ * of a rule::alt node, than after this node  matches, the following
+ * alternatives in the sequence of rules::alt nodes will not be matched,
+ * regardless the outcome of the rest of rule::seq sequence after this node.
+ * Eliminating alternatives works only if this node is a direct child of a
+ * rules::seq node and there are only rules::seq nodes on the path to the
+ * nearest rules::alt ancestor.
  * \tparam Child a child rule type
  * \tparam Up a temporary context of a parent rule */
 template <rule_cvref Child, class Up>
@@ -1202,8 +1235,9 @@ protected:
                 result)
         {
         case rule_result::fail:
-        case rule_result::fail_final:
-            return {rule_result::fail_final, pos};
+        case rule_result::fail_final_seq:
+        case rule_result::fail_final_alt:
+            return {rule_result::fail, pos};
         case rule_result::ok:
         case rule_result::ok_final:
             return {rule_result::ok_final, pos};
@@ -1267,32 +1301,27 @@ public:
     /*! \return the result of has_child() */
     explicit operator bool() const noexcept { return has_child(); }
 protected:
-    //! \copydoc rule_base::parse_with_tmp()
-    /*! \note We cannot override eval(), because we need to pass \a self to the
-     * child. */
-    typename dyn::parse_result parse_with_tmp(Ctx& ctx, Self& self, Up* up,
-                                          empty& tmp, It begin, It end) const
-    {
-        if (_child && _parse) {
-            auto result = _parse(_child, ctx, self, begin, end);
-            if (result.first == rule_result::ok ||
-                result.first == rule_result::ok_final)
-            {
-                attr(ctx, self, up, tmp, begin, result.second);
-            }
-            return result;
-        } else
-            return rule_result::fail;
-    }
     //! \copydoc rule_base::eval()
     typename dyn::parse_result eval(Ctx& ctx, Self& self,
                                     [[maybe_unused]] empty& tmp,
                                     It begin, It end) const
     {
         if (_child && _parse)
-            return _parse(_child, ctx, &self, begin, end);
+            switch(auto [result, pos] = _parse(_child, ctx, &self, begin, end);
+                   result)
+            {
+            case rule_result::fail:
+            case rule_result::fail_final_seq:
+            case rule_result::fail_final_alt:
+                return {rule_result::fail, pos};
+            case rule_result::ok:
+            case rule_result::ok_final:
+                return {rule_result::ok, pos};
+            default:
+                assert(false);
+            }
         else
-            return rule_result::fail;
+            return {rule_result::fail, begin};
     }
 private:
     const void* _child = nullptr; //!< Type-erased pointer to a child rule
