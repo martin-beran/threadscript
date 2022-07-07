@@ -60,7 +60,8 @@ BOOST_AUTO_TEST_CASE(fail)
     std::string text = "abc";
     auto it = tsp::make_script_iterator(text);
     tsp::context ctx;
-    tsp::rules::fail<decltype(ctx), typename decltype(it)::first_type> rule{};
+    rules::fail<decltype(ctx), tsp::empty, tsp::empty,
+        typename decltype(it)::first_type> rule{};
     auto begin = it.first;
     BOOST_CHECK_EXCEPTION(ctx.parse(rule, it),
         tsp::error<decltype(it)::first_type>,
@@ -84,7 +85,8 @@ BOOST_DATA_TEST_CASE(eof, (std::vector<test::parsed>{
 {
     auto it = tsp::make_script_iterator(sample.text);
     tsp::context ctx;
-    tsp::rules::eof<decltype(ctx), typename decltype(it)::first_type> rule{};
+    rules::eof<decltype(ctx), tsp::empty, tsp::empty,
+        typename decltype(it)::first_type> rule{};
     auto begin = it.first;
     if (sample.result) {
         BOOST_CHECK_NO_THROW(ctx.parse(rule, it));
@@ -118,8 +120,8 @@ BOOST_DATA_TEST_CASE(any, (std::vector<test::parsed>{
     auto it = tsp::make_script_iterator(sample.text);
     tsp::context ctx;
     char attr = '\0';
-    tsp::rules::any<decltype(ctx), typename decltype(it)::first_type>
-        rule{attr};
+    rules::any<decltype(ctx), tsp::empty, tsp::empty,
+        typename decltype(it)::first_type> rule{attr};
     if (sample.result) {
         auto pos = it.first;
         BOOST_REQUIRE_NO_THROW(
@@ -171,8 +173,8 @@ BOOST_DATA_TEST_CASE(t, (std::vector<test::parsed>{
     auto it = tsp::make_script_iterator(sample.text);
     tsp::context ctx;
     char attr = '\0';
-    tsp::rules::t<decltype(ctx), typename decltype(it)::first_type>
-        rule{'A', attr};
+    rules::t<decltype(ctx), tsp::empty, tsp::empty,
+        typename decltype(it)::first_type> rule{'A', attr};
     if (sample.result) {
         auto pos = it.first;
         BOOST_REQUIRE_NO_THROW(
@@ -225,13 +227,13 @@ BOOST_DATA_TEST_CASE(repeat_0_1, (std::vector<test::repeated>{
     tsp::context ctx;
     using ctx_t = decltype(ctx);
     using it_t = typename decltype(it)::first_type;
-    using t = rules::t<ctx_t, it_t>;
+    using t = rules::t<ctx_t, tsp::empty, tsp::empty, it_t>;
     char c = '\0';
     size_t cnt = 100;
-    auto set_c = [&c](auto&&, auto&&, auto&& it, auto&&) {
+    auto set_c = [&c](auto&&, auto&&, auto&&, auto&&, auto&& it, auto&&) {
         c = *it;
     };
-    auto set_cnt = [&cnt](auto&&, size_t n, auto&&, auto&&) {
+    auto set_cnt = [&cnt](auto&&, auto&&, auto&&, size_t n, auto&&, auto&&) {
         cnt = n;
     };
     auto rule = (-t{'a'}[set_c])[set_cnt];
@@ -275,13 +277,13 @@ BOOST_DATA_TEST_CASE(repeat_1_inf, (std::vector<test::repeated>{
     tsp::context ctx;
     using ctx_t = decltype(ctx);
     using it_t = typename decltype(it)::first_type;
-    using t = rules::t<ctx_t, it_t>;
+    using t = rules::t<ctx_t, tsp::empty, tsp::empty, it_t>;
     char c = '\0';
     size_t cnt = 100;
-    auto set_c = [&c](auto&&, auto&&, auto&& it, auto&&) {
+    auto set_c = [&c](auto&&, auto&&, auto&&, auto&&, auto&& it, auto&&) {
         c = *it;
     };
-    auto set_cnt = [&cnt](auto&&, size_t n, auto&&, auto&&) {
+    auto set_cnt = [&cnt](auto&&, auto&&, auto&&, size_t n, auto&&, auto&&) {
         cnt = n;
     };
     auto rule = (+t{'a'}[set_c])[set_cnt];
@@ -338,13 +340,13 @@ BOOST_DATA_TEST_CASE(repeat_0_inf, (std::vector<test::repeated>{
     tsp::context ctx;
     using ctx_t = decltype(ctx);
     using it_t = typename decltype(it)::first_type;
-    using t = rules::t<ctx_t, it_t>;
+    using t = rules::t<ctx_t, tsp::empty, tsp::empty, it_t>;
     char c = '\0';
     size_t cnt = 100;
-    auto set_c = [&c](auto&&, auto&&, auto&& it, auto&&) {
+    auto set_c = [&c](auto&&, auto&&, auto&&, auto&&, auto&& it, auto&&) {
         c = *it;
     };
-    auto set_cnt = [&cnt](auto&&, size_t n, auto&&, auto&&) {
+    auto set_cnt = [&cnt](auto&&, auto&&, auto&&, size_t n, auto&&, auto&&) {
         cnt = n;
     };
     auto rule = (*t{'a'}[set_c])[set_cnt];
@@ -386,7 +388,7 @@ BOOST_DATA_TEST_CASE(repeat_0_inf, (std::vector<test::repeated>{
 BOOST_AUTO_TEST_CASE(repeat_child_rref)
 {
     using it_t = std::string::iterator;
-    using any = rules::any<tsp::context, it_t>;
+    using any = rules::any<tsp::context, tsp::empty, tsp::empty, it_t>;
     {
         auto a = any{};
         auto rule = -std::move(a);
@@ -418,7 +420,7 @@ BOOST_AUTO_TEST_CASE(repeat_child_rref)
 BOOST_AUTO_TEST_CASE(repeat_child_lref)
 {
     using it_t = std::string::iterator;
-    using any = rules::any<tsp::context, it_t>;
+    using any = rules::any<tsp::context, tsp::empty, tsp::empty, it_t>;
     {
         auto a = any{};
         auto rule = -a;

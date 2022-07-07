@@ -66,23 +66,32 @@ enum class rule_result: uint8_t {
  * iterators \a It delimiting the part of the input matched by the rule.
  * \tparam Handler a handler
  * \tparam Ctx a parsing context
+ * \tparam Self a temporary context of a rule
+ * \tparam Up a temporary context of a parent rule (will be \c nullptr if a
+ * rule has no parent)
  * \tparam Info information about a parsed part of input
  * \tparam It an iterator to the input sequence of terminal symbols */
-template <class Handler, class Ctx, class Info, class It> concept handler =
-    std::is_invocable_r_v<void, Handler, Ctx&, Info, It, It> &&
+template <class Handler, class Ctx, class Self, class Up, class Info, class It>
+concept handler =
+    std::is_invocable_r_v<void, Handler, Ctx&, Self&, Up*, Info, It, It> &&
     std::forward_iterator<It> && std::derived_from<Ctx, context>;
 
 //! The default handler called when a rule matches
 /*! \tparam Ctx a parsing context
+ * \tparam Self a temporary context of this rule
+ * \tparam Up a temporary context of a parent rule
  * \tparam Info information about a parsed part of input
  * \tparam It an iterator to the input sequence of terminal symbols
  * \param[in] ctx a parsing context
+ * \param[in] self a temporary context of this rule
+ * \param[in] up a temporary context of a parent rule; \c nullptr if this rule
+ * hans no parent rule
  * \param[in] info information about a parsed part of input
  * \param[in] begin the first terminal matching a rule
  * \param[in] end one after the last terminal matching a rule */
-template <class Ctx, class Info, std::forward_iterator It>
-using default_handler =
-    std::function<void(Ctx& ctx, Info info, It begin, It end)>;
+template <class Ctx, class Self, class Up, class Info, std::forward_iterator It>
+using default_handler = std::function<void(Ctx& ctx, Self& self, Up* up,
+                                           Info info, It begin, It end)>;
 
 //! Changes the type of information passed to a handler
 /*! For supported \a Handler types, it contains a member typedef \c type, which
@@ -99,15 +108,17 @@ template <class Handler, class Info2>
 using rebind_handler_t =
     typename rebind_handler<Handler, Info2>::type;
 
-//! A template instance for rebinding default_handler
+//! A template specialization for rebinding default_handler
 /*! \tparam Ctx a context type
+ * \tparam Self a temporary context of this rule
+ * \tparam Up a temporary context of a parent rule
  * \tparam Info a the original information type
  * \tparam It an iterator type
  * \tparam Info2 a new information type */
-template <class Ctx, class Info, class It, class Info2>
-struct rebind_handler<default_handler<Ctx, Info, It>, Info2> {
+template <class Ctx, class Self, class Up, class Info, class It, class Info2>
+struct rebind_handler<default_handler<Ctx, Self, Up, Info, It>, Info2> {
     //! The hew handler type
-    using type = default_handler<Ctx, Info2, It>;
+    using type = default_handler<Ctx, Self, Up, Info2, It>;
 };
 
 //! Empty data that can be used as parameter \a Info of a handler.
@@ -115,6 +126,41 @@ struct rebind_handler<default_handler<Ctx, Info, It>, Info2> {
  * by a rule, and also as internal temporary data \a Tmp of a rule if the rule
  * does not need any additional data. */
 struct empty {};
+
+//! Creates a typed null pointer.
+/*! It is intended for creating argument \a Up for a deduction guide of a rule
+ * class in namespace threadscript::rules
+ * \tparam Up a temporary context of a parent rule
+ * \return a null pointer to \a Up */
+template <class Up> Up* up_null()
+{
+    return static_cast<Up*>(nullptr);
+}
+
+//! Get a parent temporary context from a child temporary context
+/*! This primary template returns the same type as is used by the current rule,
+ * with optional reference, \c const, or \c volatile removed.
+ * \tparam T a temporary context type of a rule */
+template <class T> struct up_type {
+    //! The temporary context type of a parent rule
+    using type = std::remove_cvref_t<T>;
+};
+
+//! A template specialization for a context type providing a parent type
+/*! This specialization uses \c std::remove_cvref_t<T>::up_type to get the
+ * parent context type */
+template <class T>
+    requires requires { typename std::remove_cvref_t<T>::up_type; }
+struct up_type<T> {
+    //! The temporary context type of a parent rule
+    using type = typename std::remove_cvref_t<T>::up_type;
+};
+
+//! Get a parent temporary context from a child temporary context
+/*! It \a T, with optional reference, \c const, or \c volatile removed, has
+ * member type \c up_type, then it is returned. Otherwise, \a T is returned.
+ * \tparam T a temporary context type of a rule */
+template <class T> using up_type_t = typename up_type<T>::type;
 
 //! A base class of all rules
 /*! Member functions in this class are not virtual, but they can be overriden
@@ -125,18 +171,24 @@ struct empty {};
  * by parse_internal() is changed, both these types are \ref empty.
  * \tparam Rule the derived rule class
  * \tparam Ctx a parsing context
+ * \tparam Self a temporary context of this rule
+ * \tparam Up a temporary context of a parent rule
  * \tparam Info information about a parsed part of input
  * \tparam It an iterator to the input sequence of terminal symbols
  * \tparam Handler the type of a handler called when the rule matches
  * \threadsafe{safe,unsafe} */
-template <class Rule, class Ctx, class Info, std::forward_iterator It,
-    handler<Ctx, Info, It> Handler = default_handler<Ctx, Info, It>>
+template <class Rule, class Ctx, class Self, class Up, class Info,
+    std::forward_iterator It,
+    handler<Ctx, Self, Up, Info, It> Handler =
+        default_handler<Ctx, Self, Up, Info, It>>
 class rule_base {
 public:
     using rule_type = Rule; //!< The derived rule type
     //! TThe rule_type without reference, \c const, and \c volatile
     using value_type = std::remove_cvref_t<Rule>;
     using context_type = Ctx; //!< A parsing context
+    using self_ctx_type = Self; //!< A temporary context of this rule
+    using up_ctx_type = Up; //!< A temporary context of a parent rule
     using info_type = Info; //!< Information about a parsed part of input
     using iterator_type = It; //!< An iterator to the input
     //! The type of a terminal symbol
@@ -149,8 +201,9 @@ public:
     /*! \param[in] hnd the handler stored in the rule */
     explicit rule_base(Handler hnd = {}): hnd(std::move(hnd)) {}
     //! Parses a part of the input according to the rule and uses the result.
-    /*! This function consists of sevaral parts, delegated to other member
-     * functions:
+    /*! This function consists of several parts, mainly delegated to other
+     * member functions:
+     * \arg It creates a temporary context of type Self.
      * \arg parse_internal() creates temporary private data used during the
      * single call of parse()
      * \arg parse_with_tmp() parses the input by calling eval() and if a match
@@ -159,7 +212,8 @@ public:
      * temporary private data into a handler argument
      * \arg attr() calls the registered handler and passes to it a result of
      * parsing
-     * \arg parse_internal() destroys temporary private data
+     * \arg parse_internal() destroys temporary private data and a temporary
+     * context
      * \arg if the rule does not match, then attr(), make_info(), and the
      * handler are not called
      *
@@ -168,22 +222,28 @@ public:
      * rule does not match, it returns rule_result::fail or
      * rule_result::fail_final and the position where matching failed.
      * \param[in,out] ctx the parsing context; may be modified by the function
+     * \param[in,out] up a temporary context of a parent rule; \c nullptr if
+     * this rule has no parent
      * \param[in] begin a position in the input sequence where matching starts
      * \param[in] end the end of input sequence
      * \return the result of matching this rule with the input sequence
      * \throw error if the maximum depth of rule nesting is exceeded */
-    parse_result parse(Ctx& ctx, It begin, It end) const {
+    parse_result parse(Ctx& ctx, Up* up, It begin, It end) const {
         if (ctx.max_depth && ctx.depth >= ctx.max_depth)
             throw error(begin, ctx.depth_msg);
         finally dec_depth{[&d = ctx.depth]() noexcept { --d; }};
         ++ctx.depth;
-        return static_cast<const Rule*>(this)->parse_internal(ctx, begin, end);
+        Self self{};
+        return static_cast<const Rule*>(this)->parse_internal(ctx, self, up,
+                                                              begin, end);
     }
     //! Sets a new handler
-    /*! \param[in] h the new handler
+    /*! \param[in] h the new handler */
+    void set_handler(Handler h) { hnd = std::move(h); }
+    /*! \copydoc set_handler()
      * \return \c *this */
     Rule& operator[](Handler h) {
-        hnd = std::move(h);
+        set_handler(std::move(h));
         return static_cast<Rule&>(*this);
     }
     //! The stored handler called by attr().
@@ -193,31 +253,43 @@ protected:
     //! Creates temporary private data usable in this parsing operation.
     /*! Private data are destroyed when the current parsing operation ends.
      * \param[in,out] ctx the parsing context; may be modified by the function
+     * \param[in,out] self the temporary context; may be modified by the
+     * function
+     * \param[in,out] up a temporary context of a parent rule; \c nullptr if
+     * this rule has no parent
      * \param[in] begin a position in the input sequence where matching starts
      * \param[in] end the end of input sequence
      * \return the result of matching this rule with the input sequence */
-    parse_result parse_internal(Ctx& ctx, It begin, It end) const {
+    parse_result parse_internal(Ctx& ctx, Self& self, Up* up, It begin, It end)
+        const
+    {
         empty tmp{};
-        return static_cast<const Rule*>(this)->parse_with_tmp(ctx, tmp,
-                                                              begin, end);
+        return static_cast<const Rule*>(this)->parse_with_tmp(ctx, self, up,
+                                                              tmp, begin, end);
     }
     //! Parses the input and can use temporary private data
     /*! When the rules matches, the result is passed out from the rule by
      * calling attr().
      * \tparam Tmp the type of temporary private data
      * \param[in,out] ctx the parsing context; may be modified by the function
+     * \param[in,out] self the temporary context; may be modified by the
+     * function
+     * \param[in,out] up a temporary context of a parent rule; \c nullptr if
+     * this rule has no parent
      * \param[in,out] tmp temporary private data
      * \param[in] begin a position in the input sequence where matching starts
      * \param[in] end the end of input sequence
      * \return the result of matching this rule with the input sequence */
     template <class Tmp>
-    parse_result parse_with_tmp(Ctx& ctx, Tmp& tmp, It begin, It end) const {
+    parse_result parse_with_tmp(Ctx& ctx, Self& self, Up* up, Tmp& tmp,
+                                It begin, It end) const
+    {
         auto result =
-            static_cast<const Rule*>(this)->eval(ctx, tmp, begin, end);
+            static_cast<const Rule*>(this)->eval(ctx, self, tmp, begin, end);
         if (result.first == rule_result::ok ||
             result.first == rule_result::ok_final)
         {
-            static_cast<const Rule*>(this)->attr(ctx, tmp, begin,
+            static_cast<const Rule*>(this)->attr(ctx, self, up, tmp, begin,
                                                  result.second);
         }
         return result;
@@ -228,13 +300,16 @@ protected:
      * rule_result::fail).
      * \tparam Tmp the type of temporary private data
      * \param[in,out] ctx the parsing context; may be modified by the function
+     * \param[in,out] self the temporary context; may be modified by the
+     * function
      * \param[in,out] tmp temporary private data
      * \param[in] begin a position in the input sequence where matching starts
      * \param[in] end the end of input sequence
      * \return[in] the result of matching this rule with the input sequence,
      * with the same meaning as in parse() */
     template <class Tmp>
-    parse_result eval([[maybe_unused]] Ctx& ctx, [[maybe_unused]] Tmp& tmp,
+    parse_result eval([[maybe_unused]] Ctx& ctx, [[maybe_unused]] Self& self,
+                      [[maybe_unused]] Tmp& tmp,
                       [[maybe_unused]] It begin, [[maybe_unused]] It end) const
     {
         return {rule_result::fail, begin};
@@ -254,6 +329,10 @@ protected:
      * called only if it evaluates to \c true.
      * \tparam Tmp the type of temporary private data
      * \param[in,out] ctx the parsing context; may be modified by the function
+     * \param[in,out] self the temporary context; may be modified by the
+     * function
+     * \param[in,out] up a temporary context of a parent rule; \c nullptr if
+     * this rule has no parent
      * \param[in,out] tmp temporary private data
      * \param[in] begin a position in the input sequence where matching starts;
      * it is the \a begin argument of parse()
@@ -263,13 +342,13 @@ protected:
      * a value obtained from the matching part of input into the attribute of
      * an attribute grammar. */
     template <class Tmp>
-    void attr(Ctx& ctx, Tmp& tmp, It begin, It end) const {
+    void attr(Ctx& ctx, Self& self, Up* up, Tmp& tmp, It begin, It end) const {
         if constexpr (requires { bool(hnd); }) {
             if (bool(hnd))
-                hnd(ctx, static_cast<const Rule*>(this)->make_info(tmp),
-                    begin, end);
+                hnd(ctx, self, up,
+                    static_cast<const Rule*>(this)->make_info(tmp), begin, end);
         } else
-            hnd(ctx, static_cast<const Rule*>(this)->make_info(tmp),
+            hnd(ctx, self, up, static_cast<const Rule*>(this)->make_info(tmp),
                 begin, end);
     }
 };
@@ -277,12 +356,15 @@ protected:
 //! A rule, which must be derived from rule_base and have a \c parse() function
 /*! \tparam Rule a rule type */
 template <class Rule> concept rule = std::derived_from<Rule, rule_base<
-    Rule, typename Rule::context_type, typename Rule::info_type,
+    Rule, typename Rule::context_type, typename Rule::self_ctx_type,
+    typename Rule::up_ctx_type, typename Rule::info_type,
     typename Rule::iterator_type, typename Rule::handler_type>> &&
     requires (const Rule r, typename Rule::context_type& ctx,
+              typename Rule::up_ctx_type* up,
               const typename Rule::iterator_type it)
     {
-        { r.parse(ctx, it, it) } -> std::same_as<typename Rule::parse_result>;
+        { r.parse(ctx, up, it, it) } ->
+            std::same_as<typename Rule::parse_result>;
     };
 
 //! A rule, which can also be a reference, \c const, or \c volatile
@@ -312,6 +394,8 @@ public:
     //! Parses an input sequence of terminal symbols according to \a rule.
     /*! \tparam R a rule type
      * \param[in] rule the rule matched to the input
+     * \param[in,out] up passed to \a rule as a temporary context of a parent
+     * rule; may be \c nullptr
      * \param[in] begin the start of the input
      * \param[in] end the end of the input
      * \param[in] all whether to require all input to match
@@ -322,11 +406,13 @@ public:
      * value, because an exception can be thrown directly from a deeper level
      * of nested rules, e.g., for exceeded maximum parsing depth. */
     template <rule R> typename R::iterator_type
-    parse(const R& rule, typename R::iterator_type begin,
-          typename R::iterator_type end, bool all = true)
+    parse(const R& rule, typename R::up_ctx_type* up,
+          typename R::iterator_type begin, typename R::iterator_type end,
+          bool all = true)
     {
         depth = 0;
-        switch (auto [result, pos] = rule.parse(*this, begin, end); result) {
+        switch (auto [result, pos] = rule.parse(*this, up, begin, end); result)
+        {
             case rule_result::fail:
             case rule_result::fail_final:
                 if (error_msg)
@@ -343,7 +429,44 @@ public:
         }
     }
     //! Parses an input sequence of terminal symbols according to \a rule.
+    /*! It passes \c nullptr to \a rule as a temporary context of a parent rule.
+     * \tparam R a rule type
+     * \param[in] rule the rule matched to the input
+     * \param[in] begin the start of the input
+     * \param[in] end the end of the input
+     * \param[in] all whether to require all input to match
+     * \return the end of matching part of the input; it is equal to \a end if
+     * \a all is \c true
+     * \throw error if the input does not match the \a rule
+     * \note Exceptions are used to signal failed parsing instead of a return
+     * value, because an exception can be thrown directly from a deeper level
+     * of nested rules, e.g., for exceeded maximum parsing depth. */
+    template <rule R> typename R::iterator_type
+    parse(const R& rule, typename R::iterator_type begin,
+          typename R::iterator_type end, bool all = true)
+    {
+        return parse(rule, nullptr, begin, end, all);
+    }
+    //! Parses an input sequence of terminal symbols according to \a rule.
     /*! \tparam R a rule type
+     * \param[in] rule the rule matched to the input
+     * \param[in,out] up passed to \a rule as a temporary context of a parent
+     * rule; may be \c nullptr
+     * \param[in] it contains begin and end of the input
+     * \param[in] all whether to require all input to match
+     * \return the end of matching part of the input; it is equal to \a
+     * it.second if \a all is \c true
+     * \throw error if the input does not match the \a rule */
+    template <rule R> typename R::iterator_type
+    parse(const R& rule, typename R::up_ctx_type* up,
+          std::pair<typename R::iterator_type, typename R::iterator_type> it,
+          bool all = true)
+    {
+        return parse(rule, up, it.first, it.second, all);
+    }
+    //! Parses an input sequence of terminal symbols according to \a rule.
+    /*! It passes \c nullptr to \a rule as a temporary context of a parent rule.
+     * \tparam R a rule type
      * \param[in] rule the rule matched to the input
      * \param[in] it contains begin and end of the input
      * \param[in] all whether to require all input to match
@@ -355,7 +478,7 @@ public:
           std::pair<typename R::iterator_type, typename R::iterator_type> it,
           bool all = true)
     {
-        return parse(rule, it.first, it.second, all);
+        return parse(rule, nullptr, it.first, it.second, all);
     }
     //! An error message to be stored in an exception.
     /*! If not \c nullopt, then this message is used when a parsing failed
@@ -374,8 +497,9 @@ public:
 private:
     size_t depth = 0; //!< The current stack depth of parsing
     //! Needed to manipulate context::depth
-    template <class Rule, class Ctx, class Info, std::forward_iterator It,
-        handler<Ctx, Info, It> Handler> friend class rule_base;
+    template <class Rule, class Ctx, class Self, class Up, class Info,
+        std::forward_iterator It, handler<Ctx, Self, Up, Info, It> Handler>
+    friend class rule_base;
 };
 
 //! An iterator for parsing script source code.
@@ -479,16 +603,19 @@ namespace rules {
 
 //! A rule that always fails.
 /*! \tparam Ctx a parsing context
+ * \tparam Self a temporary context of this rule
+ * \tparam Up a temporary context of a parent rule
  * \tparam It an iterator to the input sequence of terminal symbols
  * \tparam Handler the type of a handler called when the rule matches */
-template <class Ctx, std::forward_iterator It,
-    class Handler = default_handler<Ctx, empty, It>>
+template <class Ctx, class Self, class Up, std::forward_iterator It,
+    class Handler = default_handler<Ctx, Self, Up, empty, It>>
 class fail final:
-    public rule_base<fail<Ctx, It, Handler>, Ctx, empty, It, Handler>
+    public rule_base<fail<Ctx, Self, Up, It, Handler>,
+        Ctx, Self, Up, empty, It, Handler>
 {
 public:
     //! The alias for the base class
-    using base = rule_base<fail, Ctx, empty, It, Handler>;
+    using base = rule_base<fail, Ctx, Self, Up, empty, It, Handler>;
     using base::base;
 };
 
@@ -496,49 +623,59 @@ public:
 /*! This rule does not consume any input, therefore it must not be used in an
  * unlimited rules::repeat, because it would create an endless loop.
  * \tparam Ctx a parsing context
+ * \tparam Self a temporary context of this rule
+ * \tparam Up a temporary context of a parent rule
  * \tparam It an iterator to the input sequence of terminal symbols
  * \tparam Handler the type of a handler called when the rule matches */
-template <class Ctx, std::forward_iterator It,
-    class Handler = default_handler<Ctx, empty, It>>
+template <class Ctx, class Self, class Up, std::forward_iterator It,
+    class Handler = default_handler<Ctx, Self, Up, empty, It>>
 class eof final:
-    public rule_base<eof<Ctx, It, Handler>, Ctx, empty, It, Handler>
+    public rule_base<eof<Ctx, Self, Up, It, Handler>,
+        Ctx, Self, Up, empty, It, Handler>
 {
 public:
     //! The alias for the base class
-    using base = rule_base<eof, Ctx, empty, It, Handler>;
+    using base = rule_base<eof, Ctx, Self, Up, empty, It, Handler>;
     using base::base;
 protected:
     //! \copydoc rule_base::eval()
     typename eof::parse_result eval([[maybe_unused]] Ctx& ctx,
+                                    [[maybe_unused]] Self& self,
                                     [[maybe_unused]] empty& tmp,
                                     It begin, It end) const
     {
         return {begin == end ? rule_result::ok : rule_result::fail, begin};
     }
     //! rule_base needs access to overriden member functions
-    friend rule_base<eof, Ctx, empty, It, Handler>;
+    friend base;
 };
 
 //! A rule that matches any single terminal symbol.
 /*! \tparam Ctx a parsing context
+ * \tparam Self a temporary context of this rule
+ * \tparam Up a temporary context of a parent rule
  * \tparam It an iterator to the input sequence of terminal symbols
  * \tparam Handler the type of a handler called when the rule matches */
-template <class Ctx, std::forward_iterator It,
-    class Handler = default_handler<Ctx, empty, It>>
+template <class Ctx, class Self, class Up, std::forward_iterator It,
+    class Handler = default_handler<Ctx, Self, Up, empty, It>>
 class any final:
-    public rule_base<any<Ctx, It, Handler>, Ctx, empty, It, Handler>
+    public rule_base<any<Ctx, Self, Up, It, Handler>,
+        Ctx, Self, Up, empty, It, Handler>
 {
 public:
     //! The alias for the base class
-    using base = rule_base<any, Ctx, empty, It, Handler>;
+    using base = rule_base<any, Ctx, Self, Up, empty, It, Handler>;
     using base::base;
     //! Creates the rule
     /*! \param[in] out a place where a matched terminal will be stored */
     explicit any(typename any::term_type& out):
-        any([&out](auto&&, auto&&, auto&& it, auto&&) { out = *it; }) {}
+        any([&out](auto&&, auto&&, auto&&, auto&&, auto&& it, auto&&) {
+                out = *it;
+            }) {}
 protected:
     //! \copydoc rule_base::eval()
     typename any::parse_result eval([[maybe_unused]] Ctx& ctx,
+                                    [[maybe_unused]] Self& self,
                                     [[maybe_unused]] empty& tmp,
                                     It begin, It end) const
     {
@@ -548,19 +685,24 @@ protected:
             return {rule_result::fail, begin};
     }
     //! rule_base needs access to overriden member functions
-    friend rule_base<any, Ctx, empty, It, Handler>;
+    friend base;
 };
 
 //! A rule that matches a specific single terminal symbol.
 /*! \tparam Ctx a parsing context
+ * \tparam Self a temporary context of this rule
+ * \tparam Up a temporary context of a parent rule
  * \tparam It an iterator to the input sequence of terminal symbols
  * \tparam Handler the type of a handler called when the rule matches */
-template <class Ctx, std::forward_iterator It,
-    class Handler = default_handler<Ctx, empty, It>>
-class t final: public rule_base<t<Ctx, It, Handler>, Ctx, empty, It, Handler> {
+template <class Ctx, class Self, class Up, std::forward_iterator It,
+    class Handler = default_handler<Ctx, Self, Up, empty, It>>
+class t final: public rule_base<t<Ctx, Self, Up, It, Handler>,
+    Ctx, Self, Up, empty, It, Handler>
+{
 public:
     //! The alias for the base class
-    using base = rule_base<t<Ctx, It, Handler>, Ctx, empty, It, Handler>;
+    using base = rule_base<t<Ctx, Self, Up, It, Handler>,
+        Ctx, Self, Up, empty, It, Handler>;
     //! Creates the rule with a handler.
     /*! \param[in] term the terminal symbol matched by this rule
      * \param[in] hnd the handler stored in the rule */
@@ -570,10 +712,14 @@ public:
     /*! \param[in] term the terminal symbol matched by this rule
      * \param[in] out a place where a matched terminal will be stored */
     explicit t(typename t::term_type term, typename t::term_type& out):
-        t(term, [&out](auto&&, auto&&, auto&& it, auto&&) { out = *it; }) {}
+        t(term,
+          [&out](auto&&, auto&&, auto&&, auto&&, auto&& it, auto&&) {
+              out = *it;
+          }) {}
 protected:
     //! \copydoc rule_base::eval()
     typename t::parse_result eval([[maybe_unused]] Ctx& ctx,
+                                  [[maybe_unused]] Self& self,
                                   [[maybe_unused]] empty& tmp,
                                   It begin, It end) const
     {
@@ -591,12 +737,20 @@ private:
 namespace impl {
 
 //! A child rule type with removed reference, \c const, \c volatile
-/*! \tparam R a rule type */
+/*! \tparam R a child rule type */
 template <rule_cvref R> using child_t = std::remove_cvref_t<R>;
 
 //! A rule context type
 /*! \tparam R a rule type */
 template <rule_cvref R> using context_t = typename child_t<R>::context_type;
+
+//! A rule temporary context
+/*! \tparam R a rule type */
+template <rule_cvref R> using self_ctx_t = typename child_t<R>::self_ctx_type;
+
+//! A rule parent temporary context
+/*! \tparam R a rule type */
+template <rule_cvref R> using up_ctx_t = typename child_t<R>::up_ctx_type;
 
 //! A rule iterator type
 /*! \tparam R a rule type */
@@ -612,23 +766,27 @@ template <rule_cvref R> using handler_t = typename child_t<R>::handler_type;
 /*! Parameter \a info of \a Handler has type \c size_t and contains the number
  * of matches of the child rule.
  * \tparam Child a child rule type
+ * \tparam Up a temporary context of a parent rule
  * \tparam Handler the type of a handler called when the rule matches */
-template <rule_cvref Child,
-    class Handler = default_handler<impl::context_t<Child>, size_t,
-        impl::iterator_t<Child>>>
-class repeat final: public rule_base<repeat<Child, Handler>,
-    impl::context_t<Child>, size_t, impl::iterator_t<Child>, Handler>
+template <rule_cvref Child, class Up,
+    class Handler = default_handler<impl::context_t<Child>,
+        impl::up_ctx_t<Child>, Up, size_t, impl::iterator_t<Child>>>
+class repeat final: public rule_base<repeat<Child, Up, Handler>,
+    impl::context_t<Child>, impl::up_ctx_t<Child>, Up, size_t,
+    impl::iterator_t<Child>, Handler>
 {
 public:
     //! The alias for the base class
-    using base = rule_base<repeat<Child, Handler>, impl::context_t<Child>,
-        size_t, impl::iterator_t<Child>, Handler>;
+    using base = rule_base<repeat<Child, Up, Handler>, impl::context_t<Child>,
+        impl::up_ctx_t<Child>, Up, size_t, impl::iterator_t<Child>, Handler>;
     //! The type of the child rule
     using child_type = Child;
     //! It denotes an unlimited maximum number of occurrences of the child node
     static constexpr size_t unlimited = 0;
     //! Creates the rule with a handler.
     /*! \param[in] child the child node
+     * \param[in,out] up a temporary context of a parent rule; it is a dummy
+     * argument, usually created by up_null()
      * \param[in] min the minimum number of child matches
      * \param[in] max the maximum number of child matches
      * \param[in] hnd the handler stored in the rule
@@ -636,27 +794,33 @@ public:
      * integral type when called without an explicit \a Handler, e.g., from
      * \c operator-(). */
     template <class = void> requires (!std::convertible_to<Handler, size_t>)
-    explicit repeat(Child child, size_t min = 0, size_t max = unlimited,
-                    Handler hnd = {}):
+    explicit repeat(Child child, [[maybe_unused]] Up* up,
+                    size_t min = 0, size_t max = unlimited, Handler hnd = {}):
         base(hnd), _child(std::forward<Child>(child)), min(min), max(max) {}
     //! Creates the rule with a handler.
     /*! \param[in] child the child node
+     * \param[in,out] up a temporary context of a parent rule; it is a dummy
+     * argument, usually created by up_null()
      * \param[in] hnd the handler stored in the rule
      * \param[in] min the minimum number of child matches
      * \param[in] max the maximum number of child matches
      * \note Template magic ensures that \a Handler is not deduced to an
      * integral type when called without an explicit \a Handler. */
     template <class = void> requires (!std::convertible_to<Handler, size_t>)
-    repeat(Child child, Handler hnd, size_t min = 0, size_t max = unlimited):
+    repeat(Child child, [[maybe_unused]] Up* up, Handler hnd,
+           size_t min = 0, size_t max = unlimited):
         repeat(std::forward<Child>(child), min, max, hnd) {}
     //! Creates the rule.
     /*! \param[in] child the child rule
+     * \param[in,out] up a temporary context of a parent rule; it is a dummy
+     * argument, usually created by up_null()
      * \param[in] out a place where the number of matches will be stored if the
      * child rule matches at least \a min times
      * \param[in] min the minimum number of child matches
      * \param[in] max the maximum number of child matches
      * maches between \ref min and \ref max times */
-    repeat(Child child, size_t& out, size_t min = 0, size_t max = unlimited):
+    repeat(Child child, [[maybe_unused]] Up* up, size_t& out,
+           size_t min = 0, size_t max = unlimited):
         repeat(std::forward<Child>(child),
                [&out](auto&&, size_t info, auto&&, auto&&) {
                    out = info;
@@ -669,20 +833,24 @@ protected:
     //! \copydoc rule_base::parse_internal()
     typename repeat::parse_result
     parse_internal(typename repeat::context_type& ctx,
+                   typename repeat::self_ctx_type& self,
+                   typename repeat::up_ctx_type* up,
                    typename repeat::iterator_type begin,
                    typename repeat::iterator_type end) const
     {
         size_t tmp = 0;
-        return this->parse_with_tmp(ctx, tmp, begin, end);
+        return this->parse_with_tmp(ctx, self, up, tmp, begin, end);
     }
     //! \copydoc rule_base::eval()
     typename repeat::parse_result eval(typename repeat::context_type& ctx,
+                                       typename repeat::self_ctx_type& self,
                                        size_t& tmp,
                                        typename repeat::iterator_type begin,
                                        typename repeat::iterator_type end) const
     {
         for (size_t i = 0;; ++i) {
-            switch (auto [result, pos] = _child.parse(ctx, begin, end); result)
+            switch (auto [result, pos] = _child.parse(ctx, &self, begin, end);
+                    result)
             {
             case rule_result::fail:
             case rule_result::fail_final:
@@ -713,51 +881,63 @@ private:
 };
 
 //! A deduction guide for \ref repeat
-/*! \tparam Child a child rule type */
-template <class Child>
-repeat(Child&&, size_t = {}, size_t = {}) -> repeat<Child>;
+/*! \tparam Child a child rule type
+ * \tparam Up a temporary context of a parent rule
+ * \note \a Up is usually created by up_null(). */
+template <class Child, class Up>
+repeat(Child&&, Up*, size_t = {}, size_t = {}) -> repeat<Child, Up>;
 
 //! A deduction guide for \ref repeat
 /*! \tparam Child a child rule type
- * \tparam Handler a handler type */
-template <class Child, class Handler>
+ * \tparam Up a temporary context of a parent rule
+ * \tparam Handler a handler type
+ * \note \a Up is usually created by up_null(). */
+template <class Child, class Up, class Handler>
     requires (!std::convertible_to<Handler, size_t>)
-repeat(Child&&, size_t, size_t, Handler) -> repeat<Child, Handler>;
+repeat(Child&&, Up*, size_t, size_t, Handler) -> repeat<Child, Up, Handler>;
 
 //! A deduction guide for \ref repeat
 /*! \tparam Child a child rule type
- * \tparam Handler a handler type */
-template <class Child, class Handler>
+ * \tparam Up a temporary context of a parent rule
+ * \tparam Handler a handler type
+ * \note \a Up is usually created by up_null(). */
+template <class Child, class Up, class Handler>
     requires (!std::convertible_to<Handler, size_t>)
-repeat(Child&&, Handler, size_t = {}, size_t = {}) -> repeat<Child, Handler>;
+repeat(Child&&, Up*, Handler, size_t = {}, size_t = {}) ->
+    repeat<Child, Up, Handler>;
 
 //! A deduction guide for \ref repeat
-/*! \tparam Child a child rule type */
-template <class Child>
-repeat(Child&&, size_t&, size_t = {}, size_t = {}) -> repeat<Child>;
+/*! \tparam Child a child rule type
+ * \tparam Up a temporary context of a parent rule
+ * \tparam Handler a handler type
+ * \note \a Up is usually created by up_null(). */
+template <class Child, class Up>
+repeat(Child&&, Up*, size_t&, size_t = {}, size_t = {}) -> repeat<Child, Up>;
 
 //! A rule that matches a sequential composition of two child rules
 /*! It matches iff the first child matches an initial part of the input and the
  * second child matches an immediately following part of the input.
  * \tparam Child1 the first child rule type
  * \tparam Child2 the second child rule type
- * \tparam C1 type \a Child1 with removed reference, \c const, \c volatile
- * \tparam C2 type \a Child2 with removed reference, \c const, \c volatile
+ * \tparam Up a temporary context of a parent rule
  * \tparam Handler the type of a handler called when the rule matches */
-template <rule_cvref Child1, rule_cvref Child2,
-    class Handler = default_handler<impl::context_t<Child1>, empty,
-        impl::iterator_t<Child1>>>
+template <rule_cvref Child1, rule_cvref Child2, class Up,
+    class Handler = default_handler<impl::context_t<Child1>,
+        impl::up_ctx_t<Child1>, Up, empty, impl::iterator_t<Child1>>>
     requires
         std::same_as<impl::context_t<Child1>, impl::context_t<Child2>> &&
+        std::same_as<impl::up_ctx_t<Child1>, impl::up_ctx_t<Child2>> &&
         std::same_as<impl::iterator_t<Child1>, impl::iterator_t<Child2>> &&
         std::same_as<impl::handler_t<Child1>, impl::handler_t<Child2>>
-class seq final: public rule_base<seq<Child1, Child2, Handler>,
-    impl::context_t<Child1>, empty, impl::iterator_t<Child1>, Handler>
+class seq final: public rule_base<seq<Child1, Child2, Up, Handler>,
+    impl::context_t<Child1>, impl::up_ctx_t<Child1>, Up, empty,
+    impl::iterator_t<Child1>, Handler>
 {
 public:
     //! The alias for the base class
-    using base = rule_base<seq<Child1, Child2, Handler>,
-        impl::context_t<Child1>, empty, impl::iterator_t<Child1>, Handler>;
+    using base = rule_base<seq<Child1, Child2, Up, Handler>,
+        impl::context_t<Child1>, impl::up_ctx_t<Child1>, Up, empty,
+        impl::iterator_t<Child1>, Handler>;
     //! The type of the first child rule
     using child1_type = Child1;
     //! The type of the second child rule
@@ -765,16 +945,21 @@ public:
     //! Creates the rule with a handler.
     /*! \param[in] child1 the first child node
      * \param[in] child2 the second child node
+     * \param[in,out] up a temporary context of a parent rule; it is a dummy
+     * argument, usually created by up_null()
      * \param[in] hnd the handler stored in the rule */
-    seq(Child1 child1, Child2 child2, Handler hnd = {}):
+    seq(Child1 child1, Child2 child2, [[maybe_unused]] Up* up,
+        Handler hnd = {}):
         base(hnd), _child1(std::forward<Child1>(child1)),
         _child2(std::forward<Child2>(child2)) {}
     //! Creates the rule.
     /*! \param[in] child1 the first child node
      * \param[in] child2 the second child node
+     * \param[in,out] up a temporary context of a parent rule; it is a dummy
+     * argument, usually created by up_null()
      * \param[in] out a place where \c true will be stored if the sequence of
      * child rules matches */
-    seq(Child1 child1, Child2 child2, bool& out):
+    seq(Child1 child1, Child2 child2, [[maybe_unused]] Up* up, bool& out):
         seq(std::forward<Child1>(child1), std::forward<Child2>(child2),
             [&out](auto&&, auto&&, auto&&, auto&&) { out = true; }) {}
     //! Gets the first child node.
@@ -786,18 +971,20 @@ public:
 protected:
     //! \copydoc rule_base::eval()
     typename seq::parse_result eval(typename seq::context_type& ctx,
+                                    typename seq::self_ctx_type& self,
                                     [[maybe_unused]] empty& tmp,
                                     typename seq::iterator_type begin,
                                     typename seq::iterator_type end) const
     {
-        switch (auto [result1, pos1] = _child1.parse(ctx, begin, end); result1)
+        switch (auto [result1, pos1] = _child1.parse(ctx, &self, begin, end);
+                result1)
         {
         case rule_result::fail:
         case rule_result::fail_final:
             return {result1, pos1};
         case rule_result::ok:
         case rule_result::ok_final:
-            switch (auto [result2, pos2] = _child2.parse(ctx, pos1, end);
+            switch (auto [result2, pos2] = _child2.parse(ctx, &self, pos1, end);
                     result2)
             {
             case rule_result::fail:
@@ -826,45 +1013,55 @@ private:
 
 //! A deduction guide for \ref seq
 /*! \tparam Child1 a first child rule type
- * \tparam Child2 a second child rule type */
-template <class Child1, class Child2>
-seq(Child1&&, Child2&&) -> seq<Child1, Child2>;
+ * \tparam Child2 a second child rule type
+ * \tparam Up a temporary context of a parent rule
+ * \note \a Up is usually created by up_null(). */
+template <class Child1, class Child2, class Up>
+seq(Child1&&, Child2&&, Up*) -> seq<Child1, Child2, Up>;
 
 //! A deduction guide for \ref seq
 /*! \tparam Child1 a first child rule type
  * \tparam Child2 a second child rule type
- * \tparam Handler a handler type */
-template <class Child1, class Child2, class Handler>
-seq(Child1&&, Child2&&, Handler) -> seq<Child1, Child2, Handler>;
+ * \tparam Up a temporary context of a parent rule
+ * \tparam Handler a handler type
+ * \note \a Up is usually created by up_null(). */
+template <class Child1, class Child2, class Up, class Handler>
+seq(Child1&&, Child2&&, Up*, Handler) -> seq<Child1, Child2, Up, Handler>;
 
 //! A deduction guide for \ref seq
 /*! \tparam Child1 a first child rule type
- * \tparam Child2 a second child rule type */
-template <class Child1, class Child2>
-seq(Child1&&, Child2&&, bool&) -> seq<Child1, Child2>;
+ * \tparam Child2 a second child rule type
+ * \tparam Up a temporary context of a parent rule
+ * \note \a Up is usually created by up_null(). */
+template <class Child1, class Child2, class Up>
+seq(Child1&&, Child2&&, Up*, bool&) -> seq<Child1, Child2, Up>;
 
 //! A rule that matches an alternative of two child rules
 /*! It matches iff the first or the second child matches. If the first child
  * matches, matching of the second child is not tried.
+ * Parameter \a info of \a Handler has type \c size_t and contains the number
+ * of matched child rule (1 or 2).
  * \tparam Child1 the first child rule type
  * \tparam Child2 the second child rule type
- * \tparam C1 type \a Child1 with removed reference, \c const, \c volatile
- * \tparam C2 type \a Child2 with removed reference, \c const, \c volatile
+ * \tparam Up a temporary context of a parent rule
  * \tparam Handler the type of a handler called when the rule matches */
-template <rule_cvref Child1, rule_cvref Child2,
-    class Handler = default_handler<typename Child1::context_type, empty,
-        typename Child1::iterator_type>>
+template <rule_cvref Child1, rule_cvref Child2, class Up,
+    class Handler = default_handler<impl::context_t<Child1>,
+        impl::up_ctx_t<Child1>, Up, size_t, impl::iterator_t<Child1>>>
     requires
         std::same_as<impl::context_t<Child1>, impl::context_t<Child2>> &&
+        std::same_as<impl::up_ctx_t<Child1>, impl::up_ctx_t<Child2>> &&
         std::same_as<impl::iterator_t<Child1>, impl::iterator_t<Child2>> &&
         std::same_as<impl::handler_t<Child1>, impl::handler_t<Child2>>
-class alt final: public rule_base<alt<Child1, Child2, Handler>,
-    impl::context_t<Child1>, empty, impl::iterator_t<Child1>, Handler>
+class alt final: public rule_base<alt<Child1, Child2, Up, Handler>,
+    impl::context_t<Child1>, impl::up_ctx_t<Child1>, Up, size_t,
+    impl::iterator_t<Child1>, Handler>
 {
 public:
     //! The alias for the base class
-    using base = rule_base<alt<Child1, Child2, Handler>,
-        impl::context_t<Child1>, empty, impl::iterator_t<Child1>, Handler>;
+    using base = rule_base<alt<Child1, Child2, Up, Handler>,
+        impl::context_t<Child1>, impl::up_ctx_t<Child1>, Up, size_t,
+        impl::iterator_t<Child1>, Handler>;
     //! The type of the first child rule
     using child1_type = Child1;
     //! The type of the second child rule
@@ -872,18 +1069,23 @@ public:
     //! Creates the rule with a handler.
     /*! \param[in] child1 the first child node
      * \param[in] child2 the second child node
+     * \param[in,out] up a temporary context of a parent rule; it is a dummy
+     * argument, usually created by up_null()
      * \param[in] hnd the handler stored in the rule */
-    alt(Child1 child1, Child2 child2, Handler hnd = {}):
+    alt(Child1 child1, Child2 child2, [[maybe_unused]] Up* up,
+        Handler hnd = {}):
         base(hnd), _child1(std::forward<Child1>(child1)),
         _child2(std::forward<Child2>(child2)) {}
     //! Creates the rule.
     /*! \param[in] child1 the first child node
      * \param[in] child2 the second child node
-     * \param[in] out a place where \c true will be stored if either of the
-     * alternative child rules matches */
-    alt(Child1 child1, Child2 child2, bool& out):
+     * \param[in,out] up a temporary context of a parent rule; it is a dummy
+     * argument, usually created by up_null()
+     * \param[in] out a place where the number of the the matched child (1 or
+     * 2) will be stored if either of the alternative child rules matches */
+    alt(Child1 child1, Child2 child2, [[maybe_unused]] Up* up, size_t& out):
         alt(std::forward<Child1>(child1), std::forward<Child2>(child2),
-            [&out](auto&&, auto&&, auto&&, auto&&) { out = true; }) {}
+            [&out](auto&&, size_t info, auto&&, auto&&) { out = info; }) {}
     //! Gets the first child node.
     /*! \return the child */
     const Child1& child1() const noexcept { return _child1; }
@@ -891,20 +1093,34 @@ public:
     /*! \return the child */
     const Child2& child2() const noexcept { return _child2; }
 protected:
+    //! \copydoc rule_base::parse_internal()
+    typename alt::parse_result
+    parse_internal(typename alt::context_type& ctx,
+                   typename alt::self_ctx_type& self,
+                   typename alt::up_ctx_type* up,
+                   typename alt::iterator_type begin,
+                   typename alt::iterator_type end) const
+    {
+        size_t tmp = 2;
+        return this->parse_with_tmp(ctx, self, up, tmp, begin, end);
+    }
     //! \copydoc rule_base::eval()
     typename alt::parse_result eval(typename alt::context_type& ctx,
-                                    [[maybe_unused]] empty& tmp,
+                                    typename alt::self_ctx_type& self,
+                                    size_t& tmp,
                                     typename alt::iterator_type begin,
                                     typename alt::iterator_type end) const
     {
-        switch (auto [result1, pos1] = _child1.parse(ctx, begin, end); result1)
+        switch (auto [result1, pos1] = _child1.parse(ctx, &self, begin, end);
+                result1)
         {
         case rule_result::fail_final:
             return {rule_result::fail_final};
         case rule_result::fail:
-            return _child2.parse(ctx, pos1, end);
+            return _child2.parse(ctx, &self, pos1, end);
         case rule_result::ok:
         case rule_result::ok_final:
+            tmp = 1;
             return {result1, pos1};
         default:
             assert(false);
@@ -920,15 +1136,27 @@ private:
 //! A deduction guide for \ref alt
 /*! \tparam Child1 a first child rule type
  * \tparam Child2 a second child rule type
- * \tparam Handler a handler type */
-template <class Child1, class Child2, class Handler>
-alt(Child1&&, Child2&&, Handler) -> alt<Child1, Child2, Handler>;
+ * \tparam Up a temporary context of a parent rule
+ * \note \a Up is usually created by up_null(). */
+template <class Child1, class Child2, class Up>
+alt(Child1&&, Child2&&, Up*) -> alt<Child1, Child2, Up>;
 
 //! A deduction guide for \ref alt
 /*! \tparam Child1 a first child rule type
- * \tparam Child2 a second child rule type */
-template <class Child1, class Child2>
-alt(Child1&&, Child2&&, bool&) -> alt<Child1, Child2>;
+ * \tparam Child2 a second child rule type
+ * \tparam Up a temporary context of a parent rule
+ * \note \a Up is usually created by up_null().
+ * \tparam Handler a handler type */
+template <class Child1, class Child2, class Up, class Handler>
+alt(Child1&&, Child2&&, Up*, Handler) -> alt<Child1, Child2, Up, Handler>;
+
+//! A deduction guide for \ref alt
+/*! \tparam Child1 a first child rule type
+ * \tparam Child2 a second child rule type
+ * \tparam Up a temporary context of a parent rule
+ * \note \a Up is usually created by up_null(). */
+template <class Child1, class Child2, class Up>
+alt(Child1&&, Child2&&, Up*, size_t&) -> alt<Child1, Child2, Up>;
 
 //! A rule that disables (cuts) the following alternatives in rules::alt
 /*! It this node is a member of a sequence of rule::seq nodes that is a child
@@ -936,32 +1164,39 @@ alt(Child1&&, Child2&&, bool&) -> alt<Child1, Child2>;
  * matches or not), the following alternatives in the sequence of rules::alt
  * nodes will not be matched.
  * \tparam Child a child rule type
- * \tparam C type \a Child with removed reference, \c const, \c volatile */
-template <rule_cvref Child>
-class cut final:
-    public rule_base<cut<Child>, typename Child::context_type, empty,
-        typename Child::iterator_type, typename Child::handler_type>
+ * \tparam Up a temporary context of a parent rule */
+template <rule_cvref Child, class Up>
+class cut final: public rule_base<cut<Child, Up>, impl::context_t<Child>,
+    impl::up_ctx_t<Child>, Up, empty, impl::iterator_t<Child>,
+    impl::handler_t<Child>>
 {
 public:
     //! The alias for the base class
-    using base = rule_base<cut<Child>, impl::context_t<Child>,
-        impl::iterator_t<Child>, impl::handler_t<Child>>;
+    using base = rule_base<cut<Child, Up>, impl::context_t<Child>,
+        impl::up_ctx_t<Child>, Up, empty, impl::iterator_t<Child>,
+        impl::handler_t<Child>>;
     //! The type of the child rule
     using child_type = Child;
     //! Creates the rule
-    /*! \param[in] child the child node */
-    explicit cut(Child child): base(), _child(std::forward<Child>(child)) {}
+    /*! \param[in] child the child node
+     * \param[in,out] up a temporary context of a parent rule; it is a dummy
+     * argument, usually created by up_null() */
+    explicit cut(Child child, [[maybe_unused]] Up* up):
+        base(), _child(std::forward<Child>(child)) {}
     //! Gets the child node.
     /*! \return the child */
     const Child& child() const noexcept { return _child; }
 protected:
     //! \copydoc rule_base::eval()
     typename cut::parse_result eval(typename cut::context_type& ctx,
+                                    typename cut::self_ctx_type& self,
                                     [[maybe_unused]] empty& tmp,
                                     typename cut::iterator_type begin,
                                     typename cut::iterator_type end) const
     {
-        switch (auto [result, pos] = _child.parse(ctx, begin, end); result) {
+        switch (auto [result, pos] = _child.parse(ctx, &self, begin, end);
+                result)
+        {
         case rule_result::fail:
         case rule_result::fail_final:
             return {rule_result::fail_final, pos};
@@ -979,37 +1214,46 @@ private:
 };
 
 //! A deduction guide for \ref cut
-/*! \tparam Child a child rule type */
-template <class Child>
-cut(Child&&) -> cut<Child>;
+/*! \tparam Child a child rule type
+ * \tparam Up a temporary context of a parent rule
+ * \note \a Up is usually created by up_null(). */
+template <class Child, class Up>
+cut(Child&&, Up*) -> cut<Child, Up>;
 
 //! A rule that provides dynamic replacement of a child rule.
 /*! It is intended for defining recursive rules.
  * \tparam Ctx a parsing context
+ * \tparam Self a temporary context of this rule
+ * \tparam Up a temporary context of a parent rule
  * \tparam It an iterator to the input sequence of terminal symbols
  * \tparam Handler the type of a handler called when the rule matches */
-template <class Ctx, std::forward_iterator It,
-    class Handler = default_handler<Ctx, empty, It>>
-class dyn final:
-    public rule_base<dyn<Ctx, It, Handler>, Ctx, empty, It, Handler>
+template <class Ctx, class Self, class Up, std::forward_iterator It,
+    class Handler = default_handler<Ctx, Self, Up, empty, It>>
+class dyn final: public rule_base<dyn<Ctx, Self, Up, It, Handler>, Ctx, Self,
+    Up, empty, It, Handler>
 {
 public:
     //! The alias for the base class
-    using base = rule_base<dyn<Ctx, It, Handler>, Ctx, empty, It, Handler>;
+    using base = rule_base<dyn<Ctx, Self, Up, It, Handler>, Ctx, Self, Up,
+        empty, It, Handler>;
     using base::base;
     //! Sets the child node.
     /*! \tparam Rule the type of the child node
      * \param[in] r the child node */
-    template <rule Rule> void child(const Rule& r) {
+    template <rule Rule> requires
+        std::same_as<impl::context_t<Rule>, Ctx> &&
+        std::same_as<impl::up_ctx_t<Rule>, Self> &&
+        std::same_as<impl::iterator_t<Rule>, It>
+    void set_child(const Rule& r) {
         _child = &r;
-        _parse = [](void* child, Ctx& ctx, It begin, It end) {
-            return static_cast<const Rule*>(child)->parse(ctx, begin, end);
+        _parse = [](void* child, Ctx& ctx, Up* up, It begin, It end) {
+            return static_cast<const Rule*>(child)->parse(ctx, up, begin, end);
         };
     }
-    /*! \copydoc child()
+    /*! \copydoc set_child()
      * \return \c *this */
     template <rule Rule> dyn& operator>>=(const Rule& r) {
-        child(r);
+        set_child(r);
         return *this;
     }
     //! Tests if a child node has been set.
@@ -1019,12 +1263,30 @@ public:
     /*! \return the result of has_child() */
     explicit operator bool() const noexcept { return has_child(); }
 protected:
+    //! \copydoc rule_base::parse_with_tmp()
+    /*! \note We cannot override eval(), because we need to pass \a self to the
+     * child. */
+    typename dyn::parse_result parse_with_tmp(Ctx& ctx, Self& self, Up* up,
+                                          empty& tmp, It begin, It end) const
+    {
+        if (_child && _parse) {
+            auto result = _parse(_child, ctx, self, begin, end);
+            if (result.first == rule_result::ok ||
+                result.first == rule_result::ok_final)
+            {
+                attr(ctx, self, up, tmp, begin, result.second);
+            }
+            return result;
+        } else
+            return rule_result::fail;
+    }
     //! \copydoc rule_base::eval()
-    typename dyn::parse_result eval(Ctx& ctx, [[maybe_unused]] empty& tmp,
+    typename dyn::parse_result eval(Ctx& ctx, Self& self,
+                                    [[maybe_unused]] empty& tmp,
                                     It begin, It end) const
     {
         if (_child && _parse)
-            return _parse(_child, ctx, begin, end);
+            return _parse(_child, ctx, &self, begin, end);
         else
             return rule_result::fail;
     }
@@ -1034,13 +1296,15 @@ private:
     /*! \param[in] child the value of _child is expected, and it must be the
      * value previously set by child()
      * \param[in] ctx a parsing context
+     * \param[in,out] up a temporary context of a parent rule; \c nullptr if
+     * this rule has no parent
      * \param[in] begin the start of the input
      * \param[in] end the end of the input
      * \return a parsing result returned by the child node */
-    typename dyn::parse_result (*_parse)(void* child, Ctx& ctx,
+    typename dyn::parse_result (*_parse)(void* child, Ctx& ctx, Up* up,
                                          It begin, It end) = nullptr;
     //! rule_base needs access to overriden member functions
-    friend rule_base<dyn, Ctx, empty, It, Handler>;
+    friend base;
 };
 
 } // namespace rules
@@ -1051,9 +1315,12 @@ private:
  * \return a rules::repeat rule containg \a r as the child rule, with the
  * minimum number of repetitions 0 and maximum 1 */
 template <rule_cvref Rule>
-rules::repeat<Rule, rebind_rhnd_t<Rule, size_t>> operator-(Rule&& r)
+rules::repeat<Rule, up_type_t<rules::impl::up_ctx_t<Rule>>,
+    rebind_rhnd_t<Rule, size_t>>
+operator-(Rule&& r)
 {
-    return rules::repeat{std::forward<Rule>(r), 0, 1};
+    return rules::repeat{std::forward<Rule>(r),
+        up_null<up_type_t<rules::impl::up_ctx_t<Rule>>>(), 0, 1};
 }
 
 //! Wraps a rule by rules::repeat for at least 1 match.
@@ -1062,10 +1329,13 @@ rules::repeat<Rule, rebind_rhnd_t<Rule, size_t>> operator-(Rule&& r)
  * \return a rules::repeat rule containg \a r as the child rule, with the
  * minimum number of repetitions 1 and maximum unlimited */
 template <rule_cvref Rule>
-rules::repeat<Rule, rebind_rhnd_t<Rule, size_t>> operator+(Rule&& r)
+rules::repeat<Rule, up_type_t<rules::impl::up_ctx_t<Rule>>,
+    rebind_rhnd_t<Rule, size_t>>
+operator+(Rule&& r)
 {
-    return rules::repeat{std::forward<Rule>(r), 1,
-        rules::repeat<Rule>::unlimited};
+    using up_t = up_type_t<rules::impl::up_ctx_t<Rule>>;
+    return rules::repeat{std::forward<Rule>(r), up_null<up_t>(),
+        1, rules::repeat<Rule, up_t>::unlimited};
 }
 
 //! Wraps a rule by rules::repeat for any number of matches.
@@ -1074,10 +1344,13 @@ rules::repeat<Rule, rebind_rhnd_t<Rule, size_t>> operator+(Rule&& r)
  * \return a rules::repeat rule containg \a r as the child rule, with the
  * minimum number of repetitions 0 and maximum unlimited */
 template <rule_cvref Rule>
-rules::repeat<Rule, rebind_rhnd_t<Rule, size_t>> operator*(Rule&& r)
+rules::repeat<Rule, up_type_t<rules::impl::up_ctx_t<Rule>>,
+    rebind_rhnd_t<Rule, size_t>>
+operator*(Rule&& r)
 {
-    return rules::repeat{std::forward<Rule>(r), 0,
-        rules::repeat<Rule>::unlimited};
+    using up_t = up_type_t<rules::impl::up_ctx_t<Rule>>;
+    return rules::repeat{std::forward<Rule>(r), up_null<up_t>(),
+        0, rules::repeat<Rule, up_t>::unlimited};
 }
 
 //! Creates a sequential composition of two rules.
@@ -1086,11 +1359,15 @@ rules::repeat<Rule, rebind_rhnd_t<Rule, size_t>> operator*(Rule&& r)
  * \param[in] r1 the first child rule
  * \param[in] r2 the second child rule
  * \return a rules::seq rule containing \a r1 and \a r2 as child rules */
-template <rule Rule1, rule_cvref Rule2>
-rules::seq<Rule1, Rule2, rebind_rhnd_t<Rule1, empty>>
+template <rule Rule1, rule_cvref Rule2> requires
+    std::same_as<up_type_t<rules::impl::up_ctx_t<Rule1>>,
+        up_type_t<rules::impl::up_ctx_t<Rule2>>>
+rules::seq<Rule1, Rule2, up_type_t<rules::impl::up_ctx_t<Rule1>>,
+    rebind_rhnd_t<Rule1, empty>>
 operator>>(Rule1&& r1, Rule2&& r2)
 {
-    return rules::seq{std::forward<Rule1>(r1), std::forward<Rule2>(r2)};
+    return rules::seq{std::forward<Rule1>(r1), std::forward<Rule2>(r2),
+        up_null<up_type_t<rules::impl::up_ctx_t<Rule1>>>()};
 }
 
 //! Creates an alternative composition of two rules.
@@ -1099,11 +1376,15 @@ operator>>(Rule1&& r1, Rule2&& r2)
  * \param[in] r1 the first child rule
  * \param[in] r2 the second child rule
  * \return a rules::alt rule containing \a r1 and \a r2 as child rules */
-template <rule_cvref Rule1, rule_cvref Rule2>
-rules::alt<Rule1, Rule2, rebind_rhnd_t<Rule1, empty>>
+template <rule_cvref Rule1, rule_cvref Rule2> requires
+    std::same_as<up_type_t<rules::impl::up_ctx_t<Rule1>>,
+        up_type_t<rules::impl::up_ctx_t<Rule2>>>
+rules::alt<Rule1, Rule2,  up_type_t<rules::impl::up_ctx_t<Rule1>>,
+    rebind_rhnd_t<Rule1, empty>>
 operator|(Rule1 r1, Rule2 r2)
 {
-    return rules::alt{std::move(r1), std::move(r2)};
+    return rules::alt{std::forward<Rule1>(r1), std::forward<Rule2>(r2),
+        up_null<up_type_t<rules::impl::up_ctx_t<Rule1>>>()};
 }
 
 //! Creates a rule that disables (cuts) the following alternatives in rules::alt
@@ -1111,9 +1392,10 @@ operator|(Rule1 r1, Rule2 r2)
  * \param[in] r the child rule
  * \return a rules::cut rule containing \a r as the child rule. */
 template <rule_cvref Rule, rebind_rhnd_t<Rule, empty>>
-rules::cut<Rule> operator!(Rule r)
+rules::cut<Rule, up_type_t<rules::impl::up_ctx_t<Rule>>> operator!(Rule r)
 {
-    return rules::cut{std::move(r)};
+    return rules::cut{std::forward<Rule>(r),
+        up_null<up_type_t<rules::impl::up_ctx_t<Rule>>>()};
 }
 
 } // namespace threadscript::parser
