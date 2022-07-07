@@ -823,7 +823,7 @@ public:
     repeat(Child child, [[maybe_unused]] Up* up, size_t& out,
            size_t min = 0, size_t max = unlimited):
         repeat(std::forward<Child>(child),
-               [&out](auto&&, size_t info, auto&&, auto&&) {
+               [&out](auto&&, auto&&, auto&&, size_t info, auto&&, auto&&) {
                    out = info;
                },
                min, max) {}
@@ -928,8 +928,7 @@ template <rule_cvref Child1, rule_cvref Child2, class Up,
     requires
         std::same_as<impl::context_t<Child1>, impl::context_t<Child2>> &&
         std::same_as<impl::up_ctx_t<Child1>, impl::up_ctx_t<Child2>> &&
-        std::same_as<impl::iterator_t<Child1>, impl::iterator_t<Child2>> &&
-        std::same_as<impl::handler_t<Child1>, impl::handler_t<Child2>>
+        std::same_as<impl::iterator_t<Child1>, impl::iterator_t<Child2>>
 class seq final: public rule_base<seq<Child1, Child2, Up, Handler>,
     impl::context_t<Child1>, impl::up_ctx_t<Child1>, Up, empty,
     impl::iterator_t<Child1>, Handler>
@@ -962,7 +961,9 @@ public:
      * child rules matches */
     seq(Child1 child1, Child2 child2, [[maybe_unused]] Up* up, bool& out):
         seq(std::forward<Child1>(child1), std::forward<Child2>(child2),
-            [&out](auto&&, auto&&, auto&&, auto&&) { out = true; }) {}
+            [&out](auto&&, auto&&, auto&&, auto&&, auto&&, auto&&) {
+                out = true;
+            }) {}
     //! Gets the first child node.
     /*! \return the child */
     const Child1& child1() const noexcept { return _child1; }
@@ -1052,8 +1053,7 @@ template <rule_cvref Child1, rule_cvref Child2, class Up,
     requires
         std::same_as<impl::context_t<Child1>, impl::context_t<Child2>> &&
         std::same_as<impl::up_ctx_t<Child1>, impl::up_ctx_t<Child2>> &&
-        std::same_as<impl::iterator_t<Child1>, impl::iterator_t<Child2>> &&
-        std::same_as<impl::handler_t<Child1>, impl::handler_t<Child2>>
+        std::same_as<impl::iterator_t<Child1>, impl::iterator_t<Child2>>
 class alt final: public rule_base<alt<Child1, Child2, Up, Handler>,
     impl::context_t<Child1>, impl::up_ctx_t<Child1>, Up, size_t,
     impl::iterator_t<Child1>, Handler>
@@ -1086,7 +1086,10 @@ public:
      * 2) will be stored if either of the alternative child rules matches */
     alt(Child1 child1, Child2 child2, [[maybe_unused]] Up* up, size_t& out):
         alt(std::forward<Child1>(child1), std::forward<Child2>(child2),
-            [&out](auto&&, size_t info, auto&&, auto&&) { out = info; }) {}
+            [&out](auto&&, auto&&, auto&&, size_t info, auto&&, auto&&) {
+                out = info;
+            })
+    {}
     //! Gets the first child node.
     /*! \return the child */
     const Child1& child1() const noexcept { return _child1; }
@@ -1116,9 +1119,9 @@ protected:
                 result1)
         {
         case rule_result::fail_final:
-            return {rule_result::fail_final};
+            return {rule_result::fail_final, pos1};
         case rule_result::fail:
-            return _child2.parse(ctx, &self, pos1, end);
+            return _child2.parse(ctx, &self, begin, end);
         case rule_result::ok:
         case rule_result::ok_final:
             tmp = 1;
@@ -1381,8 +1384,8 @@ template <rule_cvref Rule1, rule_cvref Rule2> requires
     std::same_as<up_type_t<rules::impl::up_ctx_t<Rule1>>,
         up_type_t<rules::impl::up_ctx_t<Rule2>>>
 rules::alt<Rule1, Rule2,  up_type_t<rules::impl::up_ctx_t<Rule1>>,
-    rebind_rhnd_t<Rule1, empty>>
-operator|(Rule1 r1, Rule2 r2)
+    rebind_rhnd_t<Rule1, size_t>>
+operator|(Rule1&& r1, Rule2&& r2)
 {
     return rules::alt{std::forward<Rule1>(r1), std::forward<Rule2>(r2),
         up_null<up_type_t<rules::impl::up_ctx_t<Rule1>>>()};

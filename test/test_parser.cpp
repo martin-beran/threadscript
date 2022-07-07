@@ -600,3 +600,171 @@ BOOST_AUTO_TEST_CASE(seq_child_llref)
     BOOST_TEST(&a2 == &rule.child2());
 }
 //! \endcond
+
+/*! \file
+ * \test \c alt -- test of threadscript::parser::rules::alt,
+ * \c threadscript::parser::operator|(), and
+ * \c threadscript::parser::rule_base::operator[]() */
+//! \cond
+BOOST_DATA_TEST_CASE(alt, (std::vector<test::cnt12>{
+                               {"", false, 0, 0, 1, 1},
+                               {"x", false, 0, 0, 1, 1},
+                               {"A", true, 1, 1, 1, 2},
+                               {"B", true, 2, 1, 1, 2},
+                               {"C", true, 0, 2, 1, 2},
+                               {"Aa", false, 1, 1, 1, 2, "Partial match"},
+                               {"Ba", false, 2, 1, 1, 2, "Partial match"},
+                               {"Ca", false, 0, 2, 1, 2, "Partial match"},
+                           }))
+{
+    auto it = tsp::make_script_iterator(sample.text);
+    using ctx_t = tsp::context;
+    ctx_t ctx;
+    using it_t = typename decltype(it)::first_type;
+    using t = rules::t<ctx_t, tsp::empty, tsp::empty, it_t>;
+    char c = '\0';
+    size_t cnt1 = 0;
+    size_t cnt2 = 0;
+    auto set_cnt1 =
+        [&c, &cnt1](auto&&, auto&&, auto&&, size_t n, auto b, auto e) {
+            cnt1 = n;
+            BOOST_REQUIRE(b != e);
+            c = *b;
+        };
+    auto set_cnt2 =
+        [&c, &cnt2](auto&&, auto&&, auto&&, size_t n, auto b, auto e) {
+            cnt2 = n;
+            BOOST_REQUIRE(b != e);
+            c = *b;
+        };
+    auto rule = ((t{'A'} | t{'B'})[set_cnt1] | t{'C'})[set_cnt2];
+    if (sample.result) {
+        it_t pos;
+        BOOST_REQUIRE_NO_THROW(
+            try {
+                pos = ctx.parse(rule, it);
+            } catch (std::exception& e) {
+                BOOST_TEST_INFO("exception: " << e.what());
+                throw;
+            });
+        switch (sample.cnt1) {
+        case 0:
+            switch (sample.cnt2) {
+            case 0:
+                BOOST_CHECK_EQUAL(c, '\0');
+                break;
+            case 1:
+                BOOST_CHECK(false);
+                break;
+            case 2:
+                BOOST_CHECK_EQUAL(c, 'C');
+                break;
+            default:
+                BOOST_CHECK(false);
+                break;
+            }
+            break;
+        case 1:
+            BOOST_CHECK_EQUAL(c, 'A');
+            break;
+        case 2:
+            BOOST_CHECK_EQUAL(c, 'B');
+            break;
+        default:
+            BOOST_CHECK(false);
+            break;
+        }
+        BOOST_CHECK_EQUAL(pos.line, sample.line);
+        BOOST_CHECK_EQUAL(pos.column, sample.column);
+    } else {
+        BOOST_CHECK_EXCEPTION(ctx.parse(rule, it),
+            tsp::error<it_t>,
+            ([it, &sample](auto&& e) {
+                BOOST_CHECK_EQUAL(e.what(), sample.error);
+                BOOST_CHECK_EQUAL(e.pos().line, sample.line);
+                BOOST_CHECK_EQUAL(e.pos().column, sample.column);
+                return true;
+            }));
+    }
+    BOOST_CHECK_EQUAL(cnt1, sample.cnt1);
+    BOOST_CHECK_EQUAL(cnt2, sample.cnt2);
+}
+//! \endcond
+
+/*! \file
+ * \test alt_child_rrref -- tests that if rvalue children are passed to
+ * threadscript::parser::rules::alt, then copies are stored */
+//! \cond
+BOOST_AUTO_TEST_CASE(alt_child_rrref)
+{
+    using it_t = std::string::iterator;
+    using any = rules::any<tsp::context, tsp::empty, tsp::empty, it_t>;
+    auto a1 = any{};
+    auto a2 = any{};
+    auto rule = std::move(a1) | std::move(a2);
+    using rule_t = decltype(rule);
+    static_assert(!std::is_reference_v<typename rule_t::child1_type>);
+    static_assert(!std::is_reference_v<typename rule_t::child2_type>);
+    BOOST_TEST(&a1 != &rule.child1());
+    BOOST_TEST(&a2 != &rule.child2());
+}
+//! \endcond
+
+/*! \file
+ * \test alt_child_lrref -- tests that if lvalue and rvalue children are passed
+ * to threadscript::parser::rules::alt, then a reference and a copy are stored
+ */
+//! \cond
+BOOST_AUTO_TEST_CASE(alt_child_lrref)
+{
+    using it_t = std::string::iterator;
+    using any = rules::any<tsp::context, tsp::empty, tsp::empty, it_t>;
+    auto a1 = any{};
+    auto a2 = any{};
+    auto rule = a1 | std::move(a2);
+    using rule_t = decltype(rule);
+    static_assert(std::is_reference_v<typename rule_t::child1_type>);
+    static_assert(!std::is_reference_v<typename rule_t::child2_type>);
+    BOOST_TEST(&a1 == &rule.child1());
+    BOOST_TEST(&a2 != &rule.child2());
+}
+//! \endcond
+
+/*! \file
+ * \test alt_child_rlref -- tests that if rvalue and lvalue children are passed
+ * to threadscript::parser::rules::alt, then a copy and a reference are stored
+ */
+//! \cond
+BOOST_AUTO_TEST_CASE(alt_child_rlref)
+{
+    using it_t = std::string::iterator;
+    using any = rules::any<tsp::context, tsp::empty, tsp::empty, it_t>;
+    auto a1 = any{};
+    auto a2 = any{};
+    auto rule = std::move(a1) | a2;
+    using rule_t = decltype(rule);
+    static_assert(!std::is_reference_v<typename rule_t::child1_type>);
+    static_assert(std::is_reference_v<typename rule_t::child2_type>);
+    BOOST_TEST(&a1 != &rule.child1());
+    BOOST_TEST(&a2 == &rule.child2());
+}
+//! \endcond
+
+/*! \file
+ * \test alt_child_llref -- tests that if lvalue and lvalue children are passed
+ * to threadscript::parser::rules::alt, then references are stored */
+//! \cond
+BOOST_AUTO_TEST_CASE(alt_child_llref)
+{
+    using it_t = std::string::iterator;
+    using any = rules::any<tsp::context, tsp::empty, tsp::empty, it_t>;
+    auto a1 = any{};
+    auto a2 = any{};
+    auto rule = a1 | a2;
+    using rule_t = decltype(rule);
+    static_assert(std::is_reference_v<typename rule_t::child1_type>);
+    static_assert(std::is_reference_v<typename rule_t::child2_type>);
+    BOOST_TEST(&a1 == &rule.child1());
+    BOOST_TEST(&a2 == &rule.child2());
+}
+//! \endcond
