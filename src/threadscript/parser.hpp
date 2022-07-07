@@ -486,7 +486,10 @@ template <class Ctx, std::forward_iterator It,
 class fail final:
     public rule_base<fail<Ctx, It, Handler>, Ctx, empty, It, Handler>
 {
-    using rule_base<fail, Ctx, empty, It, Handler>::rule_base;
+public:
+    //! The alias for the base class
+    using base = rule_base<fail, Ctx, empty, It, Handler>;
+    using base::base;
 };
 
 //! A rule that matches the end of input.
@@ -500,7 +503,10 @@ template <class Ctx, std::forward_iterator It,
 class eof final:
     public rule_base<eof<Ctx, It, Handler>, Ctx, empty, It, Handler>
 {
-    using rule_base<eof, Ctx, empty, It, Handler>::rule_base;
+public:
+    //! The alias for the base class
+    using base = rule_base<eof, Ctx, empty, It, Handler>;
+    using base::base;
 protected:
     //! \copydoc rule_base::eval()
     typename eof::parse_result eval([[maybe_unused]] Ctx& ctx,
@@ -522,8 +528,10 @@ template <class Ctx, std::forward_iterator It,
 class any final:
     public rule_base<any<Ctx, It, Handler>, Ctx, empty, It, Handler>
 {
-    using rule_base<any, Ctx, empty, It, Handler>::rule_base;
 public:
+    //! The alias for the base class
+    using base = rule_base<any, Ctx, empty, It, Handler>;
+    using base::base;
     //! Creates the rule
     /*! \param[in] out a place where a matched terminal will be stored */
     explicit any(typename any::term_type& out):
@@ -975,6 +983,66 @@ private:
 template <class Child>
 cut(Child&&) -> cut<Child>;
 
+//! A rule that provides dynamic replacement of a child rule.
+/*! It is intended for defining recursive rules.
+ * \tparam Ctx a parsing context
+ * \tparam It an iterator to the input sequence of terminal symbols
+ * \tparam Handler the type of a handler called when the rule matches */
+template <class Ctx, std::forward_iterator It,
+    class Handler = default_handler<Ctx, empty, It>>
+class dyn final:
+    public rule_base<dyn<Ctx, It, Handler>, Ctx, empty, It, Handler>
+{
+public:
+    //! The alias for the base class
+    using base = rule_base<dyn<Ctx, It, Handler>, Ctx, empty, It, Handler>;
+    using base::base;
+    //! Sets the child node.
+    /*! \tparam Rule the type of the child node
+     * \param[in] r the child node */
+    template <rule Rule> void child(const Rule& r) {
+        _child = &r;
+        _parse = [](void* child, Ctx& ctx, It begin, It end) {
+            return static_cast<const Rule*>(child)->parse(ctx, begin, end);
+        };
+    }
+    /*! \copydoc child()
+     * \return \c *this */
+    template <rule Rule> dyn& operator>>=(const Rule& r) {
+        child(r);
+        return *this;
+    }
+    //! Tests if a child node has been set.
+    /*! \return \c true if a child node has been set, \c false otherwise */
+    [[nodiscard]] bool has_child() const noexcept { return _child && _parse; }
+    //! Tests if a child node has been set.
+    /*! \return the result of has_child() */
+    explicit operator bool() const noexcept { return has_child(); }
+protected:
+    //! \copydoc rule_base::eval()
+    typename dyn::parse_result eval(Ctx& ctx, [[maybe_unused]] empty& tmp,
+                                    It begin, It end) const
+    {
+        if (_child && _parse)
+            return _parse(_child, ctx, begin, end);
+        else
+            return rule_result::fail;
+    }
+private:
+    const void* _child = nullptr; //!< Type-erased pointer to a child rule
+    //! A function that calls <tt>_child->parse()</tt>
+    /*! \param[in] child the value of _child is expected, and it must be the
+     * value previously set by child()
+     * \param[in] ctx a parsing context
+     * \param[in] begin the start of the input
+     * \param[in] end the end of the input
+     * \return a parsing result returned by the child node */
+    typename dyn::parse_result (*_parse)(void* child, Ctx& ctx,
+                                         It begin, It end) = nullptr;
+    //! rule_base needs access to overriden member functions
+    friend rule_base<dyn, Ctx, empty, It, Handler>;
+};
+
 } // namespace rules
 
 //! Wraps a rule by rules::repeat for 0 or 1 match.
@@ -1020,7 +1088,7 @@ rules::repeat<Rule, rebind_rhnd_t<Rule, size_t>> operator*(Rule&& r)
  * \return a rules::seq rule containing \a r1 and \a r2 as child rules */
 template <rule Rule1, rule_cvref Rule2>
 rules::seq<Rule1, Rule2, rebind_rhnd_t<Rule1, empty>>
-operator<<(Rule1&& r1, Rule2&& r2)
+operator>>(Rule1&& r1, Rule2&& r2)
 {
     return rules::seq{std::forward<Rule1>(r1), std::forward<Rule2>(r2)};
 }
