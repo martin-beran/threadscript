@@ -18,23 +18,52 @@ using namespace std::string_literals;
 
 namespace test {
 
-struct parsed {
-    parsed(std::string text, bool result, size_t line, size_t column,
-           std::string error = "Parse error"):
-        text(std::move(text)), result(result), line(line), column(column),
+struct input {
+    input(std::string text, size_t line, size_t column,
+          std::string error = "Parse error"):
+        text(std::move(text)), line(line), column(column),
         error(std::move(error))
     {}
     std::string text;
-    bool result;
     size_t line;
     size_t column;
     std::string error;
 };
 
+std::ostream& operator<<(std::ostream& os, const input& v)
+{
+    os << '"' << v.text << "\"->" << v.line << ':' << v.column;
+    return os;
+}
+
+struct parsed: input {
+    parsed(std::string text, bool result, size_t line, size_t column,
+           std::string error = "Parse error"):
+        input(std::move(text), line, column, std::move(error)), result(result)
+    {}
+    bool result;
+};
+
 std::ostream& operator<<(std::ostream& os, const parsed& v)
 {
-    os << '"' << v.text << "\"->" << (v.result ? "OK" : "FAIL") <<
-        ':' << v.line << ':' << v.column;
+    os << static_cast<const input&>(v) << ':' << (v.result ? "OK" : "FAIL");
+    return os;
+}
+
+struct parsed3: input {
+    parsed3(std::string text, bool result1, bool result2, bool result3):
+        input(std::move(text), 1, 1),
+        result1(result1), result2(result2), result3(result3)
+    {}
+    bool result1;
+    bool result2;
+    bool result3;
+};
+
+std::ostream& operator<<(std::ostream& os, const parsed3& v)
+{
+    os << static_cast<const input&>(v) << ':' <<
+        v.result1 << v.result2 << v.result3;
     return os;
 }
 
@@ -509,7 +538,7 @@ BOOST_DATA_TEST_CASE(seq, (std::vector<test::repeated>{
             BOOST_CHECK_EQUAL(c, 'c');
         BOOST_CHECK_EQUAL(pos.line, sample.line);
         BOOST_CHECK_EQUAL(pos.column, sample.column);
-    } else {
+    } else
         BOOST_CHECK_EXCEPTION(ctx.parse(rule, it),
             tsp::error<it_t>,
             ([it, &sample](auto&& e) {
@@ -518,7 +547,6 @@ BOOST_DATA_TEST_CASE(seq, (std::vector<test::repeated>{
                 BOOST_CHECK_EQUAL(e.pos().column, sample.column);
                 return true;
             }));
-    }
     BOOST_CHECK_EQUAL(cnt, sample.cnt);
 }
 //! \endcond
@@ -766,5 +794,135 @@ BOOST_AUTO_TEST_CASE(alt_child_llref)
     static_assert(std::is_reference_v<typename rule_t::child2_type>);
     BOOST_TEST(&a1 == &rule.child1());
     BOOST_TEST(&a2 == &rule.child2());
+}
+//! \endcond
+
+/*! \file
+ * \test \c cut -- test of threadscript::parser::rules::cut and \c
+ * threadscript::parser::operator!() */
+//! \cond
+BOOST_DATA_TEST_CASE(cut, (std::vector<test::parsed3>{
+                               {"", false, false, false},
+                               {"A", false, false, false},
+                               {"AB", false, false, false},
+                               {"ABC", true, true, true},
+                               {"ABD", true, false, true},
+                               {"ABE", true, false, false},
+                           }))
+{
+    auto it = tsp::make_script_iterator(sample.text);
+    using ctx_t = tsp::context;
+    ctx_t ctx;
+    using it_t = typename decltype(it)::first_type;
+    using t = rules::t<ctx_t, tsp::empty, tsp::empty, it_t>;
+    auto rule1 = t{'A'} >> t{'B'} >> t{'C'} | t{'A'} >> t{'B'} >> t{'D'} |
+        t{'A'} >> t{'B'} >> t{'E'};
+    auto rule2 = !t{'A'} >> t{'B'} >> t{'C'} | t{'A'} >> t{'B'} >> t{'D'} |
+        t{'A'} >> t{'B'} >> t{'E'};
+    auto rule3 = t{'A'} >> t{'B'} >> t{'C'} | t{'A'} >> !t{'B'} >> t{'D'} |
+        t{'A'} >> t{'B'} >> t{'E'};
+    auto check = [&it, &ctx, &sample](auto&& rule, bool result) {
+        if (result)
+            BOOST_CHECK_NO_THROW(
+                try {
+                    ctx.parse(rule, it);
+                } catch (std::exception& e) {
+                    BOOST_TEST_INFO("exception: " << e.what());
+                    throw;
+                });
+        else
+            BOOST_CHECK_EXCEPTION(ctx.parse(rule, it),
+                tsp::error<it_t>,
+                ([it, &sample](auto&& e) {
+                     BOOST_CHECK_EQUAL(e.what(), sample.error);
+                     return true;
+                 }));
+
+    };
+    check(rule1, sample.result1);
+    check(rule2, sample.result2);
+    check(rule3, sample.result3);
+}
+//! \endcond
+
+/*! \file
+ * \test \c cut_child_rref -- tests that if an rvalue child is passed to
+ * threadscript::parser::rules::cut, then a copy is stored */
+//! \cond
+BOOST_AUTO_TEST_CASE(cut_child_rref)
+{
+    using it_t = std::string::iterator;
+    using any = rules::any<tsp::context, tsp::empty, tsp::empty, it_t>;
+    auto a = any{};
+    auto rule = !std::move(a);
+    using rule_t = decltype(rule);
+    static_assert(!std::is_reference_v<typename rule_t::child_type>);
+    BOOST_TEST(&a != &rule.child());
+}
+//! \endcond
+
+/*! \file
+ * \test \c cut_child_lref -- tests that if an lvalue child is passed to
+ * threadscript::parser::rules::cut, then a reference is stored */
+//! \cond
+BOOST_AUTO_TEST_CASE(cut_child_lref)
+{
+    using it_t = std::string::iterator;
+    using any = rules::any<tsp::context, tsp::empty, tsp::empty, it_t>;
+    auto a = any{};
+    auto rule = !a;
+    using rule_t = decltype(rule);
+    static_assert(std::is_reference_v<typename rule_t::child_type>);
+    BOOST_TEST(&a == &rule.child());
+}
+//! \endcond
+
+/*! \file
+ * \test \c dyn -- test of threadscript::parser::rules::dyn and
+ * \c threadscript::parser::operator>>=() */
+//! \cond
+BOOST_DATA_TEST_CASE(dyn, (std::vector<test::parsed>{
+                               {"", false, 1, 1},
+                               {"A", true, 1, 2},
+                               {"B", false, 1, 1},
+                               {"AA", true, 1, 3},
+                               {"AAA", true, 1, 4},
+                               {"BAA", false, 1, 1},
+                               {"ABA", false, 1, 2, "Partial match"},
+                               {"AAB", false, 1, 3, "Partial match"},
+                               {"AAAAAAA", true, 1, 8},
+                           }))
+{
+    auto it = tsp::make_script_iterator(sample.text);
+    using ctx_t = tsp::context;
+    ctx_t ctx;
+    using it_t = typename decltype(it)::first_type;
+    using t = rules::t<ctx_t, tsp::empty, tsp::empty, it_t>;
+    using dyn = rules::dyn<ctx_t, tsp::empty, tsp::empty, it_t>;
+    ptrdiff_t l = -1;
+    auto length = [&l](auto&&, auto&&, auto&&, auto&&, auto&& b, auto&& e) {
+        l = e.get() - b.get();
+    };
+    dyn rule;
+    auto inner = t{'A'} >> rule[length] | t{'A'};
+    rule >>= inner;
+    if (sample.result) {
+        BOOST_REQUIRE_NO_THROW(
+            try {
+                ctx.parse(rule, it);
+            } catch (std::exception& e) {
+                BOOST_TEST_INFO("exception: " << e.what());
+                throw;
+            });
+        BOOST_CHECK_EQUAL(sample.text.size(), l);
+    } else
+        BOOST_CHECK_EXCEPTION(ctx.parse(rule, it),
+            tsp::error<it_t>,
+            ([it, &sample](auto&& e) {
+                BOOST_CHECK_EQUAL(e.what(), sample.error);
+                BOOST_CHECK_EQUAL(e.pos().line, sample.line);
+                BOOST_CHECK_EQUAL(e.pos().column, sample.column);
+                return true;
+            }));
 }
 //! \endcond

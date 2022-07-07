@@ -76,7 +76,8 @@ enum class rule_result: uint8_t {
  * \tparam Up a temporary context of a parent rule (will be \c nullptr if a
  * rule has no parent)
  * \tparam Info information about a parsed part of input; it is expected to be
- * \ref empty unless specified otherwise for a particular rule type
+ * \ref threadscript::parser::empty unless specified otherwise for a particular
+ * rule type
  * \tparam It an iterator to the input sequence of terminal symbols */
 template <class Handler, class Ctx, class Self, class Up, class Info, class It>
 concept handler =
@@ -1278,20 +1279,22 @@ public:
     //! Sets the child node.
     /*! \tparam Rule the type of the child node
      * \param[in] r the child node */
-    template <rule Rule> requires
+    template <rule_cvref Rule> requires
         std::same_as<impl::context_t<Rule>, Ctx> &&
         std::same_as<impl::up_ctx_t<Rule>, Self> &&
-        std::same_as<impl::iterator_t<Rule>, It>
-    void set_child(const Rule& r) {
+        std::same_as<impl::iterator_t<Rule>, It> &&
+        std::is_lvalue_reference_v<Rule>
+    void set_child(Rule&& r) {
         _child = &r;
-        _parse = [](void* child, Ctx& ctx, Up* up, It begin, It end) {
-            return static_cast<const Rule*>(child)->parse(ctx, up, begin, end);
+        _parse = [](const void* child, Ctx& ctx, Up* up, It begin, It end) {
+            return static_cast<const std::remove_cvref_t<Rule>*>(child)->
+                parse(ctx, up, begin, end);
         };
     }
     /*! \copydoc set_child()
      * \return \c *this */
-    template <rule Rule> dyn& operator>>=(const Rule& r) {
-        set_child(r);
+    template <rule_cvref Rule> dyn& operator>>=(Rule&& r) {
+        set_child(std::forward<Rule>(r));
         return *this;
     }
     //! Tests if a child node has been set.
@@ -1334,7 +1337,7 @@ private:
      * \param[in] begin the start of the input
      * \param[in] end the end of the input
      * \return a parsing result returned by the child node */
-    typename dyn::parse_result (*_parse)(void* child, Ctx& ctx, Up* up,
+    typename dyn::parse_result (*_parse)(const void* child, Ctx& ctx, Up* up,
                                          It begin, It end) = nullptr;
     //! rule_base needs access to overriden member functions
     friend base;
@@ -1424,8 +1427,9 @@ operator|(Rule1&& r1, Rule2&& r2)
 /*! \tparam Rule the type of the child rule
  * \param[in] r the child rule
  * \return a rules::cut rule containing \a r as the child rule. */
-template <rule_cvref Rule, rebind_rhnd_t<Rule, empty>>
-rules::cut<Rule, up_type_t<rules::impl::up_ctx_t<Rule>>> operator!(Rule r)
+template <rule_cvref Rule>
+rules::cut<Rule, up_type_t<rules::impl::up_ctx_t<Rule>>>
+operator!(Rule&& r)
 {
     return rules::cut{std::forward<Rule>(r),
         up_null<up_type_t<rules::impl::up_ctx_t<Rule>>>()};
