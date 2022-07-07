@@ -69,7 +69,8 @@ enum class rule_result: uint8_t {
  * \tparam Self a temporary context of a rule
  * \tparam Up a temporary context of a parent rule (will be \c nullptr if a
  * rule has no parent)
- * \tparam Info information about a parsed part of input
+ * \tparam Info information about a parsed part of input; it is expected to be
+ * \ref empty unless specified otherwise for a particular rule type
  * \tparam It an iterator to the input sequence of terminal symbols */
 template <class Handler, class Ctx, class Self, class Up, class Info, class It>
 concept handler =
@@ -1359,7 +1360,7 @@ operator*(Rule&& r)
  * \param[in] r1 the first child rule
  * \param[in] r2 the second child rule
  * \return a rules::seq rule containing \a r1 and \a r2 as child rules */
-template <rule Rule1, rule_cvref Rule2> requires
+template <rule_cvref Rule1, rule_cvref Rule2> requires
     std::same_as<up_type_t<rules::impl::up_ctx_t<Rule1>>,
         up_type_t<rules::impl::up_ctx_t<Rule2>>>
 rules::seq<Rule1, Rule2, up_type_t<rules::impl::up_ctx_t<Rule1>>,
