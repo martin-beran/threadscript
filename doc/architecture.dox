@@ -131,9 +131,51 @@
  *
  * \section Architecture_Code Script code and parsing
  *
+ * \subsection Architecture_Code_Parsed Parsed script code
+ *
  * Each parsed ThreadScript source file is represented by
  * a threadscript::script object. It owns a tree of threadscript::code_node
  * objects, which represent code of the script.
+ *
+ * \subsection Architecture_Code_GenParser Generic parser
+ *
+ * Parsing of ThreadScript source code of scripts is implemented by a parser
+ * defined using a generic recursive descent parser. The generic parser is
+ * contained in file parser.hpp, namespace threadscript::parser. A parser for
+ * a concrete grammar is defined by grammar rules, created by combining basic
+ * rules available in threadscript::parser::rules. Examples how to use the
+ * parser are in the tests in test_parser.cpp.
+ *
+ * Parsing of an input is initiated by class threadscript::parser::context. It
+ * is possible to create a derived context class, for example, to provide
+ * storage for information obtained from the parsed text. Storing information
+ * or executing actions depending on input is done by adding handlers
+ * (threadscript::parser::handler) to rules. When a rule matches, a handler
+ * registered in the rule is called with the part of input matched by the rule.
+ * A handler can be added to a rule by operator
+ * threadscript::parser::rule_base::operator[]().
+ *
+ * All rules are implemented by classes derived from
+ * threadscript::parser::rule_base. There are some leaf rules, for example,
+ * threadscript::parser::rules::any, threadscript::parser::rules::t,
+ * threadscript::parser::rules::eof. Complex rules are created by combining
+ * rule classes: threadscript::parser::rules::seq,
+ * threadscript::parser::rules::alt, threadscript::parser::rules::repeat,
+ * threadscript::parser::rules::cut, and threadscript::parser::rules::dyn.
+ * Composite rules can be created by directly using these classes, but the
+ * preferred way is to use combining operators
+ * threadscript::parser::operator>>(), threadscript::parser::operator|(),
+ * threadscript::parser::operator-(), threadscript::parser::operator*(),
+ * threadscript::parser::operator+(), threadscript::parser::operator!(),
+ * threadscript::parser::rules::dyn::operator>>=().
+ *
+ * In addition, there are some auxiliary declarations in namespace
+ * threadscript::parser, e.g., threadscript::parser::rebind_handler (for
+ * changing additional information passed to a handler),
+ * threadscript::parser::script_iterator (an iterator with tracking the current
+ * line and column in the input text, which can be easily created by helper
+ * function threadscript::parser::make_script_iterator()), or
+ * threadscript::parser::error (an exception type thrown if parsing fails).
  *
  * \section Architecture_Execution Execution of a script
  * \section Architecture_API ThreadScript API

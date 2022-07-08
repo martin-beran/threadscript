@@ -515,7 +515,8 @@ private:
 //! An iterator for parsing script source code.
 /*! It can be used when using any text consisting of a sequence of \c char's.
  * It maintains the current line and column numbers, both starting at 1. It
- * expects lines delimited by <tt>'\\n'</tt>.
+ * expects lines delimited by <tt>'\\n'</tt>. There is helper function
+ * make_script_iterator() for creating a pair of iterators.
  * \tparam It the underlying iterator type, which must point to a \c char */
 template <std::forward_iterator It> requires
     requires (It it) { { *it } -> std::same_as<char&>; } ||
