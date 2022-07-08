@@ -65,6 +65,25 @@ enum class rule_result: uint8_t {
     ok_final,
 };
 
+//! A predicate to test a terminal symbol
+/*! A predicate gets a terminal symbol from the input sequence and checks a
+ * condition for it.
+ * \tparam Predicate a predicate
+ * \tparam It an iterator to the input sequence of terminal symbols */
+template <class Predicate, class It>
+concept predicate =
+    std::is_invocable_r_v<bool, Predicate,
+        typename std::iterator_traits<It>::value_type> &&
+    std::forward_iterator<It>;
+
+//! The default predicate type
+/*! \tparam It an iterator to the input sequence of terminal symbols
+ * \param[in] v a value (a terminal symbol) from the input
+ * \return value of the predicate for \a v */
+template <class It>
+using default_predicate =
+    std::function<bool(const typename std::iterator_traits<It>::value_type& v)>;
+
 //! A handler called when a rule matches
 /*! A handler gets a context object \a Ctx that has invoked this rule via
  * context::parse(), some information \a Info extracted from the input by the
@@ -741,6 +760,62 @@ protected:
     }
 private:
     typename t::term_type term; //!< The terminal symbol matched by this rule
+    //! rule_base needs access to overriden member functions
+    friend base;
+};
+
+//! A rule that matches a terminal symbol for which a predicate returns \c true
+/*! \tparam Ctx a parsing context
+ * \tparam Self a temporary context of this rule
+ * \tparam Up a temporary context of a parent rule
+ * \tparam It an iterator to the input sequence of terminal symbols
+ * \tparam Predicate a predicate for testing if a symbol matches
+ * \tparam Handler the type of a handler called when the rule matches */
+template <class Ctx, class Self, class Up, std::forward_iterator It,
+    predicate<It> Predicate = default_predicate<It>,
+    class Handler = default_handler<Ctx, Self, Up, empty, It>>
+class p final: public rule_base<p<Ctx, Self, Up, It, Predicate, Handler>,
+    Ctx, Self, Up, empty, It, Handler>
+{
+public:
+    //! The alias for the base class
+    using base = rule_base<p<Ctx, Self, Up, It, Predicate, Handler>,
+        Ctx, Self, Up, empty, It, Handler>;
+    //! The type of a predicate
+    using predicate_type = Predicate;
+    //! Creates the rule with a handler.
+    /*! \param[in] pred the predicate for testing input
+     * \param[in] hnd the handler stored in the rule */
+    explicit p(Predicate pred, Handler hnd = {}):
+        base(hnd), pred(std::move(pred)) {}
+    //! Creates the rule.
+    /*! \param[in] pred the predicate for testing input
+     * \param[in] out a place where a matched terminal will be stored */
+    explicit p(Predicate pred, typename p::term_type& out):
+        p(pred,
+          [&out](auto&&, auto&&, auto&&, auto&&, auto&& it, auto&&) {
+              out = *it;
+          }) {}
+protected:
+    //! \copydoc rule_base::eval()
+    typename p::parse_result eval([[maybe_unused]] Ctx& ctx,
+                                  [[maybe_unused]] Self& self,
+                                  [[maybe_unused]] empty& tmp,
+                                  It begin, It end) const
+    {
+        if constexpr (requires { bool(pred); }) {
+            if (begin != end && bool(pred) && pred(*begin))
+                return {rule_result::ok, ++begin};
+            else
+                return {rule_result::fail, begin};
+        } else
+            if (begin != end && pred(*begin))
+                return {rule_result::ok, ++begin};
+            else
+                return {rule_result::fail, begin};
+    }
+private:
+    Predicate pred{}; //!< The predicate for testing input
     //! rule_base needs access to overriden member functions
     friend base;
 };
