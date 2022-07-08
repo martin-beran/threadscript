@@ -244,7 +244,7 @@ BOOST_DATA_TEST_CASE(t, (std::vector<test::parsed>{
             ([it, &sample](auto&& e) {
                 BOOST_CHECK_EQUAL(e.what(), sample.error);
                 if (sample.text.empty() || sample.text.front() != 'A')
-                    BOOST_CHECK(e.pos() == it.first); // empty input
+                    BOOST_CHECK(e.pos() == it.first);
                 else
                     BOOST_CHECK(e.pos() == std::next(it.first));
                 BOOST_CHECK_EQUAL(e.pos().line, sample.line);
@@ -254,6 +254,65 @@ BOOST_DATA_TEST_CASE(t, (std::vector<test::parsed>{
         if (sample.text.empty() || sample.text.front() != 'A')
             BOOST_CHECK_EQUAL(attr, '\0'); // unchanged
         else // failed after rules::t matched
+            BOOST_CHECK_EQUAL(attr, sample.text.front());
+    }
+}
+//! \endcond
+
+/*! \file
+ * \test \c p -- test of threadscript::parser::rules::p */
+//! \cond
+BOOST_DATA_TEST_CASE(p, (std::vector<test::parsed>{
+                             {"", false, 1, 1},
+                             {"A", true, 1, 2},
+                             {"B", true, 1, 2},
+                             {"a", false, 1, 1},
+                             {"?", false, 1, 1},
+                             {"A nonempty", false, 1, 2, "Partial match"},
+                             {"Z nonempty", false, 1, 2, "Partial match"},
+                         }))
+{
+    auto it = tsp::make_script_iterator(sample.text);
+    tsp::context ctx;
+    char attr = '\0';
+    rules::p<decltype(ctx), tsp::empty, tsp::empty,
+        typename decltype(it)::first_type> rule{
+            [](const char& c) {
+                return c >= 'A' && c <= 'Z';
+            }, attr};
+    if (sample.result) {
+        auto pos = it.first;
+        BOOST_REQUIRE_NO_THROW(
+            try {
+                pos = ctx.parse(rule, it);
+            } catch (std::exception& e) {
+                BOOST_TEST_INFO("exception: " << e.what());
+                throw;
+            });
+        BOOST_CHECK_EQUAL(attr, sample.text.front());
+        BOOST_CHECK(pos == std::next(it.first));
+        BOOST_CHECK_EQUAL(pos.line, sample.line);
+        BOOST_CHECK_EQUAL(pos.column, sample.column);
+    } else {
+        BOOST_CHECK_EXCEPTION(ctx.parse(rule, it),
+            tsp::error<typename decltype(it)::first_type>,
+            ([it, &sample](auto&& e) {
+                BOOST_CHECK_EQUAL(e.what(), sample.error);
+                if (sample.text.empty() || sample.text.front() < 'A' ||
+                    sample.text.front() > 'Z')
+                {
+                    BOOST_CHECK(e.pos() == it.first);
+                } else
+                    BOOST_CHECK(e.pos() == std::next(it.first));
+                BOOST_CHECK_EQUAL(e.pos().line, sample.line);
+                BOOST_CHECK_EQUAL(e.pos().column, sample.column);
+                return true;
+            }));
+        if (sample.text.empty() || sample.text.front() < 'A' ||
+            sample.text.front() > 'Z')
+        {
+            BOOST_CHECK_EQUAL(attr, '\0'); // unchanged
+        } else // failed after rules::t matched
             BOOST_CHECK_EQUAL(attr, sample.text.front());
     }
 }
