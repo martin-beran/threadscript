@@ -4,6 +4,7 @@
 
 //! \cond
 #include "threadscript/parser.hpp"
+#include <cctype>
 
 #define BOOST_TEST_MODULE parser
 #define BOOST_TEST_DYN_LINK
@@ -275,11 +276,11 @@ BOOST_DATA_TEST_CASE(p, (std::vector<test::parsed>{
     auto it = tsp::make_script_iterator(sample.text);
     tsp::context ctx;
     char attr = '\0';
-    rules::p<decltype(ctx), tsp::empty, tsp::empty,
-        typename decltype(it)::first_type> rule{
+    auto rule = rules::make_p<decltype(ctx), tsp::empty, tsp::empty,
+        typename decltype(it)::first_type>(
             [](const char& c) {
                 return c >= 'A' && c <= 'Z';
-            }, attr};
+            }, attr);
     if (sample.result) {
         auto pos = it.first;
         BOOST_REQUIRE_NO_THROW(
@@ -314,6 +315,98 @@ BOOST_DATA_TEST_CASE(p, (std::vector<test::parsed>{
             BOOST_CHECK_EQUAL(attr, '\0'); // unchanged
         } else // failed after rules::t matched
             BOOST_CHECK_EQUAL(attr, sample.text.front());
+    }
+}
+//! \endcond
+
+/*! \file
+ * \test str -- test of threadscript::parser::rules::str */
+//! \cond
+BOOST_DATA_TEST_CASE(str, (std::vector<test::parsed>{
+                               {"", false, 1, 1},
+                               {"A", false, 1, 2},
+                               {"AB", false, 1, 3},
+                               {"ABC", true, 1, 4},
+                               {"aBC", false, 1, 1},
+                               {"AbC", false, 1, 2},
+                               {"ABc", false, 1, 3},
+                               {"ABC nonempty", false, 1, 4, "Partial match"},
+                           }))
+{
+    using namespace std::string_view_literals;
+    auto it = tsp::make_script_iterator(sample.text);
+    tsp::context ctx;
+    auto rule = rules::make_str<decltype(ctx), tsp::empty, tsp::empty,
+        typename decltype(it)::first_type>("ABC"sv);
+    if (sample.result) {
+        auto pos = it.first;
+        BOOST_REQUIRE_NO_THROW(
+            try {
+                pos = ctx.parse(rule, it);
+            } catch (std::exception& e) {
+                BOOST_TEST_INFO("exception: " << e.what());
+                throw;
+            });
+        BOOST_CHECK(pos == std::next(it.first, 3));
+        BOOST_CHECK_EQUAL(pos.line, sample.line);
+        BOOST_CHECK_EQUAL(pos.column, sample.column);
+    } else {
+        BOOST_CHECK_EXCEPTION(ctx.parse(rule, it),
+            tsp::error<typename decltype(it)::first_type>,
+            ([it, &sample](auto&& e) {
+                BOOST_CHECK_EQUAL(e.what(), sample.error);
+                BOOST_CHECK_EQUAL(e.pos().line, sample.line);
+                BOOST_CHECK_EQUAL(e.pos().column, sample.column);
+                return true;
+            }));
+    }
+}
+//! \endcond
+
+/*! \file
+ * \test str_nocase -- test of threadscript::parser::rules::str with
+ * case-insensitive comparison */
+//! \cond
+BOOST_DATA_TEST_CASE(str_nocase, (std::vector<test::parsed>{
+                               {"", false, 1, 1},
+                               {"A", false, 1, 2},
+                               {"AB", false, 1, 3},
+                               {"ABC", true, 1, 4},
+                               {"aBC", true, 1, 4},
+                               {"AbC", true, 1, 4},
+                               {"ABc", true, 1, 4},
+                               {"ABC nonempty", false, 1, 4, "Partial match"},
+                           }))
+{
+    using namespace std::string_view_literals;
+    auto it = tsp::make_script_iterator(sample.text);
+    tsp::context ctx;
+    auto rule = rules::make_str<decltype(ctx), tsp::empty, tsp::empty,
+        typename decltype(it)::first_type>("ABC"sv,
+            [](auto&& a, auto&& b) {
+                return std::tolower(a) == std::tolower(b);
+            });
+    if (sample.result) {
+        auto pos = it.first;
+        BOOST_REQUIRE_NO_THROW(
+            try {
+                pos = ctx.parse(rule, it);
+            } catch (std::exception& e) {
+                BOOST_TEST_INFO("exception: " << e.what());
+                throw;
+            });
+        BOOST_CHECK(pos == std::next(it.first, 3));
+        BOOST_CHECK_EQUAL(pos.line, sample.line);
+        BOOST_CHECK_EQUAL(pos.column, sample.column);
+    } else {
+        BOOST_CHECK_EXCEPTION(ctx.parse(rule, it),
+            tsp::error<typename decltype(it)::first_type>,
+            ([it, &sample](auto&& e) {
+                BOOST_CHECK_EQUAL(e.what(), sample.error);
+                BOOST_CHECK_EQUAL(e.pos().line, sample.line);
+                BOOST_CHECK_EQUAL(e.pos().column, sample.column);
+                return true;
+            }));
     }
 }
 //! \endcond

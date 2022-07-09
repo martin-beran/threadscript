@@ -76,13 +76,17 @@ concept predicate =
         typename std::iterator_traits<It>::value_type> &&
     std::forward_iterator<It>;
 
-//! The default predicate type
-/*! \tparam It an iterator to the input sequence of terminal symbols
- * \param[in] v a value (a terminal symbol) from the input
- * \return value of the predicate for \a v */
-template <class It>
-using default_predicate =
-    std::function<bool(const typename std::iterator_traits<It>::value_type& v)>;
+//! A predicate to compare two terminal symbols
+/*! A predicate gets two terminal symbols, usually from two sequences, and
+ * checks a condition for it.
+ * \tparam Predicate2 a predicate
+ * \tparam It an iterator type */
+template <class Predicate2, class It>
+concept predicate2 =
+    std::is_invocable_r_v<bool, Predicate2,
+        typename std::iterator_traits<It>::value_type,
+        typename std::iterator_traits<It>::value_type> &&
+    std::forward_iterator<It>;
 
 //! A handler called when a rule matches
 /*! A handler gets a context object \a Ctx that has invoked this rule via
@@ -737,7 +741,7 @@ public:
     /*! \param[in] term the terminal symbol matched by this rule
      * \param[in] hnd the handler stored in the rule */
     explicit t(typename t::term_type term, Handler hnd = {}):
-        base(hnd), term(term) {}
+        base(std::move(hnd)), term(term) {}
     //! Creates the rule
     /*! \param[in] term the terminal symbol matched by this rule
      * \param[in] out a place where a matched terminal will be stored */
@@ -772,7 +776,7 @@ private:
  * \tparam Predicate a predicate for testing if a symbol matches
  * \tparam Handler the type of a handler called when the rule matches */
 template <class Ctx, class Self, class Up, std::forward_iterator It,
-    predicate<It> Predicate = default_predicate<It>,
+    predicate<It> Predicate,
     class Handler = default_handler<Ctx, Self, Up, empty, It>>
 class p final: public rule_base<p<Ctx, Self, Up, It, Predicate, Handler>,
     Ctx, Self, Up, empty, It, Handler>
@@ -787,12 +791,12 @@ public:
     /*! \param[in] pred the predicate for testing input
      * \param[in] hnd the handler stored in the rule */
     explicit p(Predicate pred, Handler hnd = {}):
-        base(hnd), pred(std::move(pred)) {}
+        base(std::move(hnd)), pred(std::move(pred)) {}
     //! Creates the rule.
     /*! \param[in] pred the predicate for testing input
      * \param[in] out a place where a matched terminal will be stored */
     explicit p(Predicate pred, typename p::term_type& out):
-        p(pred,
+        p(std::move(pred),
           [&out](auto&&, auto&&, auto&&, auto&&, auto&& it, auto&&) {
               out = *it;
           }) {}
@@ -803,22 +807,187 @@ protected:
                                   [[maybe_unused]] empty& tmp,
                                   It begin, It end) const
     {
-        if constexpr (requires { bool(pred); }) {
-            if (begin != end && bool(pred) && pred(*begin))
-                return {rule_result::ok, ++begin};
-            else
-                return {rule_result::fail, begin};
-        } else
-            if (begin != end && pred(*begin))
-                return {rule_result::ok, ++begin};
-            else
-                return {rule_result::fail, begin};
+        if (begin != end && pred(*begin))
+            return {rule_result::ok, ++begin};
+        else
+            return {rule_result::fail, begin};
     }
 private:
-    Predicate pred{}; //!< The predicate for testing input
+    Predicate pred; //!< The predicate for testing input
     //! rule_base needs access to overriden member functions
     friend base;
 };
+
+//! Creates a rules::p object
+/*! It deduces type \a Predicate from parameter \a pred, but does not deduce a
+ * handler type and converts \a hnd to default_handler.
+ * \tparam Ctx a parsing context
+ * \tparam Self a temporary context of this rule
+ * \tparam Up a temporary context of a parent rule
+ * \tparam It an iterator to the input sequence of terminal symbols
+ * \tparam Predicate a predicate for testing if a symbol matches
+ * \param[in] pred the predicate to be used by the created rule
+ * \param[in] hnd the handler stored in the rule
+ * \return a rules::p object */
+template <class Ctx, class Self, class Up, std::forward_iterator It,
+    predicate<It> Predicate>
+auto make_p(Predicate pred, default_handler<Ctx, Self, Up, empty, It> hnd = {})
+{
+    return p<Ctx, Self, Up, It, Predicate>(std::move(pred), std::move(hnd));
+}
+
+//! Creates a rules::p object
+/*! It deduces type \a Predicate from parameter \a pred.
+ * \tparam Ctx a parsing context
+ * \tparam Self a temporary context of this rule
+ * \tparam Up a temporary context of a parent rule
+ * \tparam It an iterator to the input sequence of terminal symbols
+ * \tparam Predicate a predicate for testing if a symbol matches
+ * \param[in] pred the predicate to be used by the created rule
+ * \param[in] out a place where a matched terminal will be stored
+ * \return a rules::p object */
+template <class Ctx, class Self, class Up, std::forward_iterator It,
+    predicate<It> Predicate>
+auto make_p(Predicate pred, typename std::iterator_traits<It>::value_type& out)
+{
+    return p<Ctx, Self, Up, It, Predicate>(std::move(pred), out);
+}
+
+//! Creates a rules::p object
+/*! It deduces both types \a Predicate from parameter \a pred and \a Handler
+ * from parameter \a pred.
+ * \tparam Ctx a parsing context
+ * \tparam Self a temporary context of this rule
+ * \tparam Up a temporary context of a parent rule
+ * \tparam It an iterator to the input sequence of terminal symbols
+ * \tparam Handler the type of a handler called when the rule matches
+ * \tparam Predicate a predicate for testing if a symbol matches
+ * \param[in] pred the predicate to be used by the created rule
+ * \param[in] hnd the handler stored in the rule
+ * \return a rules::p object */
+template <class Ctx, class Self, class Up, std::forward_iterator It,
+    class Handler, predicate<It> Predicate>
+auto make_p_hnd(Predicate pred, Handler hnd)
+{
+    return p<Ctx, Self, Up, It, Predicate, Handler>(std::move(pred),
+                                                    std::move(hnd));
+}
+
+//! A rule that matches a sequence from input
+/*! It tests that a predicate returns \c true for corresponding symbols from
+ * the input and from the stored sequence.
+ * \tparam Ctx a parsing context
+ * \tparam Self a temporary context of this rule
+ * \tparam Up a temporary context of a parent rule
+ * \tparam It an iterator to the input sequence of terminal symbols
+ * \tparam Seq a sequence of terminal symbols
+ * \tparam Predicate a predicate for testing if a symbol matches
+ * \tparam Handler the type of a handler called when the rule matches */
+template <class Ctx, class Self, class Up, std::forward_iterator It,
+    class Seq,
+    predicate2<It> Predicate =
+        std::equal_to<typename std::iterator_traits<It>::value_type>,
+    class Handler = default_handler<Ctx, Self, Up, empty, It>>
+    requires requires (Seq s) { std::begin(s); std::end(s); }
+class str final:
+    public rule_base<str<Ctx, Self, Up, It, Seq, Predicate, Handler>,
+        Ctx, Self, Up, empty, It, Handler>
+{
+public:
+    //! The alias for the base class
+    using base = rule_base<str<Ctx, Self, Up, It, Seq, Predicate, Handler>,
+        Ctx, Self, Up, empty, It, Handler>;
+    //! The type of a predicate
+    using predicate_type = Predicate;
+    //! Creates the rule with a handler.
+    /*! \param[in] seq a sequence of symbols to be stored and matched to input
+     * \param[in] pred the predicate for testing input
+     * \param[in] hnd the handler stored in the rule */
+    explicit str(Seq seq, Predicate pred = {}, Handler hnd = {}):
+        base(std::move(hnd)), seq(std::move(seq)), pred(std::move(pred)) {}
+protected:
+    //! \copydoc rule_base::eval()
+    typename str::parse_result eval([[maybe_unused]] Ctx& ctx,
+                                    [[maybe_unused]] Self& self,
+                                    [[maybe_unused]] empty& tmp,
+                                    It begin, It end) const
+    {
+        for (auto& s: seq) {
+            if (begin == end || !pred(s, *begin))
+                return {rule_result::fail, begin};
+            ++begin;
+        }
+        return {rule_result::ok, begin};
+    }
+private:
+    Seq seq; //!< The stored sequence
+    Predicate pred; //!< Predicate for comparing \ref str and symbols from input
+    //! rule_base needs access to overriden member functions
+    friend base;
+};
+
+//! Creates a rules::str object
+/*! It deduces type \a Seq from parameter \a seq.
+ * \tparam Ctx a parsing context
+ * \tparam Self a temporary context of this rule
+ * \tparam Up a temporary context of a parent rule
+ * \tparam It an iterator to the input sequence of terminal symbols
+ * \tparam Seq a sequence of terminal symbols
+ * \param[in] seq a sequence of symbols to be stored and matched to input
+ * \param[in] pred the predicate to be used by the created rule
+ * \param[in] hnd the handler stored in the rule
+ * \return a rules::p object */
+template <class Ctx, class Self, class Up, std::forward_iterator It, class Seq>
+auto make_str(Seq seq)
+{
+    return str<Ctx, Self, Up, It, Seq>(std::move(seq));
+}
+
+//! Creates a rules::str object
+/*! It deduces types \a Seq and \a Predicate from parameters \a seq and \a
+ * pred, but does not deduce a handler type and converts \a hnd to
+ * default_handler.
+ * \tparam Ctx a parsing context
+ * \tparam Self a temporary context of this rule
+ * \tparam Up a temporary context of a parent rule
+ * \tparam It an iterator to the input sequence of terminal symbols
+ * \tparam Seq a sequence of terminal symbols
+ * \tparam Predicate a predicate for testing if a symbol matches
+ * \param[in] seq a sequence of symbols to be stored and matched to input
+ * \param[in] pred the predicate to be used by the created rule
+ * \param[in] hnd the handler stored in the rule
+ * \return a rules::p object */
+template <class Ctx, class Self, class Up, std::forward_iterator It, class Seq,
+    predicate2<It> Predicate>
+auto make_str(Seq seq, Predicate pred,
+              default_handler<Ctx, Self, Up, empty, It> hnd = {})
+{
+    return str<Ctx, Self, Up, It, Seq, Predicate>(std::move(seq),
+                                              std::move(pred), std::move(hnd));
+}
+
+//! Creates a rules::str object
+/*! It deduces types \a Seq, \a Predicate, and \a Handler from parameters
+ * \a seq, \a pred, and \a handler.
+ * \tparam Ctx a parsing context
+ * \tparam Self a temporary context of this rule
+ * \tparam Up a temporary context of a parent rule
+ * \tparam It an iterator to the input sequence of terminal symbols
+ * \tparam Handler the type of a handler called when the rule matches
+ * \tparam Seq a sequence of terminal symbols
+ * \tparam Predicate a predicate for testing if a symbol matches
+ * \param[in] seq a sequence of symbols to be stored and matched to input
+ * \param[in] pred the predicate to be used by the created rule
+ * \param[in] hnd the handler stored in the rule
+ * \return a rules::p object */
+template <class Ctx, class Self, class Up, std::forward_iterator It,
+    class Handler, class Seq, predicate2<It> Predicate =
+        std::equal_to<typename std::iterator_traits<It>::value_type>>
+auto make_str_hnd(Seq seq, Predicate pred, Handler hnd)
+{
+    return str<Ctx, Self, Up, It, Seq, Predicate, Handler>(std::move(seq),
+                                               std::move(pred), std::move(hnd));
+}
 
 namespace impl {
 
@@ -882,7 +1051,8 @@ public:
     template <class = void> requires (!std::convertible_to<Handler, size_t>)
     explicit repeat(Child child, [[maybe_unused]] Up* up,
                     size_t min = 0, size_t max = unlimited, Handler hnd = {}):
-        base(hnd), _child(std::forward<Child>(child)), min(min), max(max) {}
+        base(std::move(hnd)), _child(std::forward<Child>(child)), min(min),
+        max(max) {}
     //! Creates the rule with a handler.
     /*! \param[in] child the child node
      * \param[in,out] up a temporary context of a parent rule; it is a dummy
@@ -1036,7 +1206,7 @@ public:
      * \param[in] hnd the handler stored in the rule */
     seq(Child1 child1, Child2 child2, [[maybe_unused]] Up* up,
         Handler hnd = {}):
-        base(hnd), _child1(std::forward<Child1>(child1)),
+        base(std::move(hnd)), _child1(std::forward<Child1>(child1)),
         _child2(std::forward<Child2>(child2)) {}
     //! Creates the rule.
     /*! \param[in] child1 the first child node
@@ -1167,7 +1337,7 @@ public:
      * \param[in] hnd the handler stored in the rule */
     alt(Child1 child1, Child2 child2, [[maybe_unused]] Up* up,
         Handler hnd = {}):
-        base(hnd), _child1(std::forward<Child1>(child1)),
+        base(std::move(hnd)), _child1(std::forward<Child1>(child1)),
         _child2(std::forward<Child2>(child2)) {}
     //! Creates the rule.
     /*! \param[in] child1 the first child node
