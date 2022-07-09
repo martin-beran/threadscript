@@ -79,11 +79,11 @@ concept predicate =
 //! A predicate to compare two terminal symbols
 /*! A predicate gets two terminal symbols, usually from two sequences, and
  * checks a condition for it.
- * \tparam Predicate2 a predicate
+ * \tparam Predicate a predicate
  * \tparam It an iterator type */
-template <class Predicate2, class It>
+template <class Predicate, class It>
 concept predicate2 =
-    std::is_invocable_r_v<bool, Predicate2,
+    std::is_invocable_r_v<bool, Predicate,
         typename std::iterator_traits<It>::value_type,
         typename std::iterator_traits<It>::value_type> &&
     std::forward_iterator<It>;
@@ -934,8 +934,6 @@ private:
  * \tparam It an iterator to the input sequence of terminal symbols
  * \tparam Seq a sequence of terminal symbols
  * \param[in] seq a sequence of symbols to be stored and matched to input
- * \param[in] pred the predicate to be used by the created rule
- * \param[in] hnd the handler stored in the rule
  * \return a rules::p object */
 template <class Ctx, class Self, class Up, std::forward_iterator It, class Seq>
 auto make_str(Seq seq)

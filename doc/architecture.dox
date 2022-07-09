@@ -177,6 +177,11 @@
  * function threadscript::parser::make_script_iterator()), or
  * threadscript::parser::error (an exception type thrown if parsing fails).
  *
+ * Specializations of templates from threadscript::parser and some common rules
+ * useful for parsing textual data (in ASCII encoding) are in file
+ * parser_ascii.hpp, namespace threadscript::parser_ascii. Exaples how to use
+ * them are in the tests in test_parser_ascii.cpp.
+ *
  * \section Architecture_Execution Execution of a script
  * \section Architecture_API ThreadScript API
  */

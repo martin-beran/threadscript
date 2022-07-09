@@ -14,6 +14,7 @@ set(
     dummy_boost
     exception
     parser
+    parser_ascii
     symbol_table
     vm_data
     virtual_machine
