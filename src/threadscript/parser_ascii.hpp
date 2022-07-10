@@ -51,78 +51,187 @@ template <class Ctx, class Self, class Up, class Info, std::forward_iterator It>
     requires ascii_iterator<It>
 using handler = parser::default_handler<Ctx, Self, Up, Info, It>;
 
+//! Converts a character to lowercase.
+/*! It assumes ASCII, that is, letters A--Z and a--z, not depending on the
+ * current locale.
+ * \param[in] c a character
+ * \return an uppercase \a c converted to lowercase, otherwise \a c unchanged */
+[[nodiscard]] inline char to_lower(char c)
+{
+    return char(c >= 'A' && c <= 'Z' ? c - 'A' + 'a' : c);
+}
+
+//! Converts a character to uppercase.
+/*! It assumes ASCII, that is, letters A--Z and a--z, not depending on the
+ * current locale.
+ * \param[in] c a character
+ * \return an uppercase \a c converted to lowercase, otherwise \a c unchanged */
+[[nodiscard]] inline char to_upper(char c)
+{
+    return char(c >= 'a' && c <= 'z' ? c - 'a' + 'A' : c);
+}
+
+//! A function object that performs case-insensitive comparison of characters.
+/*! It treats corresponding characters from ASCII uppercase (A--Z) and
+ * lowercase (a--z) as equal. It does not depend on the current locale. */
+class equal_ic {
+public:
+    //! Tests characters \a and \b for case-insensitive equality.
+    /*! \param[in] a the first character
+     * \param[in] b the second character
+     * \return if \a a and \a b are equal */
+    bool operator()(char a, char b) {
+        return to_lower(a) == to_lower(b);
+    }
+};
+
 //! This namespace contains various reusable parser rules
 /*! There are some rules frequently needed by parsers of textual data, for
  * example, rules for end-of-line, whitespace, numbers, or identifiers.
  * \test in file test_parser_ascii.cpp */
 namespace rules {
 
-//! A rule that always fails.
+//! Creates a rule that always fails.
 /*! \tparam Ctx a parsing context
  * \tparam Self a temporary context of this rule
  * \tparam Up a temporary context of a parent rule
- * \tparam It an iterator to the input sequence */
+ * \tparam It an iterator to the input sequence
+ * \return the created rule */
 template <class Ctx, class Self, class Up, ascii_iterator It>
-using fail = parser::rules::fail<Ctx, Self, Up, It,
-    handler<Ctx, Self, Up, parser::empty, It>>;
+parser::rules::fail<Ctx, Self, Up, It,
+    handler<Ctx, Self, Up, parser::empty, It>>
+fail();
 
-//! A rule that matches the end of input.
+//! Creates a rule that matches the end of input.
 /*! This rule does not consume any input, therefore it must not be used in an
  * unlimited rules::repeat, because it would create an endless loop.
  * \tparam Ctx a parsing context
  * \tparam Self a temporary context of this rule
  * \tparam Up a temporary context of a parent rule
- * \tparam It an iterator to the input sequence of terminal symbols */
+ * \tparam It an iterator to the input sequence of terminal symbols
+ * \return the created rule */
 template <class Ctx, class Self, class Up, ascii_iterator It>
-using eof = parser::rules::eof<Ctx, Self, Up, It,
-    handler<Ctx, Self, Up, parser::empty, It>>;
+parser::rules::eof<Ctx, Self, Up, It, handler<Ctx, Self, Up, parser::empty, It>>
+eof();
 
-//! A rule that matches any single terminal symbol.
-/*! \tparam Ctx a parsing context
- * \tparam Self a temporary context of this rule
- * \tparam Up a temporary context of a parent rule
- * \tparam It an iterator to the input sequence of terminal symbols */
-template <class Ctx, class Self, class Up, ascii_iterator It>
-using any = parser::rules::any<Ctx, Self, Up, It,
-    handler<Ctx, Self, Up, parser::empty, It>>;
-
-//! A rule that matches a specific single \c char.
-/*! \tparam Ctx a parsing context
- * \tparam Self a temporary context of this rule
- * \tparam Up a temporary context of a parent rule
- * \tparam It an iterator to the input sequence of terminal symbols */
-template <class Ctx, class Self, class Up, ascii_iterator It>
-using t = parser::rules::t<Ctx, Self, Up, It,
-    handler<Ctx, Self, Up, parser::empty, It>>;
-
-//! A rule that matches a \c char for which a predicate returns \c true
+//! Creates a rule that matches any single terminal symbol.
 /*! \tparam Ctx a parsing context
  * \tparam Self a temporary context of this rule
  * \tparam Up a temporary context of a parent rule
  * \tparam It an iterator to the input sequence of terminal symbols
- * \tparam Predicate a predicate for testing if a symbol matches */
+ * \return the created rule */
+template <class Ctx, class Self, class Up, ascii_iterator It>
+parser::rules::any<Ctx, Self, Up, It, handler<Ctx, Self, Up, parser::empty, It>>
+any();
+
+//! Creates a rule that matches a specific single \c char.
+/*! \tparam Ctx a parsing context
+ * \tparam Self a temporary context of this rule
+ * \tparam Up a temporary context of a parent rule
+ * \tparam It an iterator to the input sequence of terminal symbols
+ * \param[in] c the matching character
+ * \return the created rule */
+template <class Ctx, class Self, class Up, ascii_iterator It>
+parser::rules::t<Ctx, Self, Up, It, handler<Ctx, Self, Up, parser::empty, It>>
+t(char c)
+{
+    return {c};
+}
+
+//! Creates a rule that matches a \c char for which a predicate returns \c true
+/*! \tparam Ctx a parsing context
+ * \tparam Self a temporary context of this rule
+ * \tparam Up a temporary context of a parent rule
+ * \tparam It an iterator to the input sequence of terminal symbols
+ * \tparam Predicate a predicate for testing if a symbol matches
+ * \param[in] pred the predicate for testing input
+ * \return the created rule */
 template <class Ctx, class Self, class Up, ascii_iterator It,
     predicate<It> Predicate>
-using p = parser::rules::p<Ctx, Self, Up, It, Predicate,
-    handler<Ctx, Self, Up, parser::empty, It>>;
+parser::rules::p<Ctx, Self, Up, It, Predicate,
+    handler<Ctx, Self, Up, parser::empty, It>>
+p(Predicate pred)
+{
+    return {std::move(pred)};
+}
 
-//! A rule that matches a sequence of \c char.
+//! Creates a rule that matches a \c std::string.
 /*! It tests that a predicate returns \c true for corresponding \c char from
- * the input and from the stored \c std::string or \c std::string_view.
+ * the input and from the stored \c std::string.
  * \tparam Ctx a parsing context
  * \tparam Self a temporary context of this rule
  * \tparam Up a temporary context of a parent rule
- * \tparam It an iterator to the input sequence of terminal symbols
- * \tparam Seq a sequence of \c char; either \c std::string (a sequence stored
- * internally) or \c std::string_view (a reference to an externally stored
- * sequence
- * \tparam Predicate a predicate for testing if a symbol matches */
-template <class Ctx, class Self, class Up, ascii_iterator It, class Seq,
-    predicate2<It> Predicate>
-    requires (std::same_as<Seq, std::string> ||
-              std::same_as<Seq, std::string_view>)
-using str = parser::rules::str<Ctx, Self, Up, It, std::string_view, Predicate,
-    handler<Ctx, Self, Up, parser::empty, It>>;
+ * \tparam It an iterator to the input sequence of \c char
+ * \tparam Predicate a predicate for testing if a \c char matches; by default,
+ * an equality test is performed, a common alternative is case-insensitive
+ * matching by equal_ic.
+ * \param[in] seq a string to be matched; stored in the created rule object
+ * \param[in] pred the predicate for testing characters
+ * \return the created rule */
+template <class Ctx, class Self, class Up, ascii_iterator It,
+    predicate2<It> Predicate = std::equal_to<char>>
+parser::rules::str<Ctx, Self, Up, It, std::string, Predicate,
+    handler<Ctx, Self, Up, parser::empty, It>>
+str(std::string seq, Predicate pred = {})
+{
+    return {std::move(seq), std::move(pred)};
+}
+
+//! Creates a rule for case-insensitive matching of a \c std::string.
+/*! \tparam Ctx a parsing context
+ * \tparam Self a temporary context of this rule
+ * \tparam Up a temporary context of a parent rule
+ * \tparam It an iterator to the input sequence of \c char
+ * \param[in] seq a string to be matched; stored in the created rule object
+ * \return the created rule */
+template <class Ctx, class Self, class Up, ascii_iterator It>
+parser::rules::str<Ctx, Self, Up, It, std::string, equal_ic,
+    handler<Ctx, Self, Up, parser::empty, It>>
+str_ic(std::string seq)
+{
+    return {std::move(seq), equal_ic()};
+}
+
+//! Creates a rule that matches a \c std::string_view.
+/*! It tests that a predicate returns \c true for corresponding \c char from
+ * the input and from the stored \c std::string_view.
+ * \tparam Ctx a parsing context
+ * \tparam Self a temporary context of this rule
+ * \tparam Up a temporary context of a parent rule
+ * \tparam It an iterator to the input sequence of \c char
+ * \tparam Predicate a predicate for testing if a \c char matches; by default,
+ * an equality test is performed, a common alternative is case-insensitive
+ * matching by equal_ic.
+ * \param[in] seq a string view to be matched; the created rule object contains
+ * only a reference to an externally stored sequences of characters, which must
+ * not be destroyed during the lifetime of the created rule
+ * \param[in] pred the predicate for testing characters
+ * \return the created rule */
+template <class Ctx, class Self, class Up, ascii_iterator It,
+    predicate2<It> Predicate = std::equal_to<char>>
+parser::rules::str<Ctx, Self, Up, It, std::string_view, Predicate,
+    handler<Ctx, Self, Up, parser::empty, It>>
+str(std::string_view seq, Predicate pred = {})
+{
+    return {seq, std::move(pred)};
+}
+
+//! Creates a rule for case-insensitive matching of a \c std::string_view.
+/*! \tparam Ctx a parsing context
+ * \tparam Self a temporary context of this rule
+ * \tparam Up a temporary context of a parent rule
+ * \tparam It an iterator to the input sequence of \c char
+ * \param[in] seq a string view to be matched; the created rule object contains
+ * only a reference to an externally stored sequences of characters, which must
+ * not be destroyed during the lifetime of the created rule
+ * \return the created rule */
+template <class Ctx, class Self, class Up, ascii_iterator It>
+parser::rules::str<Ctx, Self, Up, It, std::string_view, equal_ic,
+    handler<Ctx, Self, Up, parser::empty, It>>
+str_ic(std::string_view seq)
+{
+    return {seq, equal_ic()};
+}
 
 } // namespace rules
 
