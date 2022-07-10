@@ -341,7 +341,12 @@ BOOST_DATA_TEST_CASE(str_ic_string_view, (std::vector<test::parsed>{
 /*! \file
  * \test \c repeat_0_1 -- test of threadscript::parser::rules::repeat,
  * \c threadscript::parser::operator-(), and
- * \c threadscript::parser::rule_base::operator[]() */
+ * \c threadscript::parser::rule_base::operator[](). This test verifies that
+ * some operators from threadscript::parser are usable with rules created by
+ * threadscript::parser_ascii::rules::factory. Based on this, we expect that
+ * other operators work as well, because they are tested in test_parser.cpp and
+ * a problem related to the factory would also occur for operators tested
+ * here. */
 //! \cond
 BOOST_DATA_TEST_CASE(repeat_0_1, (std::vector<test::repeated>{
                                       {"", true, 0, 1, 1},
@@ -363,86 +368,6 @@ BOOST_DATA_TEST_CASE(repeat_0_1, (std::vector<test::repeated>{
         cnt = n;
     };
     auto rule = (-f::t('a')[set_c])[set_cnt];
-    test_parse(sample, rule, false,
-               [&c, &cnt, &sample]() {
-                   if (sample.cnt == 0)
-                       BOOST_CHECK_EQUAL(c, '\0');
-                   else
-                       BOOST_CHECK_EQUAL(c, 'a');
-                   BOOST_CHECK_EQUAL(cnt, sample.cnt);
-               });
-}
-//! \endcond
-
-/*! \file
- * \test \c repeat_1_inf -- test of threadscript::parser::rules::repeat,
- * \c threadscript::parser::operator+(), and
- * \c threadscript::parser::rule_base::operator[]() */
-//! \cond
-BOOST_DATA_TEST_CASE(repeat_1_inf, (std::vector<test::repeated>{
-                                        {"", false, 0, 1, 1},
-                                        {"b", false, 0, 1, 1},
-                                        {"ba", false, 0, 1, 1},
-                                        {"a", true, 1, 1, 2},
-                                        {"ab", true, 1, 1, 2},
-                                        {"aa", true, 2, 1, 3},
-                                        {"aaaaa", true, 5, 1, 6},
-                                        {"aaaaab", true, 5, 1, 6},
-                                        {"aaabaab", true, 3, 1, 4},
-                                        {"aaa\naab", true, 3, 1, 4},
-                                  }))
-{
-    using f = tsra::factory<tsp::script_iterator<
-        typename decltype(sample.text)::const_iterator>>;
-    char c = '\0';
-    size_t cnt = 100;
-    auto set_c = [&c](auto&&, auto&&, auto&&, auto&&, auto&& it, auto&&) {
-        c = *it;
-    };
-    auto set_cnt = [&cnt](auto&&, auto&&, auto&&, auto&& n, auto&&, auto&&) {
-        cnt = n;
-    };
-    auto rule = (+f::t('a')[set_c])[set_cnt];
-    test_parse(sample, rule, false,
-               [&c, &cnt, &sample]() {
-                   if (sample.cnt == 0)
-                       BOOST_CHECK_EQUAL(c, '\0');
-                   else
-                       BOOST_CHECK_EQUAL(c, 'a');
-                   BOOST_CHECK_EQUAL(cnt, sample.cnt);
-               });
-}
-//! \endcond
-
-/*! \file
- * \test \c repeat_0_inf -- test of threadscript::parser::rules::repeat,
- * \c threadscript::parser::operator*(), and
- * \c threadscript::parser::rule_base::operator[]() */
-//! \cond
-BOOST_DATA_TEST_CASE(repeat_0_inf, (std::vector<test::repeated>{
-                                        {"", true, 0, 1, 1},
-                                        {"b", true, 0, 1, 1},
-                                        {"ba", true, 0, 1, 1},
-                                        {"a", true, 1, 1, 2},
-                                        {"ab", true, 1, 1, 2},
-                                        {"aa", true, 2, 1, 3},
-                                        {"aaaaa", true, 5, 1, 6},
-                                        {"aaaaab", true, 5, 1, 6},
-                                        {"aaabaab", true, 3, 1, 4},
-                                        {"aaa\naab", true, 3, 1, 4},
-                                  }))
-{
-    using f = tsra::factory<tsp::script_iterator<
-        typename decltype(sample.text)::const_iterator>>;
-    char c = '\0';
-    size_t cnt = 100;
-    auto set_c = [&c](auto&&, auto&&, auto&&, auto&&, auto&& it, auto&&) {
-        c = *it;
-    };
-    auto set_cnt = [&cnt](auto&&, auto&&, auto&&, auto&& n, auto&&, auto&&) {
-        cnt = n;
-    };
-    auto rule = (*f::t('a')[set_c])[set_cnt];
     test_parse(sample, rule, false,
                [&c, &cnt, &sample]() {
                    if (sample.cnt == 0)

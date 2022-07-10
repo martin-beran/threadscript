@@ -44,7 +44,7 @@ The full build with tests like the previous one, but repeated with all
 supported sanitizers:
 
     rm -rf build-sanitizer-*
-    ./make-everyting.sh
+    ./make-everything.sh
 
 ## Run
 

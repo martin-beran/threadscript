@@ -45,6 +45,14 @@
  * \c clang-tidy, \c test.
  *
  * \arg \c test -- Runs tests by command \c ctest.
+ *
+ * Building everything and running tests with all supported sanitizers can be
+ * invoked by
+ * \code
+ * rm -rf build-sanitizer-*
+ * ./make-everything.sh
+ * \endcode
+ *
  * \section Tests Tests
  *
  * Tests of C++ code are implemented using <a
