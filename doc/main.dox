@@ -52,6 +52,7 @@
  * rm -rf build-sanitizer-*
  * ./make-everything.sh
  * \endcode
+ * Any parameters passed to the script are forwarded to CMake.
  *
  * \section Tests Tests
  *

@@ -10,7 +10,7 @@ for s in OFF address leak thread undefined; do
     mkdir -p "$dir"
     (
         cd "$dir"
-        cmake -D SANITIZER="$s" ..
+        cmake -D SANITIZER="$s" "$@" ..
         if [ "$s" = OFF ]; then
             cmake --build . -t full
         else
