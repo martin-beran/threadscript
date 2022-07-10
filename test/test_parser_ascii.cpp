@@ -84,7 +84,6 @@ void test_parse(auto&& sample, auto&& rule, bool all, auto&& check)
     auto it = tsp::make_script_iterator(sample.text);
     tsp::context ctx;
     using it_t = typename decltype(it)::first_type;
-    BOOST_TEST_MESSAGE("result=" << sample.result);
     if (sample.result)
         BOOST_REQUIRE_NO_THROW(
             try {
@@ -105,6 +104,27 @@ void test_parse(auto&& sample, auto&& rule, bool all, auto&& check)
                 BOOST_CHECK_EQUAL(e.pos().column, sample.column);
                 return true;
             }));
+}
+
+void test_chars(auto&& chars, auto&& rule)
+{
+    for (int i = 0; i < 256; ++i) {
+        char c = char(i);
+        tsp::context ctx;
+        if (chars[i]) {
+            BOOST_CHECK_NO_THROW(
+                try {
+                    auto pos = ctx.parse(rule, &c, &c + 1);
+                    BOOST_CHECK(pos == &c + 1);
+                } catch (std::exception& e) {
+                    BOOST_TEST_INFO("i=" << i << " exception: " << e.what());
+                    throw;
+                });
+        } else {
+            BOOST_TEST_INFO("i=" << i);
+            BOOST_CHECK_THROW(ctx.parse(rule, &c, &c + 1), tsp::error<char*>);
+        }
+    }
 }
 
 } // namespace test
@@ -376,5 +396,89 @@ BOOST_DATA_TEST_CASE(repeat_0_1, (std::vector<test::repeated>{
                        BOOST_CHECK_EQUAL(c, 'a');
                    BOOST_CHECK_EQUAL(cnt, sample.cnt);
                });
+}
+//! \endcond
+
+/* \file
+ * \test \c nl -- test of threadscript::parser_ascii::rules::factory::nl() */
+//! \cond
+BOOST_AUTO_TEST_CASE(nl)
+{
+    std::array<bool, 256> chars{};
+    chars['\n'] = true;
+    test::test_chars(chars, tsra::factory<char*>::nl());
+}
+//! \endcond
+
+/* \file
+ * \test \c ws -- test of threadscript::parser_ascii::rules::factory::ws() */
+//! \cond
+BOOST_AUTO_TEST_CASE(ws)
+{
+    std::array<bool, 256> chars{};
+    chars[' '] = true;
+    chars['\t'] = true;
+    test::test_chars(chars, tsra::factory<char*>::ws());
+}
+//! \endcond
+
+/* \file
+ * \test \c lws -- test of threadscript::parser_ascii::rules::factory::lws() */
+//! \cond
+BOOST_AUTO_TEST_CASE(lws)
+{
+    std::array<bool, 256> chars{};
+    chars[' '] = true;
+    chars['\t'] = true;
+    chars['\v'] = true;
+    chars['\r'] = true;
+    chars['\n'] = true;
+    test::test_chars(chars, tsra::factory<char*>::lws());
+}
+//! \endcond
+
+/* \file
+ * \test \c print -- test of
+ * threadscript::parser_ascii::rules::factory::print() */
+//! \cond
+BOOST_AUTO_TEST_CASE(print)
+{
+    std::array<bool, 256> chars{};
+    for (int i = 32; i <= 126; ++i)
+        chars[i] = true;
+    test::test_chars(chars, tsra::factory<char*>::print());
+}
+//! \endcond
+
+/* \file
+ * \test \c digit -- test of
+ * threadscript::parser_ascii::rules::factory::digit() */
+//! \cond
+BOOST_AUTO_TEST_CASE(digit)
+{
+    std::array<bool, 256> chars{};
+    for (int i = '0'; i <= '9'; ++i)
+        chars[i] = true;
+    test::test_chars(chars, tsra::factory<char*>::digit());
+}
+//! \endcond
+
+/*! \file
+ * \test \c factory_uint -- test of
+ * threadscript::parser_ascii::rules::factory::uint() */
+//! \cond
+BOOST_DATA_TEST_CASE(factory_uint, (std::vector<test::parsed>{
+                                {"", false, 1, 1},
+                                {"A", false, 1, 1},
+                                {"0", true, 1, 2},
+                                {"12", true, 1, 3},
+                                {"1234567890", true, 1, 11},
+                                {"123 ", false, 1, 4, "Partial match"},
+                                }))
+{
+    using f = tsra::factory<tsp::script_iterator<
+        typename decltype(sample.text)::const_iterator>>;
+    auto rule = f::uint();
+    test_parse(sample, rule);
 }
 //! \endcond

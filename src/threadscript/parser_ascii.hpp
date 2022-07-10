@@ -192,6 +192,43 @@ public:
         return parser::rules::str<Ctx, Self, Up, It, std::string_view, equal_ic,
             handler<Ctx, Self, Up, parser::empty, It>>{seq, equal_ic()};
     }
+    //! Creates a rule for detecting a newline
+    /*! It detects LF (\c '\\n')
+     * \return the created rule */
+    static auto nl() {
+        return t('\n');
+    }
+    //! Creates a rule for detecting a single whitespace character
+    /*! It detects SPACE (<tt>' '</tt>), HT (<tt>'\t'</tt>).
+     * \return the created rule */
+    static auto ws() {
+        return p([](char c) { return c == ' ' || c == '\t'; });
+    }
+    //! Creates a rule for detecting a single character of multiline whitespace
+    /*! It detects SPACE, HT, VT, CR, LF.
+     * \return the created rule */
+    static auto lws() {
+        return p([](char c) {
+            return c == ' ' || c == '\t' || c == '\v' || c == '\r' || c == '\n';
+        });
+    }
+    //! Creates a rule for detecting ASCII printable characters
+    /*! It detects a single character with code between 32 and 126, inclusive
+     * \return the created rule */
+    static auto print() {
+        return p([](char c) { return c >= 32 && c <= 126; });
+    }
+    //! Creates a rule for detecting a single decimal digit
+    /*! \return the created rule */
+    static auto digit() {
+        return p([](char c) { return c >= '0' && c <= '9'; });
+    }
+    //! Creates a rule for detecting a decimal unsigned integer number
+    /*! It detects a nonempty sequence of digits.
+     * \return the created rule */
+    static auto uint() {
+        return +digit();
+    }
 };
 
 } // namespace rules
