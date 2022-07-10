@@ -274,9 +274,15 @@ public:
     void set_handler(Handler h) { hnd = std::move(h); }
     /*! \copydoc set_handler()
      * \return \c *this */
-    Rule& operator[](Handler h) {
+    Rule& operator[](Handler h) & {
         set_handler(std::move(h));
         return static_cast<Rule&>(*this);
+    }
+    /*! \copydoc set_handler()
+     * \return \c *this */
+    Rule&& operator[](Handler h) && {
+        set_handler(std::move(h));
+        return static_cast<Rule&&>(*this);
     }
     //! The stored handler called by attr().
     /*! The handler gets additional information created by make_info(). */
@@ -1537,7 +1543,13 @@ public:
     }
     /*! \copydoc set_child()
      * \return \c *this */
-    template <rule_cvref Rule> dyn& operator>>=(Rule&& r) {
+    template <rule_cvref Rule> dyn& operator>>=(Rule&& r) & {
+        set_child(std::forward<Rule>(r));
+        return *this;
+    }
+    /*! \copydoc set_child()
+     * \return \c *this */
+    template <rule_cvref Rule> dyn&& operator>>=(Rule&& r) && {
         set_child(std::forward<Rule>(r));
         return *this;
     }
