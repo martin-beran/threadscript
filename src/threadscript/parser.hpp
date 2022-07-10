@@ -188,7 +188,7 @@ struct up_type<T> {
 };
 
 //! Get a parent temporary context from a child temporary context
-/*! It \a T, with optional reference, \c const, or \c volatile removed, has
+/*! If \a T, with optional reference, \c const, or \c volatile removed, has
  * member type \c up_type, then it is returned. Otherwise, \a T is returned.
  * \tparam T a temporary context type of a rule */
 template <class T> using up_type_t = typename up_type<T>::type;

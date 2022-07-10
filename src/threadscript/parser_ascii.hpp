@@ -56,6 +56,74 @@ using handler = parser::default_handler<Ctx, Self, Up, Info, It>;
  * example, rules for end-of-line, whitespace, numbers, or identifiers.
  * \test in file test_parser_ascii.cpp */
 namespace rules {
+
+//! A rule that always fails.
+/*! \tparam Ctx a parsing context
+ * \tparam Self a temporary context of this rule
+ * \tparam Up a temporary context of a parent rule
+ * \tparam It an iterator to the input sequence */
+template <class Ctx, class Self, class Up, ascii_iterator It>
+using fail = parser::rules::fail<Ctx, Self, Up, It,
+    handler<Ctx, Self, Up, parser::empty, It>>;
+
+//! A rule that matches the end of input.
+/*! This rule does not consume any input, therefore it must not be used in an
+ * unlimited rules::repeat, because it would create an endless loop.
+ * \tparam Ctx a parsing context
+ * \tparam Self a temporary context of this rule
+ * \tparam Up a temporary context of a parent rule
+ * \tparam It an iterator to the input sequence of terminal symbols */
+template <class Ctx, class Self, class Up, ascii_iterator It>
+using eof = parser::rules::eof<Ctx, Self, Up, It,
+    handler<Ctx, Self, Up, parser::empty, It>>;
+
+//! A rule that matches any single terminal symbol.
+/*! \tparam Ctx a parsing context
+ * \tparam Self a temporary context of this rule
+ * \tparam Up a temporary context of a parent rule
+ * \tparam It an iterator to the input sequence of terminal symbols */
+template <class Ctx, class Self, class Up, ascii_iterator It>
+using any = parser::rules::any<Ctx, Self, Up, It,
+    handler<Ctx, Self, Up, parser::empty, It>>;
+
+//! A rule that matches a specific single \c char.
+/*! \tparam Ctx a parsing context
+ * \tparam Self a temporary context of this rule
+ * \tparam Up a temporary context of a parent rule
+ * \tparam It an iterator to the input sequence of terminal symbols */
+template <class Ctx, class Self, class Up, ascii_iterator It>
+using t = parser::rules::t<Ctx, Self, Up, It,
+    handler<Ctx, Self, Up, parser::empty, It>>;
+
+//! A rule that matches a \c char for which a predicate returns \c true
+/*! \tparam Ctx a parsing context
+ * \tparam Self a temporary context of this rule
+ * \tparam Up a temporary context of a parent rule
+ * \tparam It an iterator to the input sequence of terminal symbols
+ * \tparam Predicate a predicate for testing if a symbol matches */
+template <class Ctx, class Self, class Up, ascii_iterator It,
+    predicate<It> Predicate>
+using p = parser::rules::p<Ctx, Self, Up, It, Predicate,
+    handler<Ctx, Self, Up, parser::empty, It>>;
+
+//! A rule that matches a sequence of \c char.
+/*! It tests that a predicate returns \c true for corresponding \c char from
+ * the input and from the stored \c std::string or \c std::string_view.
+ * \tparam Ctx a parsing context
+ * \tparam Self a temporary context of this rule
+ * \tparam Up a temporary context of a parent rule
+ * \tparam It an iterator to the input sequence of terminal symbols
+ * \tparam Seq a sequence of \c char; either \c std::string (a sequence stored
+ * internally) or \c std::string_view (a reference to an externally stored
+ * sequence
+ * \tparam Predicate a predicate for testing if a symbol matches */
+template <class Ctx, class Self, class Up, ascii_iterator It, class Seq,
+    predicate2<It> Predicate>
+    requires (std::same_as<Seq, std::string> ||
+              std::same_as<Seq, std::string_view>)
+using str = parser::rules::str<Ctx, Self, Up, It, std::string_view, Predicate,
+    handler<Ctx, Self, Up, parser::empty, It>>;
+
 } // namespace rules
 
 } // namespace threadscript::parser_ascii
