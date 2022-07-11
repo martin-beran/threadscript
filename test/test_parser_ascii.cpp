@@ -505,7 +505,9 @@ BOOST_DATA_TEST_CASE(factory_uint, (std::vector<test::parsed>{
 
 /*! \file
  * \test \c expr -- tests of threadscript::parser_ascii::rules::factory::dyn()
- * and complex rules for evaluating arithmetic expressions */
+ * and complex rules for evaluating arithmetic expressions. This test
+ * demonstrates using nested recursive rules and passing data up from child to
+ * parent nodes of the parse tree. */
 //! \cond
 BOOST_DATA_TEST_CASE(expr, (std::vector<test::expression>{
                                 {"", std::nullopt, 1, 1},
@@ -523,52 +525,44 @@ BOOST_DATA_TEST_CASE(expr, (std::vector<test::expression>{
                                 {"2+3+", std::nullopt, 1, 4, "Partial match"},
                                 {"1+2*3+9*10*10", 907, 1, 14},
                                 {"(1+2)*(3+9)*10", 360, 1, 15},
+                                {"((1+2))*(3+9)*10+(1*(1+1*(1+2*(2*5))))",
+                                382, 1, 39},
                             }))
 {
     struct tmp {
-        bool copy_up = true;
+        void copy_up(tmp& up) {
+            if (i >= 1)
+                up.set(val[0]);
+        }
         std::array<unsigned, 2> val{};
         size_t i = 0;
         void set(unsigned v) { val.at(i++) = v; }
-        tmp& operator=(const tmp& o) {
-            val = o.val;
-            std::cout << "copy_up " << val[0] << " " << val[1] << std::endl;
-            i = o.i;
-            return *this;
-        }
     };
     auto set =
         [](auto&&, auto&&, auto&& up, auto&&, auto&& b, auto&& e) {
-            std::cout << "set " << std::string{b, e} << std::endl;
             up->set(std::stoul(std::string{b, e}));
         };
     auto add =
         [](auto&&, auto&& self, auto&& up, auto&&, auto&&, auto&&) {
-            std::cout << "add " << self.val[0] << "+" << self.val[1] << std::endl;
             up->set(self.val[0] + self.val[1]);
         };
     auto mul =
         [](auto&&, auto&& self, auto&& up, auto&&, auto&&, auto&&) {
-            std::cout << "mul " << self.val[0] << "*" << self.val[1] << std::endl;
             if (self.i == 1)
                 up->set(self.val[0]);
             else
                 up->set(self.val[0] * self.val[1]);
-        };
-    auto null =
-        [](auto&&, auto&&, auto&&, auto&&, auto&&, auto&&) {
-            std::cout << "null" << std::endl;
         };
     using f = tsra::factory<tsp::script_iterator<
         typename decltype(sample.text)::const_iterator>,
         tsp::context, tmp, tmp>;
     auto expression = f::dyn();
     auto factor =
-        f::uint()[set] | f::t('(')[null] >> expression >> f::t(')')[null];
+        f::uint()[set] | f::t('(') >> expression >> f::t(')');
     auto term = f::dyn();
-    auto term_ = (factor >> -(f::t('*')[null] >> term))[mul];
+    auto term_ = (factor >> -(f::t('*') >> term))[mul];
     term >>= term_;
-    auto expression_ = (term >> -(f::t('+')[null] >> expression))[add];
+    auto expression_ = (term >> -(f::t('+') >> expression))[add];
     expression >>= expression_;
     tmp value{};
     auto check = [&sample, &value]() {

@@ -205,7 +205,7 @@ public:
         return t('\n');
     }
     //! Creates a rule for detecting a single whitespace character
-    /*! It detects SPACE (<tt>' '</tt>), HT (<tt>'\t'</tt>).
+    /*! It detects SPACE (<tt>' '</tt>), HT (<tt>'\\t'</tt>).
      * \return the created rule */
     static auto ws() {
         return p([](char c) { return c == ' ' || c == '\t'; });

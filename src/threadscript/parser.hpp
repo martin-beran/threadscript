@@ -242,8 +242,9 @@ public:
      * \arg make_info() extracts information about the parsing result from
      * temporary private data into a handler argument
      * \arg attr() calls the registered handler and passes to it a result of
-     * parsing; if no handler is registered and \a self has member \c copy_up
-     * with value \c true, attr() copies \a self to \a up
+     * parsing; if no handler is registered, \a up is not \c nullptr, and \a
+     * self has member function \c copy_up taking a \a Up& as a parameter,
+     * attr() calls it
      * \arg parse_internal() destroys temporary private data and a temporary
      * context
      * \arg if the rule does not match, then attr(), make_info(), and the
@@ -387,9 +388,9 @@ protected:
                 hnd(ctx, self, up,
                     static_cast<const Rule*>(this)->make_info(tmp), begin, end);
             else
-                if constexpr (requires { self.copy_up; })
-                    if (self.copy_up && up)
-                        *up = self;
+                if constexpr (requires { self.copy_up(*up); })
+                    if (up)
+                        self.copy_up(*up);
         } else
             hnd(ctx, self, up, static_cast<const Rule*>(this)->make_info(tmp),
                 begin, end);
