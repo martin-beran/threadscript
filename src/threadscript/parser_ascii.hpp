@@ -192,6 +192,12 @@ public:
         return parser::rules::str<Ctx, Self, Up, It, std::string_view, equal_ic,
             handler<Ctx, Self, Up, parser::empty, It>>{seq, equal_ic()};
     }
+    //! Creates parser::rules:dyn
+    /*! \return the created rule */
+    static auto dyn() {
+        return parser::rules::dyn<Ctx, Self, Up, It,
+            handler<Ctx, Self, Up, parser::empty, It>>{};
+    }
     //! Creates a rule for detecting a newline
     /*! It detects LF (\c '\\n')
      * \return the created rule */

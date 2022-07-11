@@ -242,7 +242,8 @@ public:
      * \arg make_info() extracts information about the parsing result from
      * temporary private data into a handler argument
      * \arg attr() calls the registered handler and passes to it a result of
-     * parsing
+     * parsing; if no handler is registered and \a self has member \c copy_up
+     * with value \c true, attr() copies \a self to \a up
      * \arg parse_internal() destroys temporary private data and a temporary
      * context
      * \arg if the rule does not match, then attr(), make_info(), and the
@@ -385,6 +386,10 @@ protected:
             if (bool(hnd))
                 hnd(ctx, self, up,
                     static_cast<const Rule*>(this)->make_info(tmp), begin, end);
+            else
+                if constexpr (requires { self.copy_up; })
+                    if (self.copy_up && up)
+                        *up = self;
         } else
             hnd(ctx, self, up, static_cast<const Rule*>(this)->make_info(tmp),
                 begin, end);
@@ -1117,7 +1122,7 @@ protected:
             case rule_result::fail_final_alt:
                 if (i >= min) {
                     tmp = i;
-                    return {rule_result::ok, pos};
+                    return {rule_result::ok, begin};
                 } else
                     return {rule_result::fail, pos};
             case rule_result::ok:

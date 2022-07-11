@@ -72,6 +72,24 @@ std::ostream& operator<<(std::ostream& os, const repeated& v)
     return os;
 }
 
+struct expression: input {
+    expression(std::string text, std::optional<unsigned> result, size_t line,
+               size_t column, std::string error = "Parse error"):
+        input(std::move(text), line, column, std::move(error)),
+        result(result) {}
+    std::optional<unsigned> result;
+};
+
+std::ostream& operator<<(std::ostream& os, const expression& v)
+{
+    os << static_cast<const input&>(v) << ':';
+    if (v.result)
+        os << *v.result;
+    else
+        os << "FAIL";
+    return os;
+}
+
 template <class Sample, class Rule>
 void test_parse(Sample&& sample, Rule&& rule, bool all = true)
 {
@@ -79,7 +97,9 @@ void test_parse(Sample&& sample, Rule&& rule, bool all = true)
                [](){});
 }
 
-void test_parse(auto&& sample, auto&& rule, bool all, auto&& check)
+template <class Up = tsp::empty>
+void test_parse(auto&& sample, auto&& rule, bool all, auto&& check,
+                Up* up = nullptr)
 {
     auto it = tsp::make_script_iterator(sample.text);
     tsp::context ctx;
@@ -87,7 +107,7 @@ void test_parse(auto&& sample, auto&& rule, bool all, auto&& check)
     if (sample.result)
         BOOST_REQUIRE_NO_THROW(
             try {
-                auto pos = ctx.parse(rule, it, all);
+                auto pos = ctx.parse(rule, up, it, all);
                 BOOST_CHECK_EQUAL(pos.line, sample.line);
                 BOOST_CHECK_EQUAL(pos.column, sample.column);
                 check();
@@ -96,7 +116,7 @@ void test_parse(auto&& sample, auto&& rule, bool all, auto&& check)
                 throw;
             });
     else
-        BOOST_CHECK_EXCEPTION(ctx.parse(rule, it),
+        BOOST_CHECK_EXCEPTION(ctx.parse(rule, up, it, all),
             tsp::error<it_t>,
             ([it, &sample](auto&& e) {
                 BOOST_CHECK_EQUAL(e.what(), sample.error);
@@ -480,5 +500,80 @@ BOOST_DATA_TEST_CASE(factory_uint, (std::vector<test::parsed>{
         typename decltype(sample.text)::const_iterator>>;
     auto rule = f::uint();
     test_parse(sample, rule);
+}
+//! \endcond
+
+/*! \file
+ * \test \c expr -- tests of threadscript::parser_ascii::rules::factory::dyn()
+ * and complex rules for evaluating arithmetic expressions */
+//! \cond
+BOOST_DATA_TEST_CASE(expr, (std::vector<test::expression>{
+                                {"", std::nullopt, 1, 1},
+                                {"1", 1, 1, 2},
+                                {"(1)", 1, 1, 4},
+                                {"(1", std::nullopt, 1, 3},
+                                {"1)", std::nullopt, 1, 2, "Partial match"},
+                                {"()", std::nullopt, 1, 2},
+                                {"2*3", 6, 1, 4},
+                                {"2*", std::nullopt, 1, 2, "Partial match"},
+                                {"2+3", 5, 1, 4},
+                                {"2*3*10", 60, 1, 7},
+                                {"2*3*", std::nullopt, 1, 4, "Partial match"},
+                                {"2+3+10", 15, 1, 7},
+                                {"2+3+", std::nullopt, 1, 4, "Partial match"},
+                                {"1+2*3+9*10*10", 907, 1, 14},
+                                {"(1+2)*(3+9)*10", 360, 1, 15},
+                            }))
+{
+    struct tmp {
+        bool copy_up = true;
+        std::array<unsigned, 2> val{};
+        size_t i = 0;
+        void set(unsigned v) { val.at(i++) = v; }
+        tmp& operator=(const tmp& o) {
+            val = o.val;
+            std::cout << "copy_up " << val[0] << " " << val[1] << std::endl;
+            i = o.i;
+            return *this;
+        }
+    };
+    auto set =
+        [](auto&&, auto&&, auto&& up, auto&&, auto&& b, auto&& e) {
+            std::cout << "set " << std::string{b, e} << std::endl;
+            up->set(std::stoul(std::string{b, e}));
+        };
+    auto add =
+        [](auto&&, auto&& self, auto&& up, auto&&, auto&&, auto&&) {
+            std::cout << "add " << self.val[0] << "+" << self.val[1] << std::endl;
+            up->set(self.val[0] + self.val[1]);
+        };
+    auto mul =
+        [](auto&&, auto&& self, auto&& up, auto&&, auto&&, auto&&) {
+            std::cout << "mul " << self.val[0] << "*" << self.val[1] << std::endl;
+            if (self.i == 1)
+                up->set(self.val[0]);
+            else
+                up->set(self.val[0] * self.val[1]);
+        };
+    auto null =
+        [](auto&&, auto&&, auto&&, auto&&, auto&&, auto&&) {
+            std::cout << "null" << std::endl;
+        };
+    using f = tsra::factory<tsp::script_iterator<
+        typename decltype(sample.text)::const_iterator>,
+        tsp::context, tmp, tmp>;
+    auto expression = f::dyn();
+    auto factor =
+        f::uint()[set] | f::t('(')[null] >> expression >> f::t(')')[null];
+    auto term = f::dyn();
+    auto term_ = (factor >> -(f::t('*')[null] >> term))[mul];
+    term >>= term_;
+    auto expression_ = (term >> -(f::t('+')[null] >> expression))[add];
+    expression >>= expression_;
+    tmp value{};
+    auto check = [&sample, &value]() {
+        BOOST_CHECK_EQUAL(sample.result.value(), value.val[0]);
+    };
+    test_parse(sample, expression, true, check, &value);
 }
 //! \endcond
