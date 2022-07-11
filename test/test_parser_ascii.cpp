@@ -538,27 +538,23 @@ BOOST_DATA_TEST_CASE(expr, (std::vector<test::expression>{
         size_t i = 0;
         void set(unsigned v) { val.at(i++) = v; }
     };
-    auto set =
-        [](auto&&, auto&&, auto&& up, auto&&, auto&& b, auto&& e) {
-            up->set(std::stoul(std::string{b, e}));
-        };
-    auto add =
-        [](auto&&, auto&& self, auto&& up, auto&&, auto&&, auto&&) {
-            up->set(self.val[0] + self.val[1]);
-        };
-    auto mul =
-        [](auto&&, auto&& self, auto&& up, auto&&, auto&&, auto&&) {
-            if (self.i == 1)
-                up->set(self.val[0]);
-            else
-                up->set(self.val[0] * self.val[1]);
-        };
+    auto set = [](auto&&, auto&&, auto&& up, auto&&, auto&& b, auto&& e) {
+        up->set(std::stoul(std::string{b, e}));
+    };
+    auto add = [](auto&&, auto&& self, auto&& up, auto&&, auto&&, auto&&) {
+        up->set(self.val[0] + self.val[1]);
+    };
+    auto mul = [](auto&&, auto&& self, auto&& up, auto&&, auto&&, auto&&) {
+        if (self.i == 1)
+            up->set(self.val[0]);
+        else
+            up->set(self.val[0] * self.val[1]);
+    };
     using f = tsra::factory<tsp::script_iterator<
         typename decltype(sample.text)::const_iterator>,
         tsp::context, tmp, tmp>;
     auto expression = f::dyn();
-    auto factor =
-        f::uint()[set] | f::t('(') >> expression >> f::t(')');
+    auto factor = f::uint()[set] | f::t('(') >> expression >> f::t(')');
     auto term = f::dyn();
     auto term_ = (factor >> -(f::t('*') >> term))[mul];
     term >>= term_;
