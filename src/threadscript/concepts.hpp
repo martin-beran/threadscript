@@ -1,7 +1,7 @@
 #pragma once
 
 /*! \file
- * \brief Various concept used in ThreadScript sources
+ * \brief Various concepts used in ThreadScript sources
  */
 
 #include <memory>

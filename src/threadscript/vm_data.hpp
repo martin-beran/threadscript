@@ -11,6 +11,7 @@
 #include "threadscript/concepts.hpp"
 #include "threadscript/configure.hpp"
 #include "threadscript/exception.hpp"
+#include "threadscript/template.hpp"
 
 #include <memory>
 #include <optional>
@@ -144,8 +145,13 @@ private:
  * \tparam T the type of the internal stored \ref data
  * \tparam Name the type name used by the ThreadScript engine
  * \tparam A the allocator to be used by \ref data (if needed).
- * \test in file test_vm_data.cpp */
-template <class Derived, class T, const char* Name, impl::allocator A>
+ * \test in file test_vm_data.cpp
+ * \note Although a string literal can be used directly as argument \a Name, we
+ * define constants instead (e.g., name_value_bool), because the same argument
+ * value is used in explicit instantiation in threadscript.hpp and
+ * threadscript.cpp. Using constant variable names instead of literals reduces
+ * the probability of a typo. */
+template <class Derived, class T, str_literal Name, impl::allocator A>
 class basic_typed_value: public basic_value<A> {
 protected:
     struct tag {}; //!< Used to distiguish between constructors

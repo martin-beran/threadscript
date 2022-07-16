@@ -27,21 +27,21 @@ void basic_value<A>::set_mt_safe()
 
 /*** basic_typed_value ******************************************************/
 
-template <class Derived, class T, const char* Name, impl::allocator A>
+template <class Derived, class T, str_literal Name, impl::allocator A>
 basic_typed_value<Derived, T, Name, A>::basic_typed_value(tag, const A& alloc):
     basic_typed_value(tag2{}, alloc)
 {
 }
 
 //! \cond
-template <class Derived, class T, const char* Name, impl::allocator A>
+template <class Derived, class T, str_literal Name, impl::allocator A>
 template <class Alloc> requires impl::uses_allocator<T, Alloc>
 basic_typed_value<Derived, T, Name, A>::basic_typed_value(tag2, const Alloc& a):
     data{a}
 {
 }
 
-template <class Derived, class T, const char* Name, impl::allocator A>
+template <class Derived, class T, str_literal Name, impl::allocator A>
 template <class Alloc> requires (!impl::uses_allocator<T, Alloc>)
 basic_typed_value<Derived, T, Name, A>::basic_typed_value(tag2, const Alloc&):
     data{}
@@ -49,7 +49,7 @@ basic_typed_value<Derived, T, Name, A>::basic_typed_value(tag2, const Alloc&):
 }
 //! \endcond
 
-template <class Derived, class T, const char* Name, impl::allocator A>
+template <class Derived, class T, str_literal Name, impl::allocator A>
 auto basic_typed_value<Derived, T, Name, A>::shallow_copy_impl(const A& alloc,
                                                     std::optional<bool> mt_safe)
     const -> typename basic_value<A>::value_ptr
@@ -61,7 +61,7 @@ auto basic_typed_value<Derived, T, Name, A>::shallow_copy_impl(const A& alloc,
     return p;
 }
 
-template <class Derived, class T, const char* Name, impl::allocator A>
+template <class Derived, class T, str_literal Name, impl::allocator A>
 std::string_view basic_typed_value<Derived, T, Name, A>::type_name()
     const noexcept
 {
