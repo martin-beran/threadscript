@@ -147,8 +147,8 @@ private:
  * \tparam A the allocator to be used by \ref data (if needed).
  * \test in file test_vm_data.cpp
  * \note Although a string literal can be used directly as argument \a Name, we
- * define constants instead (e.g., name_value_bool), because the same argument
- * value is used in explicit instantiation in threadscript.hpp and
+ * define constants instead (e.g., impl::name_value_bool), because the same
+ * argument value is used in explicit instantiation in threadscript.hpp and
  * threadscript.cpp. Using constant variable names instead of literals reduces
  * the probability of a typo. */
 template <class Derived, class T, str_literal Name, impl::allocator A>
