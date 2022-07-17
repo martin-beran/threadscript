@@ -8,7 +8,7 @@
  * script representation object threadscript::basic_script, independently of
  * its template parameter (an allocator). Implementation template
  * basic_code_builder_impl of the interface, dependent on the allocator, is
- * defined in code_impl.hpp.
+ * defined in code_builder_impl.hpp.
  */
 
 #include "threadscript/configure.hpp"

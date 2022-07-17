@@ -78,6 +78,12 @@ extern template class basic_typed_value<basic_value_native_fun<allocator_any>,
     allocator_any>;
 extern template class basic_value_native_fun<allocator_any>;
 
+/*** threadscript/code_builder_impl.hpp **************************************/
+
+//! The basic_script_builder_impl using the configured allocator
+using script_builder_impl = basic_script_builder_impl<allocator_any>;
+extern template class basic_script_builder_impl<allocator_any>;
+
 /*** threadscript/symbol_table.hpp *******************************************/
 
 //! The symbol_table using the configured allocator

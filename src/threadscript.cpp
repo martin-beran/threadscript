@@ -47,6 +47,10 @@ template class basic_typed_value<basic_value_native_fun<allocator_any>,
     allocator_any>;
 template class basic_value_native_fun<allocator_any>;
 
+/*** threadscript/code_builder_impl.hpp **************************************/
+
+template class basic_script_builder_impl<allocator_any>;
+
 /*** threadscript/symbol_table.hpp *******************************************/
 
 template class basic_symbol_table<allocator_any>;
