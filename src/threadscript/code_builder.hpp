@@ -1,4 +1,4 @@
-#pragma
+#pragma once
 
 /*! \file
  * \brief A non-template interface to code.hpp
@@ -16,15 +16,15 @@
 namespace threadscript {
 
 //! The interface to classes able to build parsed script representations
-/*! An implemetation of this abstract interface class defines functions create
- * a basic_script objects and populate it by basic_code_node objects, using the
- * allocator type of the instance of template basic_script. */
+/*! An implementation of this abstract interface class defines functions that
+ * create a basic_script object and populate it by basic_code_node objects,
+ * using the allocator type of the instance of template basic_script. */
 class script_builder {
 public:
     //! An opaque handle to a script node
     class node_handle {
         //! Type-erased basic_script::node_ptr
-        std::shared_ptr<void> ptr;
+        std::shared_ptr<const void> ptr;
         friend class script_builder; //!< Needs access to \ref ptr
     };
     //! An opaque handle to a value
@@ -57,11 +57,12 @@ public:
     virtual node_handle add_node(const node_handle& parent,
                                  const file_location& location,
                                  std::string_view name,
-                                 const value_handle& value = value_handle{})
-        = 0;
+                                 const value_handle& value = {}) = 0;
     //! Creates a null value
     /*! \return basic_value_ptr with value \c nullptr */
-    virtual value_handle create_value_null() = 0;
+    value_handle create_value_null() {
+        return value_handle{};
+    }
     //! Creates a Boolean value
     /*! \param[in] val the value stored in the result
      * \return basic_value_ptr pointing to basic_value_bool */
@@ -83,13 +84,22 @@ protected:
     //! Provides access to a script node for this and derived classes.
     /*! \param[in] hnd a handle to a node
      * \return type-erased basic_script::node_ptr */
-    std::any& get(node_handle& hnd) noexcept {
+    static std::shared_ptr<const void>& get(node_handle& hnd) noexcept {
+        return hnd.ptr;
+    }
+    //! \copydoc get(node_handle&)
+    static const std::shared_ptr<const void>&
+    get(const node_handle& hnd) noexcept {
         return hnd.ptr;
     }
     //! Provides access to a value for this and derived classes.
     /*! \param[in] hnd a handle to a value
      * \return type-erased basic_value::value_ptr */
-    std::any& get(value_handle& hnd) noexcept {
+    static std::shared_ptr<void>& get(value_handle& hnd) noexcept {
+        return hnd.ptr;
+    }
+    //! \copydoc get(value_handle&)
+    static const std::shared_ptr<void>& get(const value_handle& hnd) noexcept {
         return hnd.ptr;
     }
 };

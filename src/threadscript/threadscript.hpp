@@ -8,6 +8,7 @@
 
 #include "threadscript/configure.hpp"
 #include "threadscript/code.hpp"
+#include "threadscript/code_builder_impl.hpp"
 #include "threadscript/symbol_table.hpp"
 #include "threadscript/virtual_machine.hpp"
 #include "threadscript/vm_data.hpp"
