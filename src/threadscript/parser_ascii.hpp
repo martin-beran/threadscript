@@ -105,13 +105,13 @@ template <ascii_iterator It, class Ctx = parser::context,
     class Self = parser::empty, class Up = parser::empty>
 class factory {
 public:
-    //! Creates parser::rules::fail
+    //! Creates parser::rules::fail, which always fails.
     /*! \return the created rule */
     static auto fail() {
         return parser::rules::fail<Ctx, Self, Up, It,
             handler<Ctx, Self, Up, parser::empty, It>>{};
     }
-    //! Creates parser::rules::eof
+    //! Creates parser::rules::eof, which matches the end of input.
     /*! This rule does not consume any input, therefore it must not be used in
      * an unlimited rules::repeat, because it would create an endless loop.
      * \return the created rule */
@@ -119,20 +119,20 @@ public:
         return parser::rules::eof<Ctx, Self, Up, It,
             handler<Ctx, Self, Up, parser::empty, It>>{};
     }
-    //! Creates parser::rules::any
+    //! Creates parser::rules::any, which matches any single character.
     /*! \return the created rule */
     static auto any() {
         return parser::rules::any<Ctx, Self, Up, It,
             handler<Ctx, Self, Up, parser::empty, It>>{};
     }
-    //! Creates parser::rules::t
+    //! Creates parser::rules::t, which matches the single specified character.
     /*! \param[in] c the matching character
      * \return the created rule */
     static auto t(char c) {
         return parser::rules::t<Ctx, Self, Up, It,
             handler<Ctx, Self, Up, parser::empty, It>>{c};
     }
-    //! Creates parser::rules::p
+    //! Creates parser::rules::p, which tests a character by a predicate.
     /*! \tparam Predicate a predicate for testing if a symbol matches
      * \param[in] pred the predicate for testing input
      * \return the created rule */
@@ -141,9 +141,9 @@ public:
         return parser::rules::p<Ctx, Self, Up, It, Predicate,
             handler<Ctx, Self, Up, parser::empty, It>>{std::move(pred)};
     }
-    //! Creates parser::rules::str
-    /*! It tests that a predicate returns \c true for corresponding \c char
-     * from the input and from the stored \c std::string.
+    //! Creates parser::rules::str, which compares characters by a predicate.
+    /*! It tests that a predicate returns \c true for every corresponding \c
+     * char from the input and from the stored \c std::string.
      * \tparam Predicate a predicate for testing if a \c char matches; by
      * default, an equality test is performed, a common alternative is
      * case-insensitive matching by equal_ic.
@@ -156,17 +156,19 @@ public:
             handler<Ctx, Self, Up, parser::empty, It>>{std::move(seq),
                 std::move(pred)};
     }
-    //! Creates parser::rules::str
-    /*! \param[in] seq a string to be matched; stored in the created rule object
+    //! Creates parser::rules::str, which compares characters by a predicate.
+    /*! It works like str<Predicate>(std::string, Predicate), but performs
+     * case-insensitive comparison of characters by equal_ic.
+     * \param[in] seq a string to be matched; stored in the created rule object
      * \return the created rule */
     static auto str_ic(std::string seq) {
         return parser::rules::str<Ctx, Self, Up, It, std::string, equal_ic,
             handler<Ctx, Self, Up, parser::empty, It>>{std::move(seq),
                 equal_ic()};
     }
-    //! Creates parser::rules::str
-    /*! It tests that a predicate returns \c true for corresponding \c char from
-     * the input and from the stored \c std::string_view.
+    //! Creates parser::rules::str, which compares characters by a predicate.
+    /*! It tests that a predicate returns \c true for every corresponding \c
+     * char from the input and from the stored \c std::string_view.
      * \tparam Predicate a predicate for testing if a \c char matches; by
      * default, an equality test is performed, a common alternative is
      * case-insensitive matching by equal_ic.
@@ -182,8 +184,10 @@ public:
             std::string_view, Predicate,
             handler<Ctx, Self, Up, parser::empty, It>>{seq, std::move(pred)};
     }
-    //! Creates parser::rules::str
-    /*! \param[in] seq a string view to be matched; the created rule object
+    //! Creates parser::rules::str, which compares characters by a predicate.
+    /*! It works like str<Predicate>(std::string_view, Predicate), but performs
+     * case-insensitive comparison of characters by equal_ic.
+     * \param[in] seq a string view to be matched; the created rule object
      * contains only a reference to an externally stored sequences of
      * characters, which must not be destroyed during the lifetime of the
      * created rule
@@ -192,7 +196,7 @@ public:
         return parser::rules::str<Ctx, Self, Up, It, std::string_view, equal_ic,
             handler<Ctx, Self, Up, parser::empty, It>>{seq, equal_ic()};
     }
-    //! Creates parser::rules:dyn
+    //! Creates parser::rules::dyn, which provides a dynamic child rule.
     /*! \return the created rule */
     static auto dyn() {
         return parser::rules::dyn<Ctx, Self, Up, It,
@@ -234,6 +238,28 @@ public:
      * \return the created rule */
     static auto uint() {
         return +digit();
+    }
+    //! Creates a rule for detecting a single uppercase letter
+    /*! \return the created rule */
+    static auto upper() {
+        return p([](char c) { return c >= 'A' && c <= 'Z'; });
+    }
+    //! Creates a rule for detecting a single lowercase letter
+    /*! \return the created rule */
+    static auto lower() {
+        return p([](char c) { return c >= 'a' && c <= 'z'; });
+    }
+    //! Creates a rule for detecting a single letter (upper or lowercase)
+    /*! \return the created rule */
+    static auto letter() {
+        return upper() | lower();
+    }
+    //! Creates a rule for detecting an identifier.
+    /*! An identifier is a nonempty sequence of letters, digits, and
+     * underscores that does not start with a digit.
+     * \return the created rule */
+    static auto id() {
+        return (letter() | t('_')) >> *(letter() | digit() | t('_'));
     }
 };
 

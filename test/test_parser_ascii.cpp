@@ -503,6 +503,79 @@ BOOST_DATA_TEST_CASE(factory_uint, (std::vector<test::parsed>{
 }
 //! \endcond
 
+/* \file
+ * \test \c upper -- test of
+ * threadscript::parser_ascii::rules::factory::upper() */
+//! \cond
+BOOST_AUTO_TEST_CASE(upper)
+{
+    std::array<bool, 256> chars{};
+    for (int i = 'A'; i <= 'Z'; ++i)
+        chars[i] = true;
+    test::test_chars(chars, tsra::factory<char*>::upper());
+}
+//! \endcond
+
+/* \file
+ * \test \c lower -- test of
+ * threadscript::parser_ascii::rules::factory::lower() */
+//! \cond
+BOOST_AUTO_TEST_CASE(lower)
+{
+    std::array<bool, 256> chars{};
+    for (int i = 'a'; i <= 'z'; ++i)
+        chars[i] = true;
+    test::test_chars(chars, tsra::factory<char*>::lower());
+}
+//! \endcond
+
+/* \file
+ * \test \c letter -- test of
+ * threadscript::parser_ascii::rules::factory::letter() */
+//! \cond
+BOOST_AUTO_TEST_CASE(letter)
+{
+    std::array<bool, 256> chars{};
+    for (int i = 'A'; i <= 'Z'; ++i)
+        chars[i] = true;
+    for (int i = 'a'; i <= 'z'; ++i)
+        chars[i] = true;
+    test::test_chars(chars, tsra::factory<char*>::letter());
+}
+//! \endcond
+
+/*! \file
+ * \test \c id -- test of * threadscript::parser_ascii::rules::factory::id() */
+//! \cond
+BOOST_DATA_TEST_CASE(id, (std::vector<test::parsed>{
+                                {"", false, 1, 1},
+                                {"A", true, 1, 2},
+                                {"b", true, 1, 2},
+                                {"_", true, 1, 2},
+                                {"0", false, 1, 1},
+                                {"12", false, 1, 1},
+                                {"X0", true, 1, 3},
+                                {"Y12", true, 1, 4},
+                                {"x0", true, 1, 3},
+                                {"y12", true, 1, 4},
+                                {"_0", true, 1, 3},
+                                {"_12", true, 1, 4},
+                                {"ABC", true, 1, 4},
+                                {"Abc", true, 1, 4},
+                                {"abcd", true, 1, 5},
+                                {"_xy", true, 1, 4},
+                                {"a1b2c3d45", true, 1, 10},
+                                {"a1_b2_c3d45_", true, 1, 13},
+                                {"A_b_1 ", false, 1, 6, "Partial match"},
+                                }))
+{
+    using f = tsra::factory<tsp::script_iterator<
+        typename decltype(sample.text)::const_iterator>>;
+    auto rule = f::id();
+    test_parse(sample, rule);
+}
+//! \endcond
+
 /*! \file
  * \test \c expr -- tests of threadscript::parser_ascii::rules::factory::dyn()
  * and complex rules for evaluating arithmetic expressions. This test
