@@ -12,6 +12,7 @@
  */
 
 #include "threadscript/configure.hpp"
+#include "threadscript/exception.hpp"
 
 namespace threadscript {
 
@@ -38,7 +39,8 @@ public:
     //! A virtual destructor, because this class is polymorphic
     virtual ~script_builder() = default;
     //! Creates a new script object and stores it internally.
-    /*! \param[in] file a script file name, it will be stored in the created
+    /*! It may be called only once, the second call cases a failed assert.
+     * \param[in] file a script file name, it will be stored in the created
      * script object */
     virtual void create_script(std::string_view file) = 0;
     //! Adds a new node to the script previously created by create_script()

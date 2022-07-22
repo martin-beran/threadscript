@@ -8,7 +8,14 @@
  * parser on a source file.
  */
 
+#include <map>
+#include <memory>
+#include <ranges>
+#include <string_view>
+
 namespace threadscript {
+
+class script_builder;
 
 //! The base class of parsers declared in namespace threadscript::syntax
 /*! It is an abstract class. */
@@ -33,14 +40,22 @@ public:
      * \throw exception::parse_error if parsing fails */
     void parse(script_builder& builder, std::string_view src,
                std::string_view file = {});
+    //! Parses a script file
+    /*! It reads the \a file and passes it to parse().
+     * \param[in,out] builder a builder object used to create the internal
+     * representation of the parsed script
+     * \param[in] file the file name
+     * \throw exception::parse_error if parsing fails
+     * \throw std::ios_base::failure if reading of \a file fails */
+    void parse_file(script_builder& builder, std::string_view file);
 protected:
     //! Invokes the parser.
     /*! It must be overriden in each class derived from syntax_base and it must
      * run a parser for the selected syntax.
      * \param[in] builder passed by parse()
-     * \param[in] file passed by parse()
+     * \param[in] src passed by parse()
      * \throw exception::parse_error if parsing fails */
-    virtual void run_parser(script_builder& builder, std::string_view file) = 0;
+    virtual void run_parser(script_builder& builder, std::string_view src) = 0;
 };
 
 //! The interface for creating a running a selected parser
@@ -48,16 +63,23 @@ protected:
  * and to create its instance. */
 class syntax_factory {
 public:
+    //! The name of parser syntax::canon
+    static constexpr std::string_view syntax_canon{"canon"};
     //! Creates a parser by name
-    /*!
-     * \param[in] syntax the parser name
+    /*! \param[in] syntax the parser name
      * \return a new instance of the parser; \c nullptr if \a syntax is not
      * registered in _registry */
     static std::unique_ptr<syntax_base> create(std::string_view syntax);
+    //! Gets all known syntax names
+    /*! \return a sorted view containing names registered in _registry */
+    static std::ranges::view auto names() {
+        return _registry | std::views::transform([](auto&& r){return r.first;});
+    }
 private:
+    //! A function to create a parser object
+    using make_fun = std::unique_ptr<syntax_base>(*)();
     //! The map from syntax names to parser classes
-    static std::map<std::string_view, std::unique_ptr<syntax_base>(*)()>
-        _registry;
+    static std::map<std::string_view, make_fun> _registry;
 };
 
 } // namespace threadscript

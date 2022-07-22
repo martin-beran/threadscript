@@ -75,6 +75,7 @@ auto basic_script_builder_impl<A>::add_node(const node_handle& parent,
 template <impl::allocator A>
 void basic_script_builder_impl<A>::create_script(std::string_view file)
 {
+    assert(!_script);
     _script = basic_script<A>::create(alloc, file);
 }
 

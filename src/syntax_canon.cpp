@@ -9,7 +9,7 @@ namespace threadscript::syntax {
 
 /*** canon *******************************************************************/
 
-void canon::run_parser(script_builder& builder, std::string_view file)
+void canon::run_parser(script_builder& /*builder*/, std::string_view /*src*/)
 {
     // TODO
 }

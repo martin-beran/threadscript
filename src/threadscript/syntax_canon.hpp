@@ -15,7 +15,7 @@ namespace threadscript::syntax {
 /*! \test in file test_syntax_canon.cpp */
 class canon final: public syntax_base {
 protected:
-    void run_parser(script_builder& builder, std::string_view file) override;
+    void run_parser(script_builder& builder, std::string_view src) override;
 };
 
 } // namespace threadscript::syntax
