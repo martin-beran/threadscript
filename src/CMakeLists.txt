@@ -10,6 +10,7 @@ add_library(
     debug.cpp
     default_allocator.cpp
     exception.cpp
+    syntax.cpp
     syntax_canon.cpp
     threadscript.cpp
 )

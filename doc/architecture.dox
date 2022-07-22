@@ -19,7 +19,7 @@
  * system based on CMake
  * \arg Free and open source
  *
- * \section Debugging Debugging
+ * \section Architecture_Debugging Debugging
  *
  * To help in debugging, class threadscript::DEBUG is available to generate
  * temporary debugging mesages. Such debugging messages should not be left in
@@ -182,6 +182,36 @@
  * parser_ascii.hpp, namespace threadscript::parser_ascii. Exaples how to use
  * them are in the tests in test_parser_ascii.cpp.
  *
+ * \subsection Architecture_Syntax_variants Syntax variants
+ *
+ * There can potentially be several different variants of syntax of
+ * ThreadScript source code files. All of them produce the same parsed internal
+ * representation in a threadscript::script object. Parses for syntax variants
+ * are defined as classes in namespace threadscript::syntax. One of the syntax
+ * variants is designated as the canonical reference syntax.
+ *
+ * \subsection Architecture_Canonical_syntax Canonical syntax
+ *
+ * The canonical syntax is defined in class threadscript::syntax::canon. The
+ * canonical syntax is very simple. It is a textual representation of the tree
+ * of threadscript::code_node objects. In a script source file, there is
+ * a single root node that can contain descendant nodes. There are two kinds of
+ * nodes.
+ *
+ * \arg A <em>value node</em> represents a single value, e.g., a number,
+ * a string, or the special value \c null. It is written as a single literal of
+ * the appropriate type. Value nodes are always leafs of the tree. \arg
+ * A <em>function node</em> represents a function or a command to be applied to
+ * its descendant nodes. It is written as the function name (an identifier)
+ * followed by parenthesized, possibly empty, comma-separated, list of child
+ * nodes. A function node can be a leaf (if having no children) or an internal
+ * node (if it has at least one child).
+ *
+ * In addition, there are comments and whitespace, which can be freely added or
+ * removed between any other syntax elements without changing the meaning of
+ * the script.
+ *
  * \section Architecture_Execution Execution of a script
+ *
  * \section Architecture_API ThreadScript API
  */
