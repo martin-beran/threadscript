@@ -559,13 +559,13 @@ template <std::forward_iterator It> requires
 class script_iterator: public std::forward_iterator_tag {
 public:
     //! A required member of an iterator class
-    using difference_type = typename It::difference_type;
+    using difference_type = std::iterator_traits<It>::difference_type;
     //! A required member of an iterator class
-    using value_type = typename It::value_type;
+    using value_type = std::iterator_traits<It>::value_type;
     //! A required member of an iterator class
-    using pointer = typename It::pointer;
+    using pointer = std::iterator_traits<It>::pointer;
     //! A required member of an iterator class
-    using reference = typename It::reference;
+    using reference = std::iterator_traits<It>::reference;
     //! A required member of an iterator class
     using iterator_category = typename std::forward_iterator_tag;
     //! Creates a singular iterator.

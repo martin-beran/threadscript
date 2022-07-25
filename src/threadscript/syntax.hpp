@@ -8,6 +8,8 @@
  * parser on a source file.
  */
 
+#include "threadscript/parser_ascii.hpp"
+
 #include <map>
 #include <memory>
 #include <ranges>
@@ -15,16 +17,38 @@
 
 namespace threadscript {
 
+//! The namespace containing parsers for variants of ThreadScript syntax
+namespace syntax {
+} // namespace syntax
+
 class script_builder;
 
 //! The base class of parsers declared in namespace threadscript::syntax
-/*! It is an abstract class. */
+/*! It is an abstract class.
+ * \note A parser usually uses the PImpl idiom for implementation (see
+ * syntax::canon for an example). It allows to keep a syntax header file (e.g.,
+ * threadscript/syntax_common.hpp), which is included in syntax.cpp, short and
+ * hide the rules of the grammar in the implementation \c .cpp file (e.g.,
+ * syntax_common.cpp). */
 class syntax_base {
 public:
+    //! Iterator type used by the parser
+    using iterator_type =
+        parser::script_iterator<std::string_view::iterator>;
+    //! The rule factory used by the parser
+    using rf = parser_ascii::rules::factory<iterator_type>;
     //! The default constructor
     syntax_base() = default;
+    //! No copy
+    syntax_base(const syntax_base&) = delete;
+    //! No move
+    syntax_base(syntax_base&&) = delete;
     //! Virtual desctructor, because this is a polymorphic base class
     virtual ~syntax_base() = 0;
+    //! No copy
+    syntax_base& operator=(const syntax_base&) = delete;
+    //! No move
+    syntax_base& operator=(syntax_base&&) = delete;
     //! Parses a script source text
     /*! After a successful return, the resulting internal representation can be
      * obtained from \a builder. If an exception is thrown, \a builder should

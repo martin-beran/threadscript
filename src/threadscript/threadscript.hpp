@@ -9,6 +9,7 @@
 #include "threadscript/configure.hpp"
 #include "threadscript/code.hpp"
 #include "threadscript/code_builder_impl.hpp"
+#include "threadscript/code_parser.hpp"
 #include "threadscript/symbol_table.hpp"
 #include "threadscript/virtual_machine.hpp"
 #include "threadscript/vm_data.hpp"
@@ -38,7 +39,7 @@ template <class T> using a_vector = a_basic_vector<T, allocator_any>;
 /*! \tparam T a type of deque elements */
 template <class T> using a_deque = a_basic_deque<T, allocator_any>;
 
-/*** threadscript/code.http **************************************************/
+/*** threadscript/code.hpp ***************************************************/
 
 //! The \ref basic_code_node using the configured allocator
 using code_node = basic_code_node<allocator_any>;
@@ -84,6 +85,27 @@ extern template class basic_value_native_fun<allocator_any>;
 //! The basic_script_builder_impl using the configured allocator
 using script_builder_impl = basic_script_builder_impl<allocator_any>;
 extern template class basic_script_builder_impl<allocator_any>;
+
+/*** threadscript/code_parser.hpp ********************************************/
+
+//! The script parser using the configured allocator
+/*! Documentation of the primary template function applies, except that \a A is
+ * fixed to allocator_any:
+ *
+ * \copydetails parse_code(const A&, std::string_view, std::string_view,
+ * std::string_view) */
+extern template script::script_ptr
+parse_code<allocator_any>(const allocator_any& alloc, std::string_view src,
+                          std::string_view file, std::string_view syntax);
+
+//! The script parser using the configured allocator
+/*! Documentation of the primary template function applies, except that \a A is
+ * fixed to allocator_any:
+ *
+ * \copydetails parse_code_file(const A&, std::string_view, std::string_view) */
+extern template script::script_ptr
+parse_code_file<allocator_any>(const allocator_any& alloc,
+                               std::string_view file, std::string_view syntax);
 
 /*** threadscript/symbol_table.hpp *******************************************/
 

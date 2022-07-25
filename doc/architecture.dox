@@ -137,6 +137,15 @@
  * a threadscript::script object. It owns a tree of threadscript::code_node
  * objects, which represent code of the script.
  *
+ * \subsection Architecture_Parser Parser
+ *
+ * Parsing of ThreadScript source code is provided by functions
+ * threadscript::parse_code() and threadscript::parse_code_file(). They take
+ * the script text, either as a string view, or a text file, and a selection of
+ * a syntax variant. They return the parsed internal representation of the
+ * script as a shared pointer to threadscript::basic_script. If parsing fails
+ * or the source file cannot be read, an exception is thrown.
+ *
  * \subsection Architecture_Code_GenParser Generic parser
  *
  * Parsing of ThreadScript source code of scripts is implemented by a parser
@@ -210,6 +219,9 @@
  * In addition, there are comments and whitespace, which can be freely added or
  * removed between any other syntax elements without changing the meaning of
  * the script.
+ *
+ * The formal grammar of the canonical syntax is defined in the constructor
+ * threadscript::syntax::canon::canon(). See also \ref Canonical_syntax.
  *
  * \section Architecture_Execution Execution of a script
  *

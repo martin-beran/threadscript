@@ -629,10 +629,10 @@ BOOST_DATA_TEST_CASE(expr, (std::vector<test::expression>{
     auto expression = f::dyn();
     auto factor = f::uint()[set] | f::t('(') >> expression >> f::t(')');
     auto term = f::dyn();
-    auto term_ = (factor >> -(f::t('*') >> term))[mul];
-    term >>= term_;
-    auto expression_ = (term >> -(f::t('+') >> expression))[add];
-    expression >>= expression_;
+    auto _term = (factor >> -(f::t('*') >> term))[mul];
+    term >>= _term;
+    auto _expression = (term >> -(f::t('+') >> expression))[add];
+    expression >>= _expression;
     tmp value{};
     auto check = [&sample, &value]() {
         BOOST_CHECK_EQUAL(sample.result.value(), value.val[0]);

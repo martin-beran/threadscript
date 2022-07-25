@@ -5,6 +5,7 @@
 #include "threadscript/threadscript.hpp"
 #include "threadscript/symbol_table_impl.hpp"
 #include "threadscript/code_impl.hpp"
+#include "threadscript/code_parser_impl.hpp"
 #include "threadscript/virtual_machine_impl.hpp"
 #include "threadscript/vm_data_impl.hpp"
 
@@ -15,7 +16,7 @@ namespace threadscript {
 // primary templates and keep groups lexicographically ordered by file name.
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-/*** threadscript/code.http **************************************************/
+/*** threadscript/code.hpp ***************************************************/
 
 template class basic_code_node<allocator_any>;
 //! \cond
@@ -50,6 +51,16 @@ template class basic_value_native_fun<allocator_any>;
 /*** threadscript/code_builder_impl.hpp **************************************/
 
 template class basic_script_builder_impl<allocator_any>;
+
+/*** threadscript/code_parser_impl.hpp ***************************************/
+
+template script::script_ptr
+parse_code<allocator_any>(const allocator_any& alloc, std::string_view src,
+                          std::string_view file, std::string_view syntax);
+
+template script::script_ptr
+parse_code_file<allocator_any>(const allocator_any& alloc,
+                               std::string_view file, std::string_view syntax);
 
 /*** threadscript/symbol_table.hpp *******************************************/
 

@@ -2,6 +2,31 @@
  *
  * \section Canonical_syntax Canonical syntax
  *
+ * The rules in the grammar are composed from leaf rules defined in class
+ * threadscript::parser_ascii::rules::factory (abbreviated as \c rf), combined
+ * by operators defined in namespace threadscript::parser and in classes
+ * threadscript::parser::rules::dyn and threadscript::parser::rule_base:
+ * \arg \link threadscript::parser::operator-() -R \endlink -- 0 to
+ * 1 occurrence
+ * \arg \link threadscript::parser::operator-() +R \endlink -- at least
+ * 1 occurrence
+ * \arg \link threadscript::parser::operator-() *R \endlink -- at least
+ * 0 occurrences
+ * \arg \link threadscript::parser::operator-() R1>>R2 \endlink --
+ * concatenation
+ * \arg \link threadscript::parser::operator-()  R1|R2 \endlink --
+ * alternative
+ * \arg \link threadscript::parser::operator-() !R \endlink -- disables
+ * following alternatives
+ * \arg \link threadscript::parser::rules::dyn::operator>>=() D>>=R \endlink
+ * -- sets a child of a dynamic rule
+ * \arg \link threadscript::parser::rule_base::operator[]() R[H] \endlink --
+ * sets a handler for the rule
+ *
+ * The grammar, with \c script as the top-level rule:
+ *
+ * \snippet syntax_canon.cpp Grammar
+ *
  * \section Script_execution Script execution
  *
  * \section Builtin_commands Built-in commands
