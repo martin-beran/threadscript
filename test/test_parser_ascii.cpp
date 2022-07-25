@@ -450,8 +450,6 @@ BOOST_AUTO_TEST_CASE(lws)
     std::array<bool, 256> chars{};
     chars[' '] = true;
     chars['\t'] = true;
-    chars['\v'] = true;
-    chars['\r'] = true;
     chars['\n'] = true;
     test::test_chars(chars, tsra::factory<char*>::lws());
 }
@@ -480,6 +478,53 @@ BOOST_AUTO_TEST_CASE(digit)
     for (int i = '0'; i <= '9'; ++i)
         chars[i] = true;
     test::test_chars(chars, tsra::factory<char*>::digit());
+}
+//! \endcond
+
+/* \file
+ * \test \c hex -- test of
+ * threadscript::parser_ascii::rules::factory::hex() */
+//! \cond
+BOOST_AUTO_TEST_CASE(hex)
+{
+    std::array<bool, 256> chars{};
+    for (int i = '0'; i <= '9'; ++i)
+        chars[i] = true;
+    for (int i = 'A'; i <= 'F'; ++i)
+        chars[i] = true;
+    for (int i = 'a'; i <= 'f'; ++i)
+        chars[i] = true;
+    test::test_chars(chars, tsra::factory<char*>::hex());
+}
+//! \endcond
+
+/* \file
+ * \test \c uhex -- test of
+ * threadscript::parser_ascii::rules::factory::uhex() */
+//! \cond
+BOOST_AUTO_TEST_CASE(uhex)
+{
+    std::array<bool, 256> chars{};
+    for (int i = '0'; i <= '9'; ++i)
+        chars[i] = true;
+    for (int i = 'A'; i <= 'F'; ++i)
+        chars[i] = true;
+    test::test_chars(chars, tsra::factory<char*>::uhex());
+}
+//! \endcond
+
+/* \file
+ * \test \c lhex -- test of
+ * threadscript::parser_ascii::rules::factory::lhex() */
+//! \cond
+BOOST_AUTO_TEST_CASE(lhex)
+{
+    std::array<bool, 256> chars{};
+    for (int i = '0'; i <= '9'; ++i)
+        chars[i] = true;
+    for (int i = 'a'; i <= 'f'; ++i)
+        chars[i] = true;
+    test::test_chars(chars, tsra::factory<char*>::lhex());
 }
 //! \endcond
 

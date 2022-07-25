@@ -215,15 +215,17 @@ public:
         return p([](char c) { return c == ' ' || c == '\t'; });
     }
     //! Creates a rule for detecting a single character of multiline whitespace
-    /*! It detects SPACE, HT, VT, CR, LF.
+    /*! It detects SPACE, HT, LF. It does not detect CR and VT, because we
+     * want the logic of lws() being ws() plus nl().
      * \return the created rule */
     static auto lws() {
         return p([](char c) {
-            return c == ' ' || c == '\t' || c == '\v' || c == '\r' || c == '\n';
+            return c == ' ' || c == '\t' || c == '\n';
         });
     }
     //! Creates a rule for detecting ASCII printable characters
-    /*! It detects a single character with code between 32 and 126, inclusive
+    /*! It detects a single character with code between 32 and 126, inclusive.
+     * It does not include control characters.
      * \return the created rule */
     static auto print() {
         return p([](char c) { return c >= 32 && c <= 126; });
@@ -232,6 +234,28 @@ public:
     /*! \return the created rule */
     static auto digit() {
         return p([](char c) { return c >= '0' && c <= '9'; });
+    }
+    //! Creates a rule for detecting a single hexadecimal digit
+    /*! \return the created rule */
+    static auto hex() {
+        return p([](char c) {
+                     return (c >= '0' && c <= '9') ||
+                        (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f');
+                 });
+    }
+    //! Creates a rule for detecting a single uppercase hexadecimal digit
+    /*! \return the created rule */
+    static auto uhex() {
+        return p([](char c) {
+                     return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F');
+                 });
+    }
+    //! Creates a rule for detecting a single lowercase hexadecimal digit
+    /*! \return the created rule */
+    static auto lhex() {
+        return p([](char c) {
+                     return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f');
+                 });
     }
     //! Creates a rule for detecting a decimal unsigned integer number
     /*! It detects a nonempty sequence of digits.

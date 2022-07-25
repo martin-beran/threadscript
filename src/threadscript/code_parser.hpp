@@ -9,6 +9,12 @@
 
 namespace threadscript {
 
+//! The iterator type used by parse_code() and parse_code_file().
+using parse_iterator = parser::script_iterator<std::string_view::iterator>;
+
+//! The exception throws when parsing fails.
+using parse_error = parser::error<parse_iterator>;
+
 //! Parses a script source text
 /*! The \a file is not accessed during parsing. It is expected that its
  * content is provided in \a src. The file name is only used for storing and
