@@ -49,14 +49,24 @@ std::ostream& operator<<(std::ostream& os, const parsed& v)
     return os;
 }
 
+bool tracing_enabled()
+{
+    using namespace std::string_view_literals;
+    int argc = boost::unit_test::framework::master_test_suite().argc;
+    char** argv = boost::unit_test::framework::master_test_suite().argv;
+    return argc > 1 && (argv[1] == "-t"sv || argv[1] == "--trace"sv);
+}
+
 void test_trace(std::optional<ts::parser::rule_result> result,
                 const std::string& name, size_t depth,
                 size_t begin_line, size_t begin_column,
                 size_t end_line, size_t end_column)
 {
-    BOOST_TEST_MESSAGE(ts::parser::context::trace_msg(result, name, depth,
-                                                      begin_line, begin_column,
-                                                      end_line, end_column));
+    if (tracing_enabled())
+        std::cout <<
+            ts::parser::context::trace_msg(result, name, depth,
+                                           begin_line, begin_column, end_line,
+                                           end_column) << std::endl;
 }
 
 template <class Sample> void test_parse(Sample&& sample)
@@ -100,6 +110,8 @@ void test_parse(auto&& sample, auto&& check)
 //! \cond
 BOOST_DATA_TEST_CASE(parse, (std::vector<test::parsed>{
                                  {"", false, 1, 1},
+                                 {" ", false, 1, 2},
+                                 {"null", true, 1, 5},
                      }))
 {
     test_parse(sample);

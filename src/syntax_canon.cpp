@@ -17,10 +17,10 @@ struct canon::rules {
     script_builder* b = nullptr;
     //! [Grammar]
     //! \cond
-#define RULE(name, body) decltype(body) name = body
+#define RULE(name, body) std::remove_reference_t<decltype(body)> name = body
 
     RULE(comment, rf::t('#') >> *rf::print() >> (rf::eof() | rf::nl()));
-    RULE(space, (*rf::lws() >> -comment)["space"sv]);
+    RULE(space, (rf::lws() | comment)["space"sv]);
 
     // Cannot use a lambda, because of invalid macro expansion of the form
     // decltype(rule(lambda)) name = rule(lambda);

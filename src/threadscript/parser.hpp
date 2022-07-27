@@ -287,7 +287,6 @@ public:
      * \param[in] name the rule name reported in tracing, empty to not trace
      * this rule. */
     void set_tracing(std::string_view name) {
-        DEBUG() << this << "->set_tracing(" << name << ")";
         trace = name;
     }
     /*! \copydoc set_tracing()
@@ -598,7 +597,6 @@ public:
                                  size_t begin_line, size_t begin_column,
                                  size_t end_line, size_t end_column)
     {
-        DEBUG() << "trace_msg name=" << name << " depth=" << depth;
         std::string msg(depth, ' ');
         if (result)
             switch (*result) {
@@ -755,7 +753,6 @@ auto rule_base<Rule, Ctx, Self, Up, Info, It, Handler>::parse(
         throw error(begin, ctx.depth_msg);
     finally dec_depth{[&d = ctx.depth]() noexcept { --d; }};
     ++ctx.depth;
-    DEBUG() << this << "->Parse begin name=" << trace << " depth=" << ctx.depth;
     if (ctx.trace && !trace.empty()) {
         if constexpr (is_script_iterator_v<It>)
             ctx.trace(std::nullopt, trace, ctx.depth,
