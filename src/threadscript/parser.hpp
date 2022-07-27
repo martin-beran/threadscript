@@ -32,8 +32,8 @@ public:
     //! Creates the exception
     /*! \param[in] pos error position
      * \param[in] msg error message */
-    explicit error(I pos, const std::string& msg = "Parse error"):
-        runtime_error(msg), _pos(pos) {}
+    explicit error(I pos, std::string_view msg = "Parse error"):
+        runtime_error(std::string{msg}), _pos(pos) {}
     //! Gets the error position
     /*! \return the position */
     I pos() const { return _pos; }
@@ -281,6 +281,23 @@ public:
         set_handler(std::move(h));
         return static_cast<Rule&&>(*this);
     }
+    //! Sets error message.
+    /*! \param[in] msg the new message */
+    void set_error_msg(std::string_view msg) {
+        error_msg = msg;
+    }
+    /*! \copydoc set_error_msg()
+     * \return \c *this */
+    Rule& operator[](std::string_view msg) & {
+        set_error_msg(msg);
+        return static_cast<Rule&>(*this);
+    }
+    /*! \copydoc set_error_msg()
+     * \return \c *this */
+    Rule operator[](std::string_view msg) && {
+        set_error_msg(msg);
+        return static_cast<Rule&&>(*this);
+    }
     //! Sets rule name for tracing.
     /*! If \a name is nonempty and tracing is enabled in \ref context, this
      * rule will be traced. If \a name is empty, this rule will not be traced.
@@ -291,19 +308,23 @@ public:
     }
     /*! \copydoc set_tracing()
      * \return \c *this */
-    Rule& operator[](std::string_view name) & {
+    Rule& operator()(std::string_view name) & {
         set_tracing(name);
         return static_cast<Rule&>(*this);
     }
     /*! \copydoc set_tracing()
      * \return \c *this */
-    Rule operator[](std::string_view name) && {
+    Rule operator()(std::string_view name) && {
         set_tracing(name);
         return static_cast<Rule&&>(*this);
     }
     //! The stored handler called by attr().
     /*! The handler gets additional information created by make_info(). */
     Handler hnd{};
+    //! The error message produced by this rule
+    /*! If this rule fails and the err_msg is nonempty, it is set into
+     * context::error_msg. */
+    std::string error_msg{};
     //! The rule name used for tracing
     /*! The rule evaluation is reported when tracing is enabled in \ref
      * context. */
@@ -469,12 +490,14 @@ public:
      * when returning from a rule
      * \param[in] name the value of rule_base::trace of the traced rule
      * \param[in] depth the stack depth of the rule
+     * \param[in] error the error message of a failed node, empty if not failed
      * \param[in] begin_line reported beginning line number
      * \param[in] begin_column reported beginning column number
      * \param[in] end_line reported end line number
      * \param[in] end_column reported end column number */
     using trace_t = std::function<void(std::optional<rule_result> result,
                                        const std::string& name, size_t depth,
+                                       std::string_view error,
                                        size_t begin_line, size_t begin_column,
                                        size_t end_line, size_t end_column)>;
     //! Parses an input sequence of terminal symbols according to \a rule.
@@ -571,8 +594,9 @@ public:
     /*! If not \c nullopt, then this message is used when a parsing failed
      * exception (\ref error) is thrown, unless a more specific message is
      * used. If \c nullopt, then a default message defined by \ref error is
-     * used. */
-    std::optional<std::string> error_msg{};
+     * used. This is normally manipulated by rules during parsing, therefore it
+     * is non-owning in order to reduce copying of strings. */
+    std::optional<std::string_view> error_msg{};
     //! If nont \c nullopt, then it defines the maximum stack depth of parsing.
     std::optional<size_t> max_depth{};
     //! An error message used if max_depth is exceeded
@@ -584,16 +608,19 @@ public:
     //! A function used for rule tracing
     trace_t trace;
     //! Generates a default tracing message
-    /*! It expects the same arguments as \ref trace:
+    /*! It expects the same arguments as \ref trace
      * \param[in] result
      * \param[in] name
      * \param[in] depth
+     * \param[in] error
      * \param[in] begin_line
      * \param[in] begin_column
      * \param[in] end_line
-     * \param[in] end_column */
+     * \param[in] end_column
+     * \return a tracing message */
     static std::string trace_msg(std::optional<rule_result> result,
                                  const std::string& name, size_t depth,
+                                 std::string_view error,
                                  size_t begin_line, size_t begin_column,
                                  size_t end_line, size_t end_column)
     {
@@ -630,6 +657,7 @@ public:
             msg.append(" ").append(std::to_string(end_line));
             msg.append(":").append(std::to_string(end_column));
         }
+        msg.append(" ").append(error);
         return msg;
     }
 private:
@@ -755,26 +783,38 @@ auto rule_base<Rule, Ctx, Self, Up, Info, It, Handler>::parse(
     ++ctx.depth;
     if (ctx.trace && !trace.empty()) {
         if constexpr (is_script_iterator_v<It>)
-            ctx.trace(std::nullopt, trace, ctx.depth,
+            ctx.trace(std::nullopt, trace, ctx.depth, "",
                       begin.line, begin.column, end.line, end.column);
         else
-            ctx.trace(std::nullopt, trace, ctx.depth, 0, 0, 0, 0);
+            ctx.trace(std::nullopt, trace, ctx.depth, "", 0, 0, 0, 0);
     }
     Self self{};
+    auto saved_msg = ctx.error_msg;
+    if (!error_msg.empty())
+        ctx.error_msg = error_msg;
     parse_result result =
         static_cast<const Rule*>(this)->parse_internal(ctx, self, up,
                                                        begin, end);
+    if (!error_msg.empty() && (result.first == rule_result::ok ||
+                               result.first == rule_result::ok_final))
+    {
+        ctx.error_msg = saved_msg;
+    }
     if (ctx.trace && !trace.empty()) {
+        std::string_view error =
+            ctx.error_msg && result.first != rule_result::ok &&
+            result.first != rule_result::ok_final ?
+                *ctx.error_msg : "";
         if constexpr (is_script_iterator_v<It>) {
             auto [b, e] =
                 result.first == rule_result::ok ||
                 result.first == rule_result::ok_final ?
                 std::make_pair(begin, result.second) :
                 std::make_pair(result.second, end);
-            ctx.trace(result.first, trace, ctx.depth,
+            ctx.trace(result.first, trace, ctx.depth, error,
                       b.line, b.column, e.line, e.column);
         } else
-            ctx.trace(result.first, trace, ctx.depth, 0, 0, 0, 0);
+            ctx.trace(result.first, trace, ctx.depth, error, 0, 0, 0, 0);
     }
     return result;
 }

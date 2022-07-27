@@ -21,7 +21,11 @@
  * \arg \link threadscript::parser::rules::dyn::operator>>=() D>>=R \endlink
  * -- sets a child of a dynamic rule
  * \arg \link threadscript::parser::rule_base::operator[]() R[H] \endlink --
- * sets a handler for the rule
+ * sets a handler for the rule (the parameter is a function)
+ * \arg \link threadscript::parser::rule_base::operator[]() R["E"sv] \endlink --
+ * sets an error message for the rule (the parameter is a std::string_view)
+ * \arg \link threadscript::parser::rule_base::operator()() R("T"sv) \endlink --
+ * sets a tracing name for the rule (the parameter is a std::string_view)
  *
  * The grammar, with \c script as the top-level rule:
  *

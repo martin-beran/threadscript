@@ -18,7 +18,7 @@ using namespace std::string_view_literals;
 namespace test {
 
 struct input {
-    input(std::string text, size_t line, size_t column,
+    input(std::string text, size_t line = 0, size_t column = 0,
           std::string error = "Parse error"):
         text(std::move(text)), line(line), column(column),
         error(std::move(error))
@@ -36,8 +36,8 @@ std::ostream& operator<<(std::ostream& os, const input& v)
 }
 
 struct parsed: input {
-    parsed(std::string text, bool result, size_t line, size_t column,
-           std::string error = "Parse error"):
+    parsed(std::string text, bool result = true, size_t line = 0,
+           size_t column = 0, std::string error = "Parse error"):
         input(std::move(text), line, column, std::move(error)), result(result)
     {}
     bool result;
@@ -58,13 +58,13 @@ bool tracing_enabled()
 }
 
 void test_trace(std::optional<ts::parser::rule_result> result,
-                const std::string& name, size_t depth,
+                const std::string& name, size_t depth, std::string_view error,
                 size_t begin_line, size_t begin_column,
                 size_t end_line, size_t end_column)
 {
     if (tracing_enabled())
         std::cout <<
-            ts::parser::context::trace_msg(result, name, depth,
+            ts::parser::context::trace_msg(result, name, depth, error,
                                            begin_line, begin_column, end_line,
                                            end_column) << std::endl;
 }
@@ -77,6 +77,8 @@ template <class Sample> void test_parse(Sample&& sample)
 void test_parse(auto&& sample, auto&& check)
 {
     ts::allocator_any alloc;
+    if (tracing_enabled())
+        std::cout << "input=\"" << sample.text << "\"" << std::endl;
     if (sample.result)
         BOOST_REQUIRE_NO_THROW(
             try {
@@ -109,10 +111,49 @@ void test_parse(auto&& sample, auto&& check)
  * \test \c dummy -- A dummy test, to be removed and replaced by real tests */
 //! \cond
 BOOST_DATA_TEST_CASE(parse, (std::vector<test::parsed>{
-                                 {"", false, 1, 1},
-                                 {" ", false, 1, 2},
-                                 {"null", true, 1, 5},
-                     }))
+// Empty, spaces, comments
+    {R"()", false, 1, 1, "Expected value or function"},
+    {R"( )", false, 1, 2, "Expected value or function"},
+    {R"(
+# comment
+    )", false, 3, 5, "Expected value or function"},
+    {R"(
+# comment begin
+null
+    )"},
+    {R"(
+# comment begin
+null
+# comment end
+    )"},
+    {R"(
+# comment begin #1
+# comment begin #2
+null
+ # comment end 3
+
+# comment end 4
+    )"},
+    {R"(
+null
+# comment end
+    )"},
+// Values: null, bool
+    {R"(null)"},
+    {R"(false)"},
+    {R"(true)"},
+// Numbers (int, unsigned)
+    {R"(123)"},
+    {R"(+4)"},
+    {R"(-56)"},
+// Strings
+    {R"("")"},
+    {R"("a")"},
+    {R"("abc")"},
+    {R"("abcd)", false, 1, 6, "Expected '\"'"},
+// Functions
+// Complex syntax
+}))
 {
     test_parse(sample);
 }

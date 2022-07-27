@@ -162,7 +162,15 @@
  * (threadscript::parser::handler) to rules. When a rule matches, a handler
  * registered in the rule is called with the part of input matched by the rule.
  * A handler can be added to a rule by operator
- * threadscript::parser::rule_base::operator[]().
+ * threadscript::parser::rule_base::operator[]() with argument of type
+ * threadscript::parser::handler.
+ *
+ * A rule can contain an error message reported in threadscript::parser::error
+ * thrown if parsing fails. An error message can be set to a rule by operator
+ * threadscript::parser::rule_base::operator[](std::string_view). A rule can
+ * have a name used if rule tracing is enabled by setting a tracing function
+ * into threadscript::parser::context::trace. A tracing name can be set to
+ * a rule by operator threadscript::parser::rule_base::operator()().
  *
  * All rules are implemented by classes derived from
  * threadscript::parser::rule_base. There are some leaf rules, for example,
