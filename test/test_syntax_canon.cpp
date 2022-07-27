@@ -49,6 +49,16 @@ std::ostream& operator<<(std::ostream& os, const parsed& v)
     return os;
 }
 
+void test_trace(std::optional<ts::parser::rule_result> result,
+                const std::string& name, size_t depth,
+                size_t begin_line, size_t begin_column,
+                size_t end_line, size_t end_column)
+{
+    BOOST_TEST_MESSAGE(ts::parser::context::trace_msg(result, name, depth,
+                                                      begin_line, begin_column,
+                                                      end_line, end_column));
+}
+
 template <class Sample> void test_parse(Sample&& sample)
 {
     test_parse(std::forward<Sample>(sample), [](){});
@@ -60,7 +70,9 @@ void test_parse(auto&& sample, auto&& check)
     if (sample.result)
         BOOST_REQUIRE_NO_THROW(
             try {
-                auto parsed = ts::parse_code(alloc, sample.text, "string");
+                auto parsed = ts::parse_code(alloc, sample.text, "string",
+                                             ts::syntax_factory::syntax_canon,
+                                             test_trace);
                 BOOST_CHECK_NE(parsed.get(), nullptr);
                 check();
             } catch (std::exception& e) {
@@ -68,7 +80,9 @@ void test_parse(auto&& sample, auto&& check)
                 throw;
             });
     else
-        BOOST_CHECK_EXCEPTION(ts::parse_code(alloc, sample.text, "string"),
+        BOOST_CHECK_EXCEPTION(ts::parse_code(alloc, sample.text, "string",
+                                             ts::syntax_factory::syntax_canon,
+                                             test_trace),
             ts::parse_error,
             ([&sample](auto&& e) {
                 BOOST_CHECK_EQUAL(e.what(), sample.error);

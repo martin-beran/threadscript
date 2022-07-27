@@ -93,19 +93,22 @@ extern template class basic_script_builder_impl<allocator_any>;
  * fixed to allocator_any:
  *
  * \copydetails parse_code(const A&, std::string_view, std::string_view,
- * std::string_view) */
+ * std::string_view, parser::context::trace_t) */
 extern template script::script_ptr
 parse_code<allocator_any>(const allocator_any& alloc, std::string_view src,
-                          std::string_view file, std::string_view syntax);
+                          std::string_view file, std::string_view syntax,
+                          parser::context::trace_t trace);
 
 //! The script parser using the configured allocator
 /*! Documentation of the primary template function applies, except that \a A is
  * fixed to allocator_any:
  *
- * \copydetails parse_code_file(const A&, std::string_view, std::string_view) */
+ * \copydetails parse_code_file(const A&, std::string_view, std::string_view,
+ * parser::context::trace_t) */
 extern template script::script_ptr
 parse_code_file<allocator_any>(const allocator_any& alloc,
-                               std::string_view file, std::string_view syntax);
+                               std::string_view file, std::string_view syntax,
+                               parser::context::trace_t trace);
 
 /*** threadscript/symbol_table.hpp *******************************************/
 

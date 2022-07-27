@@ -20,7 +20,7 @@ struct canon::rules {
 #define RULE(name, body) decltype(body) name = body
 
     RULE(comment, rf::t('#') >> *rf::print() >> (rf::eof() | rf::nl()));
-    RULE(space, *rf::lws() >> -comment);
+    RULE(space, (*rf::lws() >> -comment)["space"sv]);
 
     // Cannot use a lambda, because of invalid macro expansion of the form
     // decltype(rule(lambda)) name = rule(lambda);
@@ -43,7 +43,7 @@ struct canon::rules {
     RULE(node_val,
          node_null | node_bool | node_unsigned | node_int | node_string);
 
-    RULE(node, rf::dyn());
+    RULE(node, rf::dyn()["node"sv]);
 
     RULE(params,
          *space >> -(node >> *space >> *(rf::t(',') >> *space >> node)));
@@ -51,7 +51,7 @@ struct canon::rules {
     
     RULE(_node, node_val | node_fun);
 
-    RULE(script, *space >> node >> *space);
+    RULE(script, (*space >> node >> *space)["script"sv]);
 
     //! \endcond
     //! Configures rules
@@ -69,10 +69,12 @@ canon::canon(): _rules(std::make_unique<rules>())
 
 canon::~canon() = default;
 
-void canon::run_parser(script_builder& builder, std::string_view src)
+void canon::run_parser(script_builder& builder, std::string_view src,
+                       parser::context::trace_t trace)
 {
     _rules->b = &builder;
     parser::context ctx;
+    ctx.trace = std::move(trace);
     ctx.parse(_rules->script, parser::make_script_iterator(src));
 }
 

@@ -22,7 +22,8 @@ public:
      * of \c std::unique_ptr<rules>. */
     ~canon() override;
 protected:
-    void run_parser(script_builder& builder, std::string_view src) override;
+    void run_parser(script_builder& builder, std::string_view src,
+                    parser::context::trace_t trace) override;
 private:
     struct rules;
     std::unique_ptr<rules> _rules; //!< PImpl (rules)

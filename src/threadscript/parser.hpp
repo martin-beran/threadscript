@@ -7,6 +7,7 @@
  */
 
 #include "threadscript/finally.hpp"
+#include "threadscript/debug.hpp"
 
 #include <cassert>
 #include <concepts>
@@ -262,18 +263,12 @@ public:
      * \param[in] end the end of input sequence
      * \return the result of matching this rule with the input sequence
      * \throw error if the maximum depth of rule nesting is exceeded */
-    parse_result parse(Ctx& ctx, Up* up, It begin, It end) const {
-        if (ctx.max_depth && ctx.depth >= ctx.max_depth)
-            throw error(begin, ctx.depth_msg);
-        finally dec_depth{[&d = ctx.depth]() noexcept { --d; }};
-        ++ctx.depth;
-        Self self{};
-        return static_cast<const Rule*>(this)->parse_internal(ctx, self, up,
-                                                              begin, end);
-    }
+    parse_result parse(Ctx& ctx, Up* up, It begin, It end) const;
     //! Sets a new handler
     /*! \param[in] h the new handler */
-    void set_handler(Handler h) { hnd = std::move(h); }
+    void set_handler(Handler h) {
+        hnd = std::move(h);
+    }
     /*! \copydoc set_handler()
      * \return \c *this */
     Rule& operator[](Handler h) & {
@@ -286,9 +281,34 @@ public:
         set_handler(std::move(h));
         return static_cast<Rule&&>(*this);
     }
+    //! Sets rule name for tracing.
+    /*! If \a name is nonempty and tracing is enabled in \ref context, this
+     * rule will be traced. If \a name is empty, this rule will not be traced.
+     * \param[in] name the rule name reported in tracing, empty to not trace
+     * this rule. */
+    void set_tracing(std::string_view name) {
+        DEBUG() << this << "->set_tracing(" << name << ")";
+        trace = name;
+    }
+    /*! \copydoc set_tracing()
+     * \return \c *this */
+    Rule& operator[](std::string_view name) & {
+        set_tracing(name);
+        return static_cast<Rule&>(*this);
+    }
+    /*! \copydoc set_tracing()
+     * \return \c *this */
+    Rule&& operator[](std::string_view name) && {
+        set_tracing(name);
+        return static_cast<Rule&&>(*this);
+    }
     //! The stored handler called by attr().
     /*! The handler gets additional information created by make_info(). */
     Handler hnd{};
+    //! The rule name used for tracing
+    /*! The rule evaluation is reported when tracing is enabled in \ref
+     * context. */
+    std::string trace{};
 protected:
     //! Creates temporary private data usable in this parsing operation.
     /*! Private data are destroyed when the current parsing operation ends.
@@ -435,6 +455,29 @@ template <rule_cvref Rule, class Info2> using rebind_rhnd_t =
  * \threadsafe{safe,unsafe} */
 class context {
 public:
+    //! A function type used for rule tracing
+    /*! If not empty, the target function is called when entering and exiting
+     * each rule with nonempty rule_base::trace. Arguments \a begin_line, \a
+     * begin_column, \a end_line, \a end_column are zero if access to the
+     * parsed data uses an iterator which is not script_iterator. Otherwise,
+     * they contain the position of
+     * \arg begin and end of input data when entering a rule
+     * \arg the matched part of input data if the rule matches
+     * \arg the position of an error and the end of input data if the rule does
+     * not match
+     *
+     * \param[in] result \c nullopt when entering a rule, a rule_result value
+     * when returning from a rule
+     * \param[in] name the value of rule_base::trace of the traced rule
+     * \param[in] depth the stack depth of the rule
+     * \param[in] begin_line reported beginning line number
+     * \param[in] begin_column reported beginning column number
+     * \param[in] end_line reported end line number
+     * \param[in] end_column reported end column number */
+    using trace_t = std::function<void(std::optional<rule_result> result,
+                                       const std::string& name, size_t depth,
+                                       size_t begin_line, size_t begin_column,
+                                       size_t end_line, size_t end_column)>;
     //! Parses an input sequence of terminal symbols according to \a rule.
     /*! \tparam R a rule type
      * \param[in] rule the rule matched to the input
@@ -539,6 +582,58 @@ public:
     /*! It is used in an exception thrown if a rule matches only a part of the
      * input and argument \a all of parse() is \c true. */
     std::string partial_msg{"Partial match"};
+    //! A function used for rule tracing
+    trace_t trace;
+    //! Generates a default tracing message
+    /*! It expects the same arguments as \ref trace:
+     * \param[in] result
+     * \param[in] name
+     * \param[in] depth
+     * \param[in] begin_line
+     * \param[in] begin_column
+     * \param[in] end_line
+     * \param[in] end_column */
+    static std::string trace_msg(std::optional<rule_result> result,
+                                 const std::string& name, size_t depth,
+                                 size_t begin_line, size_t begin_column,
+                                 size_t end_line, size_t end_column)
+    {
+        DEBUG() << "trace_msg name=" << name << " depth=" << depth;
+        std::string msg(depth, ' ');
+        if (result)
+            switch (*result) {
+            case rule_result::fail:
+                msg += "<<<<<<<<<<<FAIL";
+                break;
+            case rule_result::ok:
+                msg += "<<<<<<<<<<<<<OK";
+                break;
+            case rule_result::fail_final_seq:
+                msg += "<FAIL_FINAL_SEQ";
+                break;
+            case rule_result::fail_final_alt:
+                msg += "<FAIL_FINAL_ALT";
+                break;
+            case rule_result::ok_final:
+                msg += "<<<<<<<OK_FINAL";
+                break;
+            default:
+                break;
+            }
+        else
+            msg += ">>>>>>>>>>>>>>>";
+        msg.append(" ").append(name).append(" / ");
+        msg.append(std::to_string(depth));
+        if (begin_line != 0 || begin_column != 0 ||
+            end_line != 0 || end_column != 0)
+        {
+            msg.append(" ").append(std::to_string(begin_line));
+            msg.append(":").append(std::to_string(begin_column));
+            msg.append(" ").append(std::to_string(end_line));
+            msg.append(":").append(std::to_string(end_column));
+        }
+        return msg;
+    }
 private:
     size_t depth = 0; //!< The current stack depth of parsing
     //! Needed to manipulate context::depth
@@ -621,6 +716,20 @@ private:
     It it; //!< The stored underlying iterator value
 };
 
+//! Checks if \a T is an instance of script_iterator.
+/*! \tparam T a type */
+template <class T> struct is_script_iterator: std::false_type {};
+
+//! Checks if \a T is an instance of script_iterator.
+/*! \tparam It an iterator type */
+template <class It> struct is_script_iterator<script_iterator<It>>:
+    std::true_type {};
+
+//! Checks if \a T is an instance of script_iterator.
+/*! \tparam T a type */
+template <class T> inline constexpr bool is_script_iterator_v =
+    is_script_iterator<T>::value;
+
 //! Creates a pair of iterators denoting contents of a text container.
 /*! The result can be directly passed to context::parse().
  * \tparam T a text container, i.e., a class containing a sequence of
@@ -633,6 +742,44 @@ std::pair<script_iterator<typename T::const_iterator>,
 make_script_iterator(const T& chars)
 {
     return {script_iterator(chars.cbegin()), script_iterator(chars.cend())};
+}
+
+/*** rule_base ***************************************************************/
+
+template <class Rule, class Ctx, class Self, class Up, class Info,
+    std::forward_iterator It, handler<Ctx, Self, Up, Info, It> Handler>
+auto rule_base<Rule, Ctx, Self, Up, Info, It, Handler>::parse(
+                    Ctx& ctx, Up* up, It begin, It end) const -> parse_result 
+{
+    if (ctx.max_depth && ctx.depth >= ctx.max_depth)
+        throw error(begin, ctx.depth_msg);
+    finally dec_depth{[&d = ctx.depth]() noexcept { --d; }};
+    ++ctx.depth;
+    DEBUG() << this << "->Parse begin name=" << trace << " depth=" << ctx.depth;
+    if (ctx.trace && !trace.empty()) {
+        if constexpr (is_script_iterator_v<It>)
+            ctx.trace(std::nullopt, trace, ctx.depth,
+                      begin.line, begin.column, end.line, end.column);
+        else
+            ctx.trace(std::nullopt, trace, ctx.depth, 0, 0, 0, 0);
+    }
+    Self self{};
+    parse_result result =
+        static_cast<const Rule*>(this)->parse_internal(ctx, self, up,
+                                                       begin, end);
+    if (ctx.trace && !trace.empty()) {
+        if constexpr (is_script_iterator_v<It>) {
+            auto [b, e] =
+                result.first == rule_result::ok ||
+                result.first == rule_result::ok_final ?
+                std::make_pair(begin, result.second) :
+                std::make_pair(result.second, end);
+            ctx.trace(result.first, trace, ctx.depth,
+                      b.line, b.column, e.line, e.column);
+        } else
+            ctx.trace(result.first, trace, ctx.depth, 0, 0, 0, 0);
+    }
+    return result;
 }
 
 //! This namespace contains various reusable parser rules

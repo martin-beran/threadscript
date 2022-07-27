@@ -61,25 +61,30 @@ public:
      * \param[in] src the source code to be parsed
      * \param[in] file an optional file name, which will be stored in the
      * internal representation of the script
+     * \param[in] an optional tracing function
      * \throw exception::parse_error if parsing fails */
     void parse(script_builder& builder, std::string_view src,
-               std::string_view file = {});
+               std::string_view file = {}, parser::context::trace_t trace = {});
     //! Parses a script file
     /*! It reads the \a file and passes it to parse().
      * \param[in,out] builder a builder object used to create the internal
      * representation of the parsed script
      * \param[in] file the file name
+     * \param[in] an optional tracing function
      * \throw exception::parse_error if parsing fails
      * \throw std::ios_base::failure if reading of \a file fails */
-    void parse_file(script_builder& builder, std::string_view file);
+    void parse_file(script_builder& builder, std::string_view file,
+                    parser::context::trace_t trace = {});
 protected:
     //! Invokes the parser.
     /*! It must be overriden in each class derived from syntax_base and it must
      * run a parser for the selected syntax.
      * \param[in] builder passed by parse()
      * \param[in] src passed by parse()
+     * \param[in] an optional tracing function
      * \throw exception::parse_error if parsing fails */
-    virtual void run_parser(script_builder& builder, std::string_view src) = 0;
+    virtual void run_parser(script_builder& builder, std::string_view src,
+                            parser::context::trace_t trace) = 0;
 };
 
 //! The interface for creating a running a selected parser

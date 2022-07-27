@@ -25,21 +25,25 @@ using parse_error = parser::error<parse_iterator>;
  * \param[in] file a file name, which will be stored in the internal
  * representation of the script
  * \param[in] syntax the syntax variant of the script
+ * \param[in] an optional tracing function
  * \return the internal representation of the parsed script; never \c nullptr
  * \throw exception::parse_error if parsing fails */
 template <impl::allocator A> basic_script<A>::script_ptr
 parse_code(const A& alloc, std::string_view src, std::string_view file,
-           std::string_view syntax = syntax_factory::syntax_canon);
+           std::string_view syntax = syntax_factory::syntax_canon,
+           parser::context::trace_t trace = {});
 
 //! Parses a script file
 /*! \tparam A the allocator type
  * \param[in] alloc the allocator used to allocate the returned parsed script
  * \param[in] file the file name
  * \param[in] syntax the syntax variant of the script
+ * \param[in] an optional tracing function
  * \return the internal representation of the parsed script; never \c nullptr
  * \throw exception::parse_error if parsing fails */
 template <impl::allocator A> basic_script<A>::script_ptr
 parse_code_file(const A& alloc, std::string_view file,
-                std::string_view syntax = syntax_factory::syntax_canon);
+                std::string_view syntax = syntax_factory::syntax_canon,
+                parser::context::trace_t trace = {});
 
 } // namespace threadscript
