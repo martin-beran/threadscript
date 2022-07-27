@@ -277,7 +277,7 @@ public:
     }
     /*! \copydoc set_handler()
      * \return \c *this */
-    Rule&& operator[](Handler h) && {
+    Rule operator[](Handler h) && {
         set_handler(std::move(h));
         return static_cast<Rule&&>(*this);
     }
@@ -297,7 +297,7 @@ public:
     }
     /*! \copydoc set_tracing()
      * \return \c *this */
-    Rule&& operator[](std::string_view name) && {
+    Rule operator[](std::string_view name) && {
         set_tracing(name);
         return static_cast<Rule&&>(*this);
     }
@@ -698,7 +698,7 @@ public:
         auto result = *this;
         step();
         ++it;
-        return result;
+        return std::move(result);
     }
     size_t line = 1; //!< The current line number (starting at 1)
     size_t column = 1; //!< The current column number (starting at 1)
@@ -1699,9 +1699,9 @@ public:
     }
     /*! \copydoc set_child()
      * \return \c *this */
-    template <rule_cvref Rule> dyn&& operator>>=(Rule&& r) && {
+    template <rule_cvref Rule> dyn operator>>=(Rule&& r) && {
         set_child(std::forward<Rule>(r));
-        return *this;
+        return std::move(*this);
     }
     //! Tests if a child node has been set.
     /*! \return \c true if a child node has been set, \c false otherwise */
