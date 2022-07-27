@@ -82,7 +82,7 @@ namespace threadscript {
  * only the one created first produces output. This rule prevents deadlocks or
  * garbled output if a \ref DEBUG is invoked recursively when generating a
  * debugging message, e.g., by a debugging message in an \c operator<<().
- * 
+ *
  * \note Debugging messages generated after destroying file_os will not be
  * written. Such message can be written, e.g., by destructors of objects with
  * static storage duration destroyed after file_os.
@@ -131,7 +131,7 @@ private:
     std::unique_lock<std::mutex> lck; //!< The lock held by this object
     //! The output stream; \c nullptr if debugging output is disabled
     std::ostream* os = nullptr;
-    //! Used to detect if a \ref DEBUG instance exists in the current thread. 
+    //! Used to detect if a \ref DEBUG instance exists in the current thread.
     static thread_local bool active;
     static std::mutex mtx; //!< The mutex for synchronizing different instances
     //! The output stream; \c nullptr if debugging output is disabled.

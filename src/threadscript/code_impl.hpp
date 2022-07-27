@@ -121,7 +121,7 @@ basic_script<A>::basic_script(tag, const A& alloc, std::string_view file):
     _file(file, alloc), alloc(alloc)
 {
 }
-    
+
 template <impl::allocator A> basic_script<A>::~basic_script() {
     if (_root) {
         typename std::allocator_traits<A>::template rebind_alloc<node_type>

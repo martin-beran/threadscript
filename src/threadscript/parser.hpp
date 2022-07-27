@@ -256,14 +256,23 @@ public:
      * rule does not match, it returns rule_result::fail,
      * rule_result::fail_final_seq, or rule_result::fail_final_alt and the
      * position where matching failed.
+     *
+     * If matching fails and error_msg is nonempty, it is stored in \a ctx and
+     * the position of the error is stored in \a e_it. A descendant node may
+     * overwrite the error message and position. This logic ensures reporting
+     * an error where it occurred at the lowest level in the parse tree, not in
+     * some ancestor node where the error propagates.
+     *
      * \param[in,out] ctx the parsing context; may be modified by the function
      * \param[in,out] up a temporary context of a parent rule; \c nullptr if
      * this rule has no parent
      * \param[in] begin a position in the input sequence where matching starts
      * \param[in] end the end of input sequence
+     * \param[in,out] e_it an iterator used to track an error location
      * \return the result of matching this rule with the input sequence
      * \throw error if the maximum depth of rule nesting is exceeded */
-    parse_result parse(Ctx& ctx, Up* up, It begin, It end) const;
+    parse_result parse(Ctx& ctx, Up* up, It begin, It end,
+                       std::optional<It>& e_it) const;
     //! Sets a new handler
     /*! \param[in] h the new handler */
     void set_handler(Handler h) {
@@ -339,13 +348,14 @@ protected:
      * this rule has no parent
      * \param[in] begin a position in the input sequence where matching starts
      * \param[in] end the end of input sequence
+     * \param[in,out] e_it an iterator used to track an error location
      * \return the result of matching this rule with the input sequence */
-    parse_result parse_internal(Ctx& ctx, Self& self, Up* up, It begin, It end)
-        const
+    parse_result parse_internal(Ctx& ctx, Self& self, Up* up, It begin, It end,
+                                std::optional<It>& e_it) const
     {
         empty tmp{};
         return static_cast<const Rule*>(this)->parse_with_tmp(ctx, self, up,
-                                                              tmp, begin, end);
+                                                      tmp, begin, end, e_it);
     }
     //! Parses the input and can use temporary private data
     /*! When the rules matches, the result is passed out from the rule by
@@ -359,13 +369,14 @@ protected:
      * \param[in,out] tmp temporary private data
      * \param[in] begin a position in the input sequence where matching starts
      * \param[in] end the end of input sequence
+     * \param[in,out] e_it an iterator used to track an error location
      * \return the result of matching this rule with the input sequence */
     template <class Tmp>
     parse_result parse_with_tmp(Ctx& ctx, Self& self, Up* up, Tmp& tmp,
-                                It begin, It end) const
+                                It begin, It end, std::optional<It>& e_it) const
     {
-        auto result =
-            static_cast<const Rule*>(this)->eval(ctx, self, tmp, begin, end);
+        auto result = static_cast<const Rule*>(this)->eval(ctx, self, tmp,
+                                                           begin, end, e_it);
         if (result.first == rule_result::ok ||
             result.first == rule_result::ok_final)
         {
@@ -385,12 +396,14 @@ protected:
      * \param[in,out] tmp temporary private data
      * \param[in] begin a position in the input sequence where matching starts
      * \param[in] end the end of input sequence
-     * \return[in] the result of matching this rule with the input sequence,
+     * \param[in,out] e_it an iterator used to track an error location
+     * \return the result of matching this rule with the input sequence,
      * with the same meaning as in parse() */
     template <class Tmp>
     parse_result eval([[maybe_unused]] Ctx& ctx, [[maybe_unused]] Self& self,
                       [[maybe_unused]] Tmp& tmp,
-                      [[maybe_unused]] It begin, [[maybe_unused]] It end) const
+                      [[maybe_unused]] It begin, [[maybe_unused]] It end,
+                      [[maybe_unused]] std::optional<It>& e_it) const
     {
         return {rule_result::fail, begin};
     }
@@ -445,9 +458,10 @@ template <class Rule> concept rule = std::derived_from<Rule, rule_base<
     typename Rule::iterator_type, typename Rule::handler_type>> &&
     requires (const Rule r, typename Rule::context_type& ctx,
               typename Rule::up_ctx_type* up,
-              const typename Rule::iterator_type it)
+              const typename Rule::iterator_type it,
+              std::optional<typename Rule::iterator_type>& e_it)
     {
-        { r.parse(ctx, up, it, it) } ->
+        { r.parse(ctx, up, it, it, e_it) } ->
             std::same_as<typename Rule::parse_result>;
     };
 
@@ -494,12 +508,16 @@ public:
      * \param[in] begin_line reported beginning line number
      * \param[in] begin_column reported beginning column number
      * \param[in] end_line reported end line number
-     * \param[in] end_column reported end column number */
+     * \param[in] end_column reported end column number
+     * \param[in] err_line reported error line number
+     * \param[in] err_column reported error column number */
     using trace_t = std::function<void(std::optional<rule_result> result,
                                        const std::string& name, size_t depth,
                                        std::string_view error,
                                        size_t begin_line, size_t begin_column,
-                                       size_t end_line, size_t end_column)>;
+                                       size_t end_line, size_t end_column,
+                                       std::optional<size_t> err_line,
+                                       std::optional<size_t> err_column)>;
     //! Parses an input sequence of terminal symbols according to \a rule.
     /*! \tparam R a rule type
      * \param[in] rule the rule matched to the input
@@ -520,13 +538,15 @@ public:
           bool all = true)
     {
         depth = 0;
-        switch (auto [result, pos] = rule.parse(*this, up, begin, end); result)
+        std::optional<typename R::iterator_type> e_it{};
+        switch (auto [result, pos] = rule.parse(*this, up, begin, end, e_it);
+                result)
         {
             case rule_result::fail:
             case rule_result::fail_final_seq:
             case rule_result::fail_final_alt:
                 if (error_msg)
-                    throw error(pos, *error_msg);
+                    throw error(e_it.value_or(pos), *error_msg);
                 else
                     throw error(pos);
             case rule_result::ok:
@@ -608,7 +628,17 @@ public:
     //! A function used for rule tracing
     trace_t trace;
     //! Generates a default tracing message
-    /*! It expects the same arguments as \ref trace
+    /*! Each message is indented by \a depth spaces. It contains:
+     * \arg an indicator of start or end of a rule evaluation
+     * \arg the \a result value, if it is end of a rule evaluation
+     * \arg the rule \a name
+     * \arg the rule \a depth
+     * \arg begin and end posititions when entering a rule, after match and end
+     * positions if a rule succeeds, error and end positions if a rule fails
+     * \arg a position of an error (if stored during parsing)
+     * \arg an error message (if stored during parsing)
+     *
+     * It expects the same arguments as \ref trace
      * \param[in] result
      * \param[in] name
      * \param[in] depth
@@ -617,12 +647,16 @@ public:
      * \param[in] begin_column
      * \param[in] end_line
      * \param[in] end_column
+     * \param[in] err_line reported error line number
+     * \param[in] err_column reported error column number
      * \return a tracing message */
     static std::string trace_msg(std::optional<rule_result> result,
                                  const std::string& name, size_t depth,
                                  std::string_view error,
                                  size_t begin_line, size_t begin_column,
-                                 size_t end_line, size_t end_column)
+                                 size_t end_line, size_t end_column,
+                                 std::optional<size_t> err_line,
+                                 std::optional<size_t> err_column)
     {
         std::string msg(depth, ' ');
         if (result)
@@ -647,17 +681,22 @@ public:
             }
         else
             msg += ">>>>>>>>>>>>>>>";
-        msg.append(" ").append(name).append(" / ");
-        msg.append(std::to_string(depth));
+        msg.append(" ").append(name);
+        msg.append(" [").append(std::to_string(depth)).append("]");
         if (begin_line != 0 || begin_column != 0 ||
             end_line != 0 || end_column != 0)
         {
             msg.append(" ").append(std::to_string(begin_line));
             msg.append(":").append(std::to_string(begin_column));
-            msg.append(" ").append(std::to_string(end_line));
+            msg.append("-").append(std::to_string(end_line));
             msg.append(":").append(std::to_string(end_column));
         }
-        msg.append(" ").append(error);
+        if (err_line || err_column) {
+            msg.append(" ").append(std::to_string(err_line.value_or(0)));
+            msg.append(":").append(std::to_string(err_column.value_or(0)));
+        }
+        if (!error.empty())
+            msg.append(" ").append(error);
         return msg;
     }
 private:
@@ -731,7 +770,7 @@ public:
     size_t line = 1; //!< The current line number (starting at 1)
     size_t column = 1; //!< The current column number (starting at 1)
 private:
-    //! Adjusts the line and column numbers when incrementing the iterator. 
+    //! Adjusts the line and column numbers when incrementing the iterator.
     void step() {
         if (*it == '\n') {
             ++line;
@@ -775,7 +814,8 @@ make_script_iterator(const T& chars)
 template <class Rule, class Ctx, class Self, class Up, class Info,
     std::forward_iterator It, handler<Ctx, Self, Up, Info, It> Handler>
 auto rule_base<Rule, Ctx, Self, Up, Info, It, Handler>::parse(
-                    Ctx& ctx, Up* up, It begin, It end) const -> parse_result 
+                    Ctx& ctx, Up* up, It begin, It end,
+                    std::optional<It>& e_it) const -> parse_result
 {
     if (ctx.max_depth && ctx.depth >= ctx.max_depth)
         throw error(begin, ctx.depth_msg);
@@ -784,9 +824,11 @@ auto rule_base<Rule, Ctx, Self, Up, Info, It, Handler>::parse(
     if (ctx.trace && !trace.empty()) {
         if constexpr (is_script_iterator_v<It>)
             ctx.trace(std::nullopt, trace, ctx.depth, "",
-                      begin.line, begin.column, end.line, end.column);
+                      begin.line, begin.column, end.line, end.column,
+                      std::nullopt, std::nullopt);
         else
-            ctx.trace(std::nullopt, trace, ctx.depth, "", 0, 0, 0, 0);
+            ctx.trace(std::nullopt, trace, ctx.depth, "", 0, 0, 0, 0,
+                      std::nullopt, std::nullopt);
     }
     Self self{};
     auto saved_msg = ctx.error_msg;
@@ -794,12 +836,15 @@ auto rule_base<Rule, Ctx, Self, Up, Info, It, Handler>::parse(
         ctx.error_msg = error_msg;
     parse_result result =
         static_cast<const Rule*>(this)->parse_internal(ctx, self, up,
-                                                       begin, end);
-    if (!error_msg.empty() && (result.first == rule_result::ok ||
-                               result.first == rule_result::ok_final))
+                                                       begin, end, e_it);
+    if (result.first == rule_result::ok ||
+        result.first == rule_result::ok_final)
     {
+        e_it.reset();
         ctx.error_msg = saved_msg;
-    }
+    } else
+        if (!e_it)
+            e_it = result.second;
     if (ctx.trace && !trace.empty()) {
         std::string_view error =
             ctx.error_msg && result.first != rule_result::ok &&
@@ -812,9 +857,12 @@ auto rule_base<Rule, Ctx, Self, Up, Info, It, Handler>::parse(
                 std::make_pair(begin, result.second) :
                 std::make_pair(result.second, end);
             ctx.trace(result.first, trace, ctx.depth, error,
-                      b.line, b.column, e.line, e.column);
+                      b.line, b.column, e.line, e.column,
+                      e_it ? std::make_optional(e_it->line) : std::nullopt,
+                      e_it ? std::make_optional(e_it->column) : std::nullopt);
         } else
-            ctx.trace(result.first, trace, ctx.depth, error, 0, 0, 0, 0);
+            ctx.trace(result.first, trace, ctx.depth, error, 0, 0, 0, 0,
+                      std::nullopt, std::nullopt);
     }
     return result;
 }
@@ -870,9 +918,10 @@ public:
 protected:
     //! \copydoc rule_base::eval()
     typename eof::parse_result eval([[maybe_unused]] Ctx& ctx,
-                                    [[maybe_unused]] Self& self,
-                                    [[maybe_unused]] empty& tmp,
-                                    It begin, It end) const
+                                [[maybe_unused]] Self& self,
+                                [[maybe_unused]] empty& tmp,
+                                It begin, It end,
+                                [[maybe_unused]] std::optional<It>& e_it) const
     {
         return {begin == end ? rule_result::ok : rule_result::fail, begin};
     }
@@ -905,9 +954,10 @@ public:
 protected:
     //! \copydoc rule_base::eval()
     typename any::parse_result eval([[maybe_unused]] Ctx& ctx,
-                                    [[maybe_unused]] Self& self,
-                                    [[maybe_unused]] empty& tmp,
-                                    It begin, It end) const
+                                [[maybe_unused]] Self& self,
+                                [[maybe_unused]] empty& tmp,
+                                It begin, It end,
+                                [[maybe_unused]] std::optional<It>& e_it) const
     {
         if (begin != end)
             return {rule_result::ok, ++begin};
@@ -949,9 +999,10 @@ public:
 protected:
     //! \copydoc rule_base::eval()
     typename t::parse_result eval([[maybe_unused]] Ctx& ctx,
-                                  [[maybe_unused]] Self& self,
-                                  [[maybe_unused]] empty& tmp,
-                                  It begin, It end) const
+                              [[maybe_unused]] Self& self,
+                              [[maybe_unused]] empty& tmp,
+                              It begin, It end,
+                              [[maybe_unused]] std::optional<It>& e_it) const
     {
         if (begin != end && *begin == term)
                 return {rule_result::ok, ++begin};
@@ -999,9 +1050,10 @@ public:
 protected:
     //! \copydoc rule_base::eval()
     typename p::parse_result eval([[maybe_unused]] Ctx& ctx,
-                                  [[maybe_unused]] Self& self,
-                                  [[maybe_unused]] empty& tmp,
-                                  It begin, It end) const
+                              [[maybe_unused]] Self& self,
+                              [[maybe_unused]] empty& tmp,
+                              It begin, It end,
+                              [[maybe_unused]] std::optional<It>& e_it) const
     {
         if (begin != end && pred(*begin))
             return {rule_result::ok, ++begin};
@@ -1104,9 +1156,10 @@ public:
 protected:
     //! \copydoc rule_base::eval()
     typename str::parse_result eval([[maybe_unused]] Ctx& ctx,
-                                    [[maybe_unused]] Self& self,
-                                    [[maybe_unused]] empty& tmp,
-                                    It begin, It end) const
+                                [[maybe_unused]] Self& self,
+                                [[maybe_unused]] empty& tmp,
+                                It begin, It end,
+                                [[maybe_unused]] std::optional<It>& e_it) const
     {
         for (auto& s: seq) {
             if (begin == end || !pred(s, *begin))
@@ -1211,7 +1264,7 @@ template <rule_cvref R> using handler_t = typename child_t<R>::handler_type;
 
 } // namespace impl
 
-//! A rule that matches some number of occurrences of a child rule 
+//! A rule that matches some number of occurrences of a child rule
 /*! Parameter \a info of \a Handler has type \c size_t and contains the number
  * of matches of the child rule.
  * \tparam Child a child rule type
@@ -1286,21 +1339,23 @@ protected:
                    typename repeat::self_ctx_type& self,
                    typename repeat::up_ctx_type* up,
                    typename repeat::iterator_type begin,
-                   typename repeat::iterator_type end) const
+                   typename repeat::iterator_type end,
+                   std::optional<typename repeat::iterator_type>& e_it) const
     {
         size_t tmp = 0;
-        return this->parse_with_tmp(ctx, self, up, tmp, begin, end);
+        return this->parse_with_tmp(ctx, self, up, tmp, begin, end, e_it);
     }
     //! \copydoc rule_base::eval()
     typename repeat::parse_result eval(typename repeat::context_type& ctx,
-                                       typename repeat::self_ctx_type& self,
-                                       size_t& tmp,
-                                       typename repeat::iterator_type begin,
-                                       typename repeat::iterator_type end) const
+                   typename repeat::self_ctx_type& self,
+                   size_t& tmp,
+                   typename repeat::iterator_type begin,
+                   typename repeat::iterator_type end,
+                   std::optional<typename repeat::iterator_type>& e_it) const
     {
         for (size_t i = 0;; ++i) {
-            switch (auto [result, pos] = _child.parse(ctx, &self, begin, end);
-                    result)
+            switch (auto [result, pos] = _child.parse(ctx, &self, begin, end,
+                                                      e_it); result)
             {
             case rule_result::fail:
             case rule_result::fail_final_seq:
@@ -1423,13 +1478,14 @@ public:
 protected:
     //! \copydoc rule_base::eval()
     typename seq::parse_result eval(typename seq::context_type& ctx,
-                                    typename seq::self_ctx_type& self,
-                                    [[maybe_unused]] empty& tmp,
-                                    typename seq::iterator_type begin,
-                                    typename seq::iterator_type end) const
+                        typename seq::self_ctx_type& self,
+                        [[maybe_unused]] empty& tmp,
+                        typename seq::iterator_type begin,
+                        typename seq::iterator_type end,
+                        std::optional<typename seq::iterator_type>& e_it) const
     {
-        switch (auto [result1, pos1] = _child1.parse(ctx, &self, begin, end);
-                result1)
+        switch (auto [result1, pos1] = _child1.parse(ctx, &self, begin, end,
+                                                     e_it); result1)
         {
         case rule_result::fail_final_alt:
             result1 = rule_result::fail;
@@ -1439,8 +1495,8 @@ protected:
             return {result1, pos1};
         case rule_result::ok:
         case rule_result::ok_final:
-            switch (auto [result2, pos2] = _child2.parse(ctx, &self, pos1, end);
-                    result2)
+            switch (auto [result2, pos2] = _child2.parse(ctx, &self, pos1, end,
+                                                         e_it); result2)
             {
             case rule_result::fail_final_alt:
                 result2 = rule_result::fail;
@@ -1559,27 +1615,29 @@ protected:
                    typename alt::self_ctx_type& self,
                    typename alt::up_ctx_type* up,
                    typename alt::iterator_type begin,
-                   typename alt::iterator_type end) const
+                   typename alt::iterator_type end,
+                   std::optional<typename alt::iterator_type>& e_it) const
     {
         size_t tmp = 2;
-        return this->parse_with_tmp(ctx, self, up, tmp, begin, end);
+        return this->parse_with_tmp(ctx, self, up, tmp, begin, end, e_it);
     }
     //! \copydoc rule_base::eval()
     typename alt::parse_result eval(typename alt::context_type& ctx,
-                                    typename alt::self_ctx_type& self,
-                                    size_t& tmp,
-                                    typename alt::iterator_type begin,
-                                    typename alt::iterator_type end) const
+                        typename alt::self_ctx_type& self,
+                        size_t& tmp,
+                        typename alt::iterator_type begin,
+                        typename alt::iterator_type end,
+                        std::optional<typename alt::iterator_type>& e_it) const
     {
-        switch (auto [result1, pos1] = _child1.parse(ctx, &self, begin, end);
-                result1)
+        switch (auto [result1, pos1] = _child1.parse(ctx, &self, begin, end,
+                                                     e_it); result1)
         {
         case rule_result::fail_final_seq:
         case rule_result::fail_final_alt:
             return {rule_result::fail_final_alt, pos1};
         case rule_result::fail:
             switch (auto [result2, pos2] = _child2.parse(ctx, &self, begin,
-                                                         end); result2)
+                                                         end, e_it); result2)
             {
             case rule_result::fail_final_seq:
                 result2 = rule_result::fail_final_alt;
@@ -1667,12 +1725,13 @@ public:
 protected:
     //! \copydoc rule_base::eval()
     typename cut::parse_result eval(typename cut::context_type& ctx,
-                                    typename cut::self_ctx_type& self,
-                                    [[maybe_unused]] empty& tmp,
-                                    typename cut::iterator_type begin,
-                                    typename cut::iterator_type end) const
+                        typename cut::self_ctx_type& self,
+                        [[maybe_unused]] empty& tmp,
+                        typename cut::iterator_type begin,
+                        typename cut::iterator_type end,
+                        std::optional<typename cut::iterator_type>& e_it) const
     {
-        switch (auto [result, pos] = _child.parse(ctx, &self, begin, end);
+        switch (auto [result, pos] = _child.parse(ctx, &self, begin, end, e_it);
                 result)
         {
         case rule_result::fail:
@@ -1726,9 +1785,10 @@ public:
         std::is_lvalue_reference_v<Rule>
     void set_child(Rule&& r) {
         _child = &r;
-        _parse = [](const void* child, Ctx& ctx, Up* up, It begin, It end) {
+        _parse = [](const void* child, Ctx& ctx, Up* up, It begin, It end,
+                    std::optional<It>& e_it) {
             return static_cast<const std::remove_cvref_t<Rule>*>(child)->
-                parse(ctx, up, begin, end);
+                parse(ctx, up, begin, end, e_it);
         };
     }
     /*! \copydoc set_child()
@@ -1753,11 +1813,12 @@ protected:
     //! \copydoc rule_base::eval()
     typename dyn::parse_result eval(Ctx& ctx, Self& self,
                                     [[maybe_unused]] empty& tmp,
-                                    It begin, It end) const
+                                    It begin, It end,
+                                    std::optional<It>& e_it) const
     {
         if (_child && _parse)
-            switch(auto [result, pos] = _parse(_child, ctx, &self, begin, end);
-                   result)
+            switch(auto [result, pos] = _parse(_child, ctx, &self, begin, end,
+                                               e_it); result)
             {
             case rule_result::fail:
             case rule_result::fail_final_seq:
@@ -1782,9 +1843,11 @@ private:
      * this rule has no parent
      * \param[in] begin the start of the input
      * \param[in] end the end of the input
+     * \param[in,out] e_it an iterator used to track an error location
      * \return a parsing result returned by the child node */
     typename dyn::parse_result (*_parse)(const void* child, Ctx& ctx, Up* up,
-                                         It begin, It end) = nullptr;
+                                         It begin, It end,
+                                         std::optional<It>& e_it) = nullptr;
     //! rule_base needs access to overriden member functions
     friend base;
 };

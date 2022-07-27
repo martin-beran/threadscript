@@ -115,7 +115,7 @@ public:
      * trace is returned.
      * \return the stack trace */
     [[nodiscard]] stack_trace current_stack() const noexcept;
-    vm_t& vm; //!< The virtual machine 
+    vm_t& vm; //!< The virtual machine
 private:
     //! A stack frame
     /*! For simplicity, it uses frame_location, which does not use custom

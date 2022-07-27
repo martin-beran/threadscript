@@ -35,7 +35,7 @@ DEBUG::DEBUG(const std::source_location& loc):
 #else
 DEBUG::DEBUG(const boost::source_location& loc):
 #endif
-    lck(init()) 
+    lck(init())
 {
     if (active) {
         assert(!lck);

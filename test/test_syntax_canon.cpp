@@ -60,13 +60,16 @@ bool tracing_enabled()
 void test_trace(std::optional<ts::parser::rule_result> result,
                 const std::string& name, size_t depth, std::string_view error,
                 size_t begin_line, size_t begin_column,
-                size_t end_line, size_t end_column)
+                size_t end_line, size_t end_column,
+                std::optional<size_t> err_line,
+                std::optional<size_t> err_column)
 {
     if (tracing_enabled())
         std::cout <<
             ts::parser::context::trace_msg(result, name, depth, error,
                                            begin_line, begin_column, end_line,
-                                           end_column) << std::endl;
+                                           end_column, err_line, err_column) <<
+            std::endl;
 }
 
 template <class Sample> void test_parse(Sample&& sample)

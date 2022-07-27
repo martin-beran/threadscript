@@ -65,7 +65,7 @@ struct canon::rules {
          rf::id() >> *space >>
           rf::t('(')["Expected '('"sv] >>
           *params >> rf::t(')')["Expected ',' or ')'"]);
-    
+
     RULE(_node,
          node_val | node_fun);
 
