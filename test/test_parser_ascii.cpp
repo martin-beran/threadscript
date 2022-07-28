@@ -29,7 +29,8 @@ struct input {
     input(std::string text, size_t line, size_t column,
           std::string error = "Parse error"):
         text(std::move(text)), line(line), column(column),
-        error(std::move(error))
+        error(std::to_string(line) + ":" + std::to_string(column) + ": " +
+              std::move(error))
     {}
     std::string text;
     size_t line;

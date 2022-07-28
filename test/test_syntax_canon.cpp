@@ -21,7 +21,8 @@ struct input {
     input(std::string text, size_t line = 0, size_t column = 0,
           std::string error = "Parse error"):
         text(std::move(text)), line(line), column(column),
-        error(std::move(error))
+        error(std::to_string(line) + ":" + std::to_string(column) + ": " +
+              std::move(error))
     {}
     std::string text;
     size_t line;
@@ -163,11 +164,23 @@ null
     {R"(id)", false, 1, 3, "Expected '('"},
     {R"(id[])", false, 1, 3, "Expected '('"},
     {R"(id [])", false, 1, 4, "Expected '('"},
-    {R"(id()", false, 1, 4, "Expected ',' or ')'"},
+    {R"(id()", false, 1, 4, "Expected value or function"},
     {R"(id())"},
+    {R"(a())"},
+    {R"(A())"},
+    {R"(_())"},
+    {R"(abc())"},
+    {R"(ABC())"},
+    {R"(A23())"},
+    {R"(123())", false, 1, 4, "Whitespace or comment expected"},
     {R"(id(1, 2))"},
-    {R"(id(1, 2,))"},
+    {R"(id(1, 2,))", false, 1, 9, "Expected value or function"},
+    {R"(id(1, 2, null, false, true, "Hello"))"},
 // Complex syntax
+    {R"(id(1, f(2), g(null, false, true)))"},
+    {R"(id(1, f(2), g(null, false, true), h1("Hello", h2("h3", 3))))"},
+    {R"(id(1, f(2), g(null, false, true), h1("Hello", h2(h3, 3))))",
+        false, 1, 52, "Expected '('"},
 }))
 {
     test_parse(sample);

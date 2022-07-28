@@ -9,7 +9,7 @@
  *
  * \arg \ref Cmdline_ts Command line interpreter \c ts
  * \arg \ref LangRef
- * \arg ref CppAPI C++ API
+ * \arg \ref CppAPI
  *
  * \section Develop_ThreadScript Develop ThreadScript
  *

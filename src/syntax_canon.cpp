@@ -15,17 +15,30 @@ struct canon::rules {
     //! The script builder to be used by handlers
     /*! Its value is valid only during canon::run_parser(). */
     script_builder* b = nullptr;
+//! Defines a single rule as a member variable.
+/*! It is needed to eliminate repeating of rule body definition in the rule
+ * type, because non-static member variables cannot have type \c auto. It also
+ * sets the rule name for tracing.
+ * \param[in] name the rule name
+ * \param[in] body the rule body
+ * \note This macro prevents using lambdas as parameters of rules, because the
+ * resulting macro expansion:
+ * \code
+ * decltype(rule(lambda)) name = rule(lambda);
+ * \endcode
+ * would be invalid. Although their definitions are identical, the two lambdas
+ * in \c decltype and in the initializer are two different closure classes.
+ * Hence, a named function, e.g., \c is_lit_char() must be used instead of a
+ * lambda. */
+// NOLINTNEXTLINE: This macro is needed as is to generate rules
+#define RULE(name, body) decltype(body) name = (body)(std::string_view(#name))
     //! [Grammar]
     //! \cond
-#define RULE(name, body) decltype(body) name = (body)(std::string_view(#name))
-
     RULE(comment,
          rf::t('#') >> *rf::print() >> (rf::eof() | rf::nl()));
     RULE(space,
          (rf::lws() | comment)["Whitespace or comment expected"sv]);
 
-    // Cannot use a lambda, because of invalid macro expansion of the form
-    // decltype(rule(lambda)) name = rule(lambda);
     static bool is_lit_char(char c) {
         return c >= 32 && c <= 126 && c != '"' && c != '\\';
     }
@@ -52,7 +65,8 @@ struct canon::rules {
          (rf::t('+') | rf::t('-'))("Sign"sv) >> rf::uint()
          ["Expected number"sv]);
     RULE(val_string,
-         rf::t('"') >> *string_char >> rf::t('"')["Expected '\"'"sv]);
+         rf::t('"') >> *string_char >> rf::t('"')
+         ["Expected '\"'"sv]);
     RULE(node_val,
          val_null | val_bool | val_unsigned | val_int | val_string);
 
@@ -61,21 +75,28 @@ struct canon::rules {
          ["Expected value or function"sv]);
 
     RULE(params,
-         *space >> -(node >> *space >> *(rf::t(',') >> *space >> node)));
+         rf::dyn());
+    RULE(_params,
+         node >> *space >> (rf::t(')')("close"sv) |
+                            rf::t(',')["Expected ',' or ')'"sv]("comma"sv) >>
+                            *space >> params));
+
     RULE(node_fun,
          rf::id() >> *space >>
-          rf::t('(')["Expected '('"sv] >>
-          params >> rf::t(')')["Expected ',' or ')'"]);
+          rf::t('(')["Expected '('"sv]("open"sv) >> *space >>
+          (rf::t(')')("close"sv) | params));
 
     RULE(_node,
          node_val | node_fun);
 
     RULE(script,
-         *space >> node >> *space);
+         *space >> node >> *space >> rf::eof()
+         ["Whitespace or comment expected"sv]);
 
     //! \endcond
     //! Configures rules
     rules() {
+        params >>= _params;
         node >>= _node;
     }
     //! [Grammar]

@@ -33,11 +33,18 @@ public:
     /*! \param[in] pos error position
      * \param[in] msg error message */
     explicit error(I pos, std::string_view msg = "Parse error"):
-        runtime_error(std::string{msg}), _pos(pos) {}
+        runtime_error(make_message(pos, msg)), _pos(pos) {}
     //! Gets the error position
     /*! \return the position */
     I pos() const { return _pos; }
 private:
+    //! Generates an error message.
+    /*! Content of \a msg is prepended with the line and column number if \a I
+     * is an script_iterator
+     * \param[in] pos error position
+     * \param[in] msg error message
+     * \return \a message with added position */
+    static std::string make_message(I pos, std::string_view msg);
     I _pos; //!< Stored error position
 };
 
@@ -617,7 +624,12 @@ public:
      * used. This is normally manipulated by rules during parsing, therefore it
      * is non-owning in order to reduce copying of strings. */
     std::optional<std::string_view> error_msg{};
-    //! If nont \c nullopt, then it defines the maximum stack depth of parsing.
+    //! A pointer for detecting the node that has set error_msg
+    /*! It is used internally by rule_base::parse(). Any object can set it to
+     * any value (usually \c this) to mark ownership of error_msg to the logic
+     * of error reporting. */
+    const void *error_owner = nullptr;
+    //! If not \c nullopt, then it defines the maximum stack depth of parsing.
     std::optional<size_t> max_depth{};
     //! An error message used if max_depth is exceeded
     std::string depth_msg{"Maximum parsing depth exceeded"};
@@ -719,13 +731,13 @@ template <std::forward_iterator It> requires
 class script_iterator: public std::forward_iterator_tag {
 public:
     //! A required member of an iterator class
-    using difference_type = std::iterator_traits<It>::difference_type;
+    using difference_type = typename std::iterator_traits<It>::difference_type;
     //! A required member of an iterator class
-    using value_type = std::iterator_traits<It>::value_type;
+    using value_type = typename std::iterator_traits<It>::value_type;
     //! A required member of an iterator class
-    using pointer = std::iterator_traits<It>::pointer;
+    using pointer = typename std::iterator_traits<It>::pointer;
     //! A required member of an iterator class
-    using reference = std::iterator_traits<It>::reference;
+    using reference = typename std::iterator_traits<It>::reference;
     //! A required member of an iterator class
     using iterator_category = typename std::forward_iterator_tag;
     //! Creates a singular iterator.
@@ -740,7 +752,7 @@ public:
         line(line), column(column), it(std::move(it)) {}
     //! Gets the value of the underlying iterator.
     /*! \return the underlying iterator */
-    It get() const { return it; }
+    [[nodiscard]] It get() const { return it; }
     //! Dereferences the underlying iterator.
     /*! \return the character referenced by the underlying iterator. */
     auto& operator*() const { return *it; }
@@ -765,7 +777,7 @@ public:
         auto result = *this;
         step();
         ++it;
-        return std::move(result);
+        return result;
     }
     size_t line = 1; //!< The current line number (starting at 1)
     size_t column = 1; //!< The current column number (starting at 1)
@@ -809,6 +821,19 @@ make_script_iterator(const T& chars)
     return {script_iterator(chars.cbegin()), script_iterator(chars.cend())};
 }
 
+/*** error *******************************************************************/
+
+template <std::forward_iterator I>
+std::string error<I>::make_message(I pos, std::string_view msg)
+{
+    std::string result;
+    if constexpr (is_script_iterator_v<I>)
+        result.append(std::to_string(pos.line)).append(":").
+            append(std::to_string(pos.column)).append(": ");
+    result.append(msg);
+    return result;
+}
+
 /*** rule_base ***************************************************************/
 
 template <class Rule, class Ctx, class Self, class Up, class Info,
@@ -832,8 +857,10 @@ auto rule_base<Rule, Ctx, Self, Up, Info, It, Handler>::parse(
     }
     Self self{};
     auto saved_msg = ctx.error_msg;
-    if (!error_msg.empty())
+    if (!error_msg.empty()) {
         ctx.error_msg = error_msg;
+        ctx.error_owner = this;
+    }
     parse_result result =
         static_cast<const Rule*>(this)->parse_internal(ctx, self, up,
                                                        begin, end, e_it);
@@ -843,7 +870,7 @@ auto rule_base<Rule, Ctx, Self, Up, Info, It, Handler>::parse(
         e_it.reset();
         ctx.error_msg = saved_msg;
     } else
-        if (!e_it)
+        if (ctx.error_owner == this)
             e_it = result.second;
     if (ctx.trace && !trace.empty()) {
         std::string_view error =
@@ -1331,7 +1358,7 @@ public:
                min, max) {}
     //! Gets the child node.
     /*! \return the child */
-    const Child& child() const noexcept { return _child; }
+    [[nodiscard]] const Child& child() const noexcept { return _child; }
 protected:
     //! \copydoc rule_base::parse_internal()
     typename repeat::parse_result
@@ -1471,10 +1498,10 @@ public:
             }) {}
     //! Gets the first child node.
     /*! \return the child */
-    const Child1& child1() const noexcept { return _child1; }
+    [[nodiscard]] const Child1& child1() const noexcept { return _child1; }
     //! Gets the second child node.
     /*! \return the child */
-    const Child2& child2() const noexcept { return _child2; }
+    [[nodiscard]] const Child2& child2() const noexcept { return _child2; }
 protected:
     //! \copydoc rule_base::eval()
     typename seq::parse_result eval(typename seq::context_type& ctx,
@@ -1604,10 +1631,10 @@ public:
     {}
     //! Gets the first child node.
     /*! \return the child */
-    const Child1& child1() const noexcept { return _child1; }
+    [[nodiscard]] const Child1& child1() const noexcept { return _child1; }
     //! Gets the second child node.
     /*! \return the child */
-    const Child2& child2() const noexcept { return _child2; }
+    [[nodiscard]] const Child2& child2() const noexcept { return _child2; }
 protected:
     //! \copydoc rule_base::parse_internal()
     typename alt::parse_result
@@ -1721,7 +1748,7 @@ public:
         base(), _child(std::forward<Child>(child)) {}
     //! Gets the child node.
     /*! \return the child */
-    const Child& child() const noexcept { return _child; }
+    [[nodiscard]] const Child& child() const noexcept { return _child; }
 protected:
     //! \copydoc rule_base::eval()
     typename cut::parse_result eval(typename cut::context_type& ctx,

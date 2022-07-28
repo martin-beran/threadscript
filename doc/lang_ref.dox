@@ -27,6 +27,11 @@
  * \arg \link threadscript::parser::rule_base::operator()() R("T"sv) \endlink --
  * sets a tracing name for the rule (the parameter is a std::string_view)
  *
+ * Each rule is defined by a single occurrence of macro #RULE, which specifies
+ * a rule name and definition (body). Definition os some rules, e.g., \c
+ * node_fun and \c _params, is more complex in order to get better error
+ * messages.
+ *
  * The grammar, with \c script as the top-level rule:
  *
  * \snippet syntax_canon.cpp Grammar

@@ -23,7 +23,8 @@ struct input {
     input(std::string text, size_t line, size_t column,
           std::string error = "Parse error"):
         text(std::move(text)), line(line), column(column),
-        error(std::move(error))
+        error(std::to_string(line) + ":" + std::to_string(column) + ": " +
+              std::move(error))
     {}
     std::string text;
     size_t line;
@@ -117,7 +118,7 @@ BOOST_AUTO_TEST_CASE(fail)
     BOOST_CHECK_EXCEPTION(ctx.parse(rule, it),
         tsp::error<decltype(it)::first_type>,
         [begin](auto&& e) {
-            BOOST_CHECK_EQUAL(e.what(), "Parse error"s);
+            BOOST_CHECK_EQUAL(e.what(), "1:1: Parse error"s);
             BOOST_CHECK(e.pos() == begin);
             BOOST_CHECK_EQUAL(e.pos().line, 1);
             BOOST_CHECK_EQUAL(e.pos().column, 1);
@@ -986,7 +987,9 @@ BOOST_DATA_TEST_CASE(cut, (std::vector<test::parsed3>{
             BOOST_CHECK_EXCEPTION(ctx.parse(rule, it),
                 tsp::error<it_t>,
                 ([it, &sample](auto&& e) {
-                     BOOST_CHECK_EQUAL(e.what(), sample.error);
+                     BOOST_REQUIRE_GE(strlen(e.what()), 5);
+                     BOOST_REQUIRE_GE(sample.error.size(), 5);
+                     BOOST_CHECK_EQUAL(e.what() + 5, sample.error.substr(5));
                      return true;
                  }));
 
