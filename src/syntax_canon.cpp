@@ -37,7 +37,7 @@ struct canon::rules {
     RULE(esc_hex,
          rf::str_ic("x"sv) >> rf::hex() >> rf::hex());
     RULE(esc_char,
-         (rf::t('\\')("backslash") >> (esc_name | esc_hex))
+         rf::t('\\')("backslash"sv) >> (esc_name | esc_hex)
          ["Invalid escape"sv]);
     RULE(string_char,
          lit_char | esc_char);
@@ -49,7 +49,8 @@ struct canon::rules {
     RULE(val_unsigned,
          rf::uint());
     RULE(val_int,
-         (rf::t('+') | rf::t('-')) >> rf::uint()["Expected number"sv]);
+         (rf::t('+') | rf::t('-'))("Sign"sv) >> rf::uint()
+         ["Expected number"sv]);
     RULE(val_string,
          rf::t('"') >> *string_char >> rf::t('"')["Expected '\"'"sv]);
     RULE(node_val,
@@ -64,7 +65,7 @@ struct canon::rules {
     RULE(node_fun,
          rf::id() >> *space >>
           rf::t('(')["Expected '('"sv] >>
-          *params >> rf::t(')')["Expected ',' or ')'"]);
+          params >> rf::t(')')["Expected ',' or ')'"]);
 
     RULE(_node,
          node_val | node_fun);

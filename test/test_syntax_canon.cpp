@@ -149,12 +149,24 @@ null
     {R"(123)"},
     {R"(+4)"},
     {R"(-56)"},
+    {R"(+x4)", false, 1, 2, "Expected number"},
 // Strings
     {R"("")"},
     {R"("a")"},
     {R"("abc")"},
     {R"("abcd)", false, 1, 6, "Expected '\"'"},
+    {R"("\0\t\n\r\"\\")"},
+    {R"("\x00\x01\xab\xcD\xcD\xEF\x2a\x31\xb3")"},
+    {R"("\a")", false, 1, 2, "Expected '\"'"},
+    {R"("\x0g")", false, 1, 2, "Expected '\"'"},
 // Functions
+    {R"(id)", false, 1, 3, "Expected '('"},
+    {R"(id[])", false, 1, 3, "Expected '('"},
+    {R"(id [])", false, 1, 4, "Expected '('"},
+    {R"(id()", false, 1, 4, "Expected ',' or ')'"},
+    {R"(id())"},
+    {R"(id(1, 2))"},
+    {R"(id(1, 2,))"},
 // Complex syntax
 }))
 {
