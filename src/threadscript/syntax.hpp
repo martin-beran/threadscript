@@ -35,8 +35,6 @@ public:
     //! Iterator type used by the parser
     using iterator_type =
         parser::script_iterator<std::string_view::iterator>;
-    //! The rule factory used by the parser
-    using rf = parser_ascii::rules::factory<iterator_type>;
     //! The default constructor
     syntax_base() = default;
     //! No copy

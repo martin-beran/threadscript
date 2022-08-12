@@ -217,6 +217,11 @@ template <class T> using up_type_t = typename up_type<T>::type;
  * is not visible to a parent rule or to a handler, but some information
  * extracted from it can be passed to a handler as \a Info.
  *
+ * It is also possible to pass information down from parent to child rules via
+ * temporary contexts. If \a Self has a constructor that accepts a single
+ * argument of type <code>Up*</code>, then <code>Self(up)</code> is used to
+ * construct \a Self by parse().
+ *
  * Rule composition operators use template \ref up_type_t to derive the
  * temporary context type of a resulting rule from temporary context types of
  * rules passed as arguments. Hence, the temporary context type of a composite
@@ -261,7 +266,7 @@ public:
     //! Parses a part of the input according to the rule and uses the result.
     /*! This function consists of several parts, mainly delegated to other
      * member functions:
-     * \arg It creates a temporary context of type Self.
+     * \arg It creates a temporary context of type \a Self.
      * \arg parse_internal() creates temporary private data used during the
      * single call of parse()
      * \arg parse_with_tmp() parses the input by calling eval() and if a match
@@ -877,7 +882,13 @@ auto rule_base<Rule, Ctx, Self, Up, Info, It, Handler>::parse(
             ctx.trace(std::nullopt, trace, ctx.depth, "", 0, 0, 0, 0,
                       std::nullopt, std::nullopt);
     }
-    Self self{};
+    Self self = [up]() {
+        if constexpr (requires (Up* up) { Self(up); }) {
+            return Self(up);
+        } else {
+            return Self{};
+        }
+    }();
     auto saved_msg = ctx.error_msg;
     if (!error_msg.empty()) {
         ctx.error_msg = error_msg;

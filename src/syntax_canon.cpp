@@ -3,6 +3,7 @@
  */
 
 #include "threadscript/syntax_canon.hpp"
+#include "threadscript/code_builder.hpp"
 
 namespace threadscript::syntax {
 
@@ -15,9 +16,23 @@ using namespace std::string_view_literals;
  * declared using helper macro #RULE. The complete grammar is displayed and
  * documented in \ref Canonical_syntax. */
 struct canon::rules {
-    //! The script builder to be used by handlers
-    /*! Its value is valid only during canon::run_parser(). */
-    script_builder* b = nullptr;
+    //! The temporary context used by rules
+    struct ctx {
+        //! Used to construct the top level context
+        /*! \param[in] builder the script builder object */
+        ctx(script_builder& builder): builder(builder) {}
+        //! Passes the builder down from a parent to a child context.
+        /*! \param[in] up a parent context; must not be \c nullptr */
+        ctx(ctx* up): builder((assert(up), up->builder)) {}
+        //! The script builder to be used by handlers
+        /*! Its value is valid only during canon::run_parser(). */
+        script_builder& builder;
+        //! The current node being built
+        script_builder::node_handle node;
+    };
+    //! The rule factory used by the parser
+    using rf =
+        parser_ascii::rules::factory<iterator_type, parser::context, ctx>;
 //! Defines a single rule as a member variable.
 /*! It is needed to eliminate repeating of rule body definition in the rule
  * type, because non-static member variables cannot have type \c auto. It also
@@ -116,10 +131,10 @@ canon::~canon() = default;
 void canon::run_parser(script_builder& builder, std::string_view src,
                        parser::context::trace_t trace)
 {
-    _rules->b = &builder;
+    rules::ctx root_ctx(builder);
     parser::context ctx;
     ctx.trace = std::move(trace);
-    ctx.parse(_rules->script, parser::make_script_iterator(src));
+    ctx.parse(_rules->script, &root_ctx, parser::make_script_iterator(src));
 }
 
 } // namespace threadscript::syntax

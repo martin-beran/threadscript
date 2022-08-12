@@ -102,7 +102,7 @@ namespace rules {
  * \tparam Self a temporary context of this rule
  * \tparam Up a temporary context of a parent rule */
 template <ascii_iterator It, class Ctx = parser::context,
-    class Self = parser::empty, class Up = parser::empty>
+    class Self = parser::empty, class Up = parser::up_type_t<Self>>
 class factory {
 public:
     //! Creates parser::rules::fail, which always fails.
