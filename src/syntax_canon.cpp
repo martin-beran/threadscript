@@ -32,7 +32,8 @@ using namespace std::string_view_literals;
 //! Internal structure holding parser rules
 /*! The grammar is defined by rules implemented as data members of this class,
  * declared using helper macro #RULE. The complete grammar is displayed and
- * documented in \ref Canonical_syntax. */
+ * documented in \ref Canonical_syntax.
+ * \todo Binary and hexadecimal integer literals */
 struct canon::rules {
     //! The temporary context used by rules
     struct tmp_ctx {
@@ -40,7 +41,7 @@ struct canon::rules {
         /*! \param[in] builder the script builder object */
         tmp_ctx(script_builder& builder): builder(builder) {}
         //! Creates a child context.
-        /* It passes \ref builder and \ref node down from the parent to the
+        /*! It passes \ref builder and \ref node down from the parent to the
          * child context.
          * \param[in] up a parent context; must not be \c nullptr */
         tmp_ctx(tmp_ctx* up):
@@ -54,27 +55,6 @@ struct canon::rules {
     //! The rule factory used by the parser
     using rf =
         parser_ascii::rules::factory<iterator_type, parser::context, tmp_ctx>;
-    //! The handler for rule \c val_null
-    /*! \param[in] ctx the parsing context
-     * \param[in] self the temporary context of this rule
-     * \param[in] up the temporary context of the parent rule; it is never \c
-     * nullptr
-     * \param[in] info information about the parsed part of input
-     * \param[in] begin the beginning of the matching input
-     * \param[in] begin the end of the matching input */
-    static void hnd_null(parser::context& ctx, tmp_ctx& self, tmp_ctx* up,
-                         parser::empty info,
-                         iterator_type begin, iterator_type end);
-    //! The handler for rule \c val_bool
-    /*! \copydetails hnd_null() */
-    static void hnd_bool(parser::context& ctx, tmp_ctx& self, tmp_ctx* up,
-                         size_t info,
-                         iterator_type begin, iterator_type end);
-    //! The handler for rule \c string_data (used by \c val_string)
-    /*! \copydetails hnd_null() */
-    static void hnd_string(parser::context& ctx, tmp_ctx& self, tmp_ctx* up,
-                           size_t info,
-                           iterator_type begin, iterator_type end);
     //! [Grammar]
     //! \cond
     RULE(comment,
@@ -119,17 +99,20 @@ struct canon::rules {
          rf::dyn()
          ["Expected value or function"sv]);
 
+    RULE(fun_name,
+         rf::id());
     RULE(params,
          rf::dyn());
     RULE(_params,
          node >> *space >> (rf::t(')')("close"sv) |
                             rf::t(',')["Expected ',' or ')'"sv]("comma"sv) >>
                             *space >> params));
+    RULE(fun_params,
+         *space >> rf::t('(')["Expected '('"sv]("open"sv) >> *space >>
+         (rf::t(')')("close"sv) | params));
 
     RULE(node_fun,
-         rf::id() >> *space >>
-          rf::t('(')["Expected '('"sv]("open"sv) >> *space >>
-          (rf::t(')')("close"sv) | params));
+         fun_name >> fun_params);
 
     RULE(_node,
          node_val | node_fun);
@@ -139,18 +122,58 @@ struct canon::rules {
          ["Whitespace or comment expected"sv]);
 
     //! \endcond
+    //! The handler for rule \c val_null
+    /*! \param[in] ctx the parsing context
+     * \param[in] self the temporary context of this rule
+     * \param[in] up the temporary context of the parent rule; it is never \c
+     * nullptr
+     * \param[in] info information about the parsed part of input
+     * \param[in] begin the beginning of the matching input
+     * \param[in] end the end of the matching input */
+    static void hnd_null(parser::context& ctx, tmp_ctx& self, tmp_ctx* up,
+                         decltype(val_null)::info_type info,
+                         iterator_type begin, iterator_type end);
+    //! The handler for rule \c val_bool
+    /*! \copydetails hnd_null() */
+    static void hnd_bool(parser::context& ctx, tmp_ctx& self, tmp_ctx* up,
+                         decltype(val_bool)::info_type info,
+                         iterator_type begin, iterator_type end);
+    //! The handler for rule \c val_int
+    /*! \copydetails hnd_null() */
+    static void hnd_int(parser::context& ctx, tmp_ctx& self, tmp_ctx* up,
+                        decltype(val_int)::info_type info,
+                        iterator_type begin, iterator_type end);
+    //! The handler for rule \c val_unsigned
+    /*! \copydetails hnd_null() */
+    static void hnd_unsigned(parser::context& ctx, tmp_ctx& self, tmp_ctx* up,
+                        decltype(val_unsigned)::info_type info,
+                        iterator_type begin, iterator_type end);
+    //! The handler for rule \c string_data (used by \c val_string)
+    /*! \copydetails hnd_null() */
+    static void hnd_string(parser::context& ctx, tmp_ctx& self, tmp_ctx* up,
+                           decltype(string_data)::info_type info,
+                           iterator_type begin, iterator_type end);
+    //! The handler for rule \c fun_name (used by \c node_fun)
+    /*! \copydetails hnd_null() */
+    static void hnd_fun(parser::context& ctx, tmp_ctx& self, tmp_ctx* up,
+                        decltype(fun_name)::info_type info,
+                        iterator_type begin, iterator_type end);
     //! Configures rules
     rules() {
         params >>= _params;
         node >>= _node;
         val_null[hnd_null];
         val_bool[hnd_bool];
+        val_int[hnd_int];
+        val_unsigned[hnd_unsigned];
         string_data[hnd_string];
+        fun_name[hnd_fun];
     }
     //! [Grammar]
 };
 
-void canon::rules::hnd_bool(parser::context&, tmp_ctx& self, tmp_ctx*, size_t,
+void canon::rules::hnd_bool(parser::context&, tmp_ctx& self, tmp_ctx*,
+                            decltype(val_bool)::info_type,
                             iterator_type begin, iterator_type end)
 {
     assert(begin != end);
@@ -158,19 +181,76 @@ void canon::rules::hnd_bool(parser::context&, tmp_ctx& self, tmp_ctx*, size_t,
                           ""sv, self.builder.create_value_bool(*begin == 't'));
 }
 
+void canon::rules::hnd_fun(parser::context&, tmp_ctx&, tmp_ctx* up,
+                           decltype(fun_name)::info_type,
+                           iterator_type begin, iterator_type end)
+{
+    // Logic of this handler depends on fun_name to be a direct child of
+    // node_fun. This is the reason why node_fun is defined using
+    // fun_name >> fun_params. If the bodies of fun_name and fun_params were
+    // directly concatenated in the body of node_fun, we would have to go up
+    // several levels from fun_name to node_fun in order to call add_node() at
+    // the correct point of the parse tree.
+    up->node =
+        up->builder.add_node(up->node, file_location(begin.line, begin.column),
+                             std::string_view(&*begin,
+                                              std::distance(begin, end)));
+}
+
+void canon::rules::hnd_int(parser::context&, tmp_ctx& self, tmp_ctx*,
+                           decltype(val_int)::info_type,
+                           iterator_type begin, iterator_type end)
+{
+    using limits = std::numeric_limits<config::value_int_type>;
+    try {
+        auto val = std::stoll(std::string(begin, end));
+        if (val >= limits::min() && val <= limits::max()) {
+            self.builder.add_node(self.node,
+                                  file_location(begin.line, begin.column),
+                                  ""sv, self.builder.create_value_int(val));
+            return;
+        }
+    } catch (std::invalid_argument&) {
+    } catch (std::out_of_range&) {
+    }
+    throw parser::error(begin, "Invalid number");
+}
+
 void canon::rules::hnd_null(parser::context&, tmp_ctx& self, tmp_ctx*,
-                            parser::empty, iterator_type begin, iterator_type)
+                            decltype(val_null)::info_type,
+                            iterator_type begin, iterator_type)
 {
     self.builder.add_node(self.node, file_location(begin.line, begin.column),
                           ""sv, self.builder.create_value_null());
 }
 
-void canon::rules::hnd_string(parser::context&, tmp_ctx& self, tmp_ctx*, size_t,
+void canon::rules::hnd_string(parser::context&, tmp_ctx& self, tmp_ctx*,
+                              decltype(string_data)::info_type,
                               iterator_type begin, iterator_type end)
 {
     self.builder.add_node(self.node, file_location(begin.line, begin.column),
         ""sv, self.builder.create_value_string(
             std::string_view(&*begin, std::distance(begin, end))));
+}
+
+void canon::rules::hnd_unsigned(parser::context&, tmp_ctx& self, tmp_ctx*,
+                                decltype(val_unsigned)::info_type,
+                                iterator_type begin, iterator_type end)
+{
+    using limits = std::numeric_limits<config::value_unsigned_type>;
+    try {
+        auto val = std::stoull(std::string(begin, end));
+        if (val >= limits::min() && val <= limits::max()) {
+            self.builder.add_node(self.node,
+                                  file_location(begin.line, begin.column),
+                                  ""sv,
+                                  self.builder.create_value_unsigned(val));
+            return;
+        }
+    } catch (std::invalid_argument&) {
+    } catch (std::out_of_range&) {
+    }
+    throw parser::error<iterator_type>(begin, "Invalid number");
 }
 
 /*** canon *******************************************************************/

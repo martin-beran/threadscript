@@ -301,7 +301,11 @@ public:
      * \param[in] end the end of input sequence
      * \param[in,out] e_it an iterator used to track an error location
      * \return the result of matching this rule with the input sequence
-     * \throw error if the maximum depth of rule nesting is exceeded */
+     * \throw error if the maximum depth of rule nesting is exceeded
+     * \throw error if the rule implementation or a registered handler throws
+     * an exception; if that exception is derived from \c std::exception, it
+     * will be replaced by \c error containing the same message (obtained by \c
+     * std::exception::what()) */
     parse_result parse(Ctx& ctx, Up* up, It begin, It end,
                        std::optional<It>& e_it) const;
     //! Sets a new handler
@@ -882,29 +886,38 @@ auto rule_base<Rule, Ctx, Self, Up, Info, It, Handler>::parse(
             ctx.trace(std::nullopt, trace, ctx.depth, "", 0, 0, 0, 0,
                       std::nullopt, std::nullopt);
     }
-    Self self = [up]() {
-        if constexpr (requires (Up* up) { Self(up); }) {
-            return Self(up);
-        } else {
-            return Self{};
+    parse_result result;
+    try {
+        Self self = [up]() {
+            if constexpr (requires (Up* up) { Self(up); }) {
+                return Self(up);
+            } else {
+                return Self{};
+            }
+        }();
+        auto saved_msg = ctx.error_msg;
+        if (!error_msg.empty()) {
+            ctx.error_msg = error_msg;
+            ctx.error_owner = this;
         }
-    }();
-    auto saved_msg = ctx.error_msg;
-    if (!error_msg.empty()) {
-        ctx.error_msg = error_msg;
-        ctx.error_owner = this;
+        result =
+            static_cast<const Rule*>(this)->parse_internal(ctx, self, up,
+                                                           begin, end, e_it);
+        if (result.first == rule_result::ok ||
+            result.first == rule_result::ok_final)
+        {
+            e_it.reset();
+            ctx.error_msg = saved_msg;
+        } else
+            if (ctx.error_owner == this)
+                e_it = result.second;
+    } catch (error<It>&) {
+        throw;
+    } catch (std::exception& e) {
+        throw error<It>(begin, e.what());
+    } catch (...) {
+        throw error<It>(begin, "Unknown exception thrown by parsing rule");
     }
-    parse_result result =
-        static_cast<const Rule*>(this)->parse_internal(ctx, self, up,
-                                                       begin, end, e_it);
-    if (result.first == rule_result::ok ||
-        result.first == rule_result::ok_final)
-    {
-        e_it.reset();
-        ctx.error_msg = saved_msg;
-    } else
-        if (ctx.error_owner == this)
-            e_it = result.second;
     if (ctx.trace && !trace.empty()) {
         std::string_view error =
             ctx.error_msg && result.first != rule_result::ok &&
