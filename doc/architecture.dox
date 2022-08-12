@@ -1,5 +1,7 @@
 /*! \page Architecture Architecture
  *
+ * \tableofcontents
+ *
  * \section Architecture_Goals Goals
  *
  * \arg A simple interpreted scripting language
@@ -146,6 +148,12 @@
  * script as a shared pointer to threadscript::basic_script. If parsing fails
  * or the source file cannot be read, an exception is thrown.
  *
+ * Internally, these functions create a parser by threadscript::syntax_factory
+ * and a builder for the internal representation, being an implementation of
+ * interface threadscript::script_builder, e.g.,
+ * threadscript::basic_script_builder_impl. Then they invoke the created
+ * parser.
+ *
  * \subsection Architecture_Code_GenParser Generic parser
  *
  * Parsing of ThreadScript source code of scripts is implemented by a parser
@@ -228,8 +236,8 @@
  * removed between any other syntax elements without changing the meaning of
  * the script.
  *
- * The formal grammar of the canonical syntax is defined in the constructor
- * threadscript::syntax::canon::canon(). See also \ref Canonical_syntax.
+ * The formal grammar of the canonical syntax is defined in class
+ * threadscript::syntax::canon::rules. See also \ref Canonical_syntax.
  *
  * \section Architecture_Execution Execution of a script
  *

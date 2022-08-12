@@ -49,7 +49,6 @@ public:
      * \param[in] parent the created node will be added as the root node if \a
      * parent is node_handle{}, otherwise it will be added as the last child of
      * \a parent
-     * \c nullptr, and as the last child of \a parent otherwise
      * \param[in] location the location of the new node in the script
      * \param[in] name the name of the new node
      * \param[in] value the value of the new node

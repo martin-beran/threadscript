@@ -1,5 +1,7 @@
 /*! \page LangRef ThreadScript language reference
  *
+ * \tableofcontents
+ *
  * \section Canonical_syntax Canonical syntax
  *
  * The rules in the grammar are composed from leaf rules defined in class

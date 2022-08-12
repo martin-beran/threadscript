@@ -97,19 +97,23 @@ concept predicate2 =
     std::forward_iterator<It>;
 
 //! A handler called when a rule matches
-/*! A handler gets a context object \a Ctx that has invoked this rule via
- * context::parse(), some information \a Info extracted from the input by the
- * rule (e.g., a numeric value obtained by parsing a sequence of digits), and
- * iterators \a It delimiting the part of the input matched by the rule.
- * \tparam Handler a handler
- * \tparam Ctx a parsing context
- * \tparam Self a temporary context of a rule
+/*! \tparam Handler a handler type; the remaining parameters define types of
+ * parameters passed to a function call of the handler
+ * \tparam Ctx a parsing context that has invoked this rule via context::parse()
+ * \tparam Self a temporary context of a rule; this is a temporary object
+ * created at the beginning and destroyed at the end of evaluation of the
+ * current rule
  * \tparam Up a temporary context of a parent rule (will be \c nullptr if a
- * rule has no parent)
- * \tparam Info information about a parsed part of input; it is expected to be
- * \ref threadscript::parser::empty unless specified otherwise for a particular
- * rule type
- * \tparam It an iterator to the input sequence of terminal symbols */
+ * rule has no parent); this is a temporary object of a parent rule, valid
+ * during the current evaluation of the parent rule (it is \a Self of the
+ * parent rule)
+ * \tparam Info information about a parsed part of input extracted from the
+ * input by the rule (e.g., a numeric value obtained by parsing a sequence of
+ * digits); it is expected to be \ref threadscript::parser::empty unless
+ * specified otherwise for a particular rule type
+ * \tparam It an iterator to the input sequence of terminal symbols; the pair
+ * of iterators passed to the handler delimit the part of the input matched by
+ * the rule */
 template <class Handler, class Ctx, class Self, class Up, class Info, class It>
 concept handler =
     std::is_invocable_r_v<void, Handler, Ctx&, Self&, Up*, Info, It, It> &&
@@ -206,12 +210,27 @@ template <class T> using up_type_t = typename up_type<T>::type;
  * in a derived class \a Rule, because they are called via \c this pointer
  * static-cast to a pointer to \a Rule.
  *
- * Unless the output type \a Info or the type of temporary private data created
- * by parse_internal() is changed, both these types are \ref empty.
+ * Temporary contexts \a Self and \a Up can be used to keep data related to a
+ * single rule invocation and to pass them to a handler. Parent context \a Up
+ * can be used to pass information up towards the root of the parsing tree. In
+ * addition, a rule can define a private data structure in parse_internal(). It
+ * is not visible to a parent rule or to a handler, but some information
+ * extracted from it can be passed to a handler as \a Info.
+ *
+ * Rule composition operators use template \ref up_type_t to derive the
+ * temporary context type of a resulting rule from temporary context types of
+ * rules passed as arguments. Hence, the temporary context type of a composite
+ * rule is the same as the temporary context type of its constituent rules,
+ * unless other type is specified by type name member \c %up_type of a
+ * temporary context type of a constituent rule.
+ *
  * \tparam Rule the derived rule class
- * \tparam Ctx a parsing context
- * \tparam Self a temporary context of this rule
- * \tparam Up a temporary context of a parent rule
+ * \tparam Ctx a parsing context; the same \a Ctx object is shared by all rules
+ * invoked during parsing
+ * \tparam Self a temporary context of this rule; it is passed to child rules
+ * as the parent temporary context
+ * \tparam Up a temporary context of a parent rule; it is \a Self of the parent
+ * rule
  * \tparam Info information about a parsed part of input
  * \tparam It an iterator to the input sequence of terminal symbols
  * \tparam Handler the type of a handler called when the rule matches
@@ -347,7 +366,9 @@ public:
     std::string trace{};
 protected:
     //! Creates temporary private data usable in this parsing operation.
-    /*! Private data are destroyed when the current parsing operation ends.
+    /*! Unless this function is overriden, temporary private data type is \ref
+     * empty. Private data are destroyed when the current parsing operation
+     * ends.
      * \param[in,out] ctx the parsing context; may be modified by the function
      * \param[in,out] self the temporary context; may be modified by the
      * function
@@ -415,11 +436,12 @@ protected:
         return {rule_result::fail, begin};
     }
     //! Transforms temporary private data into the rule output
-    /*! The default implementation simply passes \a tmp as an argument of
-     * \a Info constructor.
+    /*! Unlike temporary data, the result is passed to a handler when the rule
+     * matches. The default implementation simply passes \a tmp as an argument
+     * of \a Info constructor.
      * \tparam Tmp the type of temporary private data
      * \param[in,out] tmp temporary private data
-     * \return informatout about a parsed part of input */
+     * \return information about a parsed part of input */
     template <class Tmp> Info make_info(Tmp& tmp) const {
         return Info(tmp);
     }

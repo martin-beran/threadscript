@@ -11,6 +11,9 @@ namespace threadscript::syntax {
 using namespace std::string_view_literals;
 
 //! Internal structure holding parser rules
+/*! The grammar is defined by rules implemented as data members of this class,
+ * declared using helper macro #RULE. The complete grammar is displayed and
+ * documented in \ref Canonical_syntax. */
 struct canon::rules {
     //! The script builder to be used by handlers
     /*! Its value is valid only during canon::run_parser(). */

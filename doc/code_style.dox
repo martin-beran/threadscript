@@ -1,5 +1,7 @@
 /*! \page Code_style Code style
  *
+ * \tableofcontents
+ *
  * \section Cpp_general General C++ rules
  *
  * \arg C++20 is used.

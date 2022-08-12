@@ -89,7 +89,10 @@ protected:
 
 //! The interface for creating a running a selected parser
 /*! This class allows to choose a parser class derived from syntax_base,
- * and to create its instance. */
+ * and to create its instance.
+ * \note \c static \c constexpr members containing names of existing syntax
+ * variants are declared in this class, to be used instead of string literals
+ * throughout source code, in order to prevent typos. */
 class syntax_factory {
 public:
     //! The name of parser syntax::canon
