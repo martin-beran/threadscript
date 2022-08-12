@@ -65,6 +65,16 @@ struct canon::rules {
     static void hnd_null(parser::context& ctx, tmp_ctx& self, tmp_ctx* up,
                          parser::empty info,
                          iterator_type begin, iterator_type end);
+    //! The handler for rule \c val_bool
+    /*! \copydetails hnd_null() */
+    static void hnd_bool(parser::context& ctx, tmp_ctx& self, tmp_ctx* up,
+                         size_t info,
+                         iterator_type begin, iterator_type end);
+    //! The handler for rule \c string_data (used by \c val_string)
+    /*! \copydetails hnd_null() */
+    static void hnd_string(parser::context& ctx, tmp_ctx& self, tmp_ctx* up,
+                           size_t info,
+                           iterator_type begin, iterator_type end);
     //! [Grammar]
     //! \cond
     RULE(comment,
@@ -87,6 +97,8 @@ struct canon::rules {
          ["Invalid escape"sv]);
     RULE(string_char,
          lit_char | esc_char);
+    RULE(string_data,
+         *string_char);
 
     RULE(val_null,
          rf::str("null"sv));
@@ -98,7 +110,7 @@ struct canon::rules {
          (rf::t('+') | rf::t('-'))("Sign"sv) >> rf::uint()
          ["Expected number"sv]);
     RULE(val_string,
-         rf::t('"') >> *string_char >> rf::t('"')
+         rf::t('"') >> string_data >> rf::t('"')
          ["Expected '\"'"sv]);
     RULE(node_val,
          val_null | val_bool | val_unsigned | val_int | val_string);
@@ -132,15 +144,33 @@ struct canon::rules {
         params >>= _params;
         node >>= _node;
         val_null[hnd_null];
+        val_bool[hnd_bool];
+        string_data[hnd_string];
     }
     //! [Grammar]
 };
+
+void canon::rules::hnd_bool(parser::context&, tmp_ctx& self, tmp_ctx*, size_t,
+                            iterator_type begin, iterator_type end)
+{
+    assert(begin != end);
+    self.builder.add_node(self.node, file_location(begin.line, begin.column),
+                          ""sv, self.builder.create_value_bool(*begin == 't'));
+}
 
 void canon::rules::hnd_null(parser::context&, tmp_ctx& self, tmp_ctx*,
                             parser::empty, iterator_type begin, iterator_type)
 {
     self.builder.add_node(self.node, file_location(begin.line, begin.column),
                           ""sv, self.builder.create_value_null());
+}
+
+void canon::rules::hnd_string(parser::context&, tmp_ctx& self, tmp_ctx*, size_t,
+                              iterator_type begin, iterator_type end)
+{
+    self.builder.add_node(self.node, file_location(begin.line, begin.column),
+        ""sv, self.builder.create_value_string(
+            std::string_view(&*begin, std::distance(begin, end))));
 }
 
 /*** canon *******************************************************************/
