@@ -11,28 +11,6 @@ namespace threadscript::syntax {
 
 using namespace std::string_view_literals;
 
-//! Internal structure holding parser rules
-/*! The grammar is defined by rules implemented as data members of this class,
- * declared using helper macro #RULE. The complete grammar is displayed and
- * documented in \ref Canonical_syntax. */
-struct canon::rules {
-    //! The temporary context used by rules
-    struct ctx {
-        //! Used to construct the top level context
-        /*! \param[in] builder the script builder object */
-        ctx(script_builder& builder): builder(builder) {}
-        //! Passes the builder down from a parent to a child context.
-        /*! \param[in] up a parent context; must not be \c nullptr */
-        ctx(ctx* up): builder((assert(up), up->builder)) {}
-        //! The script builder to be used by handlers
-        /*! Its value is valid only during canon::run_parser(). */
-        script_builder& builder;
-        //! The current node being built
-        script_builder::node_handle node;
-    };
-    //! The rule factory used by the parser
-    using rf =
-        parser_ascii::rules::factory<iterator_type, parser::context, ctx>;
 //! Defines a single rule as a member variable.
 /*! It is needed to eliminate repeating of rule body definition in the rule
  * type, because non-static member variables cannot have type \c auto. It also
@@ -50,6 +28,43 @@ struct canon::rules {
  * lambda. */
 // NOLINTNEXTLINE: This macro is needed as is to generate rules
 #define RULE(name, body) decltype(body) name = (body)(std::string_view(#name))
+
+//! Internal structure holding parser rules
+/*! The grammar is defined by rules implemented as data members of this class,
+ * declared using helper macro #RULE. The complete grammar is displayed and
+ * documented in \ref Canonical_syntax. */
+struct canon::rules {
+    //! The temporary context used by rules
+    struct tmp_ctx {
+        //! Used to construct the top level context
+        /*! \param[in] builder the script builder object */
+        tmp_ctx(script_builder& builder): builder(builder) {}
+        //! Creates a child context.
+        /* It passes \ref builder and \ref node down from the parent to the
+         * child context.
+         * \param[in] up a parent context; must not be \c nullptr */
+        tmp_ctx(tmp_ctx* up):
+            builder((assert(up), up->builder)), node(up->node) {}
+        //! The script builder to be used by handlers
+        /*! Its value is valid only during canon::run_parser(). */
+        script_builder& builder;
+        //! The current node being built
+        script_builder::node_handle node;
+    };
+    //! The rule factory used by the parser
+    using rf =
+        parser_ascii::rules::factory<iterator_type, parser::context, tmp_ctx>;
+    //! The handler for rule \c val_null
+    /*! \param[in] ctx the parsing context
+     * \param[in] self the temporary context of this rule
+     * \param[in] up the temporary context of the parent rule; it is never \c
+     * nullptr
+     * \param[in] info information about the parsed part of input
+     * \param[in] begin the beginning of the matching input
+     * \param[in] begin the end of the matching input */
+    static void hnd_null(parser::context& ctx, tmp_ctx& self, tmp_ctx* up,
+                         parser::empty info,
+                         iterator_type begin, iterator_type end);
     //! [Grammar]
     //! \cond
     RULE(comment,
@@ -116,9 +131,17 @@ struct canon::rules {
     rules() {
         params >>= _params;
         node >>= _node;
+        val_null[hnd_null];
     }
     //! [Grammar]
 };
+
+void canon::rules::hnd_null(parser::context&, tmp_ctx& self, tmp_ctx*,
+                            parser::empty, iterator_type begin, iterator_type)
+{
+    self.builder.add_node(self.node, file_location(begin.line, begin.column),
+                          ""sv, self.builder.create_value_null());
+}
 
 /*** canon *******************************************************************/
 
@@ -131,7 +154,7 @@ canon::~canon() = default;
 void canon::run_parser(script_builder& builder, std::string_view src,
                        parser::context::trace_t trace)
 {
-    rules::ctx root_ctx(builder);
+    rules::tmp_ctx root_ctx(builder);
     parser::context ctx;
     ctx.trace = std::move(trace);
     ctx.parse(_rules->script, &root_ctx, parser::make_script_iterator(src));
