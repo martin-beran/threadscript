@@ -40,5 +40,32 @@
  *
  * \section Script_execution Script execution
  *
- * \section Builtin_commands Built-in commands
- */
+ * A script in the ThreadScript language is executed according to the internal
+ * code representation obtained by parsing source code using a parser for
+ * a selected syntax variant. The internal representation directly corresponds
+ * to the structure of source in the canonical syntax. It is a tree of nodes,
+ * with values in leaves and calls of named commands or functions in named
+ * (internal) nodes. Child nodes of an internal node are interpreted as command
+ * or function arguments. The script is executed by evaluating the root of the
+ * tree, which yields a single value or terminates by an exception.
+ *
+ * We use words \e "command" and \e "function" almost interchangeably, because
+ * they are both represented by named nodes in the code tree and implemented in
+ * the same way. In the canonical syntax, commands and functions are
+ * syntactically indistinguishable. Whether something behaves as a command or
+ * a function depends on its internal implementation and is described in its
+ * documentation. Generally, a \e function first evaluates all its parameters
+ * and then computes a result. Imagine, e.g., a function computing a sum of its
+ * numeric parameters. On the other hand, a \e command uses its own logic to
+ * dynamically decide if and when each parameter is evaluated. An example is
+ * a conditional (\c if) command. It first evaluates its first argument (the
+ * condition). If it yields true, the second argument (the "then" branch) is
+ * evaluated and the third argument (the "else" branch) is not evaluated. If
+ * the condition yileds false, the second argument is skipped and the third
+ * argument is evaluated.
+ * 
+ * \section Builtin_commands Built-in commands and functions
+ *
+ * Built-in commands and functions are defined as classes in namespace
+ * threadscript::predef. A name \c FUN used in ThreadScript source code
+ * corresponds to a declaration \c f_FUN in the namespace. */

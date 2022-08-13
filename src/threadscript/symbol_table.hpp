@@ -38,7 +38,7 @@ public:
     //! Creates a new empty symbol table
     /*! \param[in] alloc an allocator used by this table
      * \param[in] parent the parent table, or \c nullptr if this is a top-level
-     * parent table */
+     * table without a parent */
     basic_symbol_table(const A& alloc, const basic_symbol_table* parent):
         data(alloc), parent(parent) {}
     //! Copy constructor

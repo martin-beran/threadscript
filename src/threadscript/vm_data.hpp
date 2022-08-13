@@ -112,8 +112,9 @@ protected:
                                         std::optional<bool> mt_safe) const = 0;
     //! Evaluates the value and returns the result.
     /*! For "normal" values, it returns the value itself. For values
-     * representing code (basic_value_script and basic_value_function), it runs
-     * the script or calls the function and returns the result.
+     * representing code (basic_value_script, basic_value_function,
+     * basic_value_native_fun), it runs the script or calls the function and
+     * returns the result.
      * \param[in] thread the current thread
      * \param[in] lookup the (const) symbol table used for symbol lookups
      * \param[in] sym the (non-const) symbol tables where new  symbols can be

@@ -63,15 +63,15 @@ public:
     [[nodiscard]] size_t num_states() const noexcept {
         return _num_states;
     }
-private:
-    //! The allocator used by this VM.
-    [[no_unique_address]] A alloc;
     //! Global variables shared by all threads
     /*! It is a shared pointer to a symbol table, so that the global symbol
      * table can be replaced without synchronization of all thread. Existing
      * threads will continue to use the old symbol table until they request the
      * new one. */
-    std::shared_ptr<basic_symbol_table<A>> sh_vars;
+    std::atomic<std::shared_ptr<const basic_symbol_table<A>>> sh_vars;
+private:
+    //! The allocator used by this VM.
+    [[no_unique_address]] A alloc;
     //! The number of basic_state objects attached to this VM
     std::atomic<size_t> _num_states{0};
     //! Needs access to num_states
@@ -91,7 +91,7 @@ public:
     /*! \param[in] vm the virtual machine which this state is attached to. */
     explicit basic_state(vm_t& vm):
         vm(vm), alloc(vm.get_allocator()),
-        t_vars(vm.get_allocator(), vm.sh_vars.get())
+        t_vars(vm.get_allocator(), vm.sh_vars.load().get())
     {
         ++vm._num_states;
     }
@@ -147,11 +147,14 @@ private:
     /*! It handles freeing memory consumed by the stack. The stack must not be
      * empty. */
     void pop_frame() noexcept;
-    [[no_unique_address]] A alloc; //!< The allocator used by this state
+    //! The allocator used by this state
+    [[no_unique_address]] A alloc;
     //! The maximum stack depth for this thread
     size_t max_stack = basic_virtual_machine<A>::default_max_stack;
-    stack_t stack; //!< The stack of this thread
-    basic_symbol_table<A> t_vars; //!< Global variables of this thread
+    //! The stack of this thread
+    stack_t stack;
+    //! Global variables of this thread
+    basic_symbol_table<A> t_vars;
     //! basic_code_node::eval() needs access to basic_state
     friend class basic_code_node<A>;
     //! basic_script::eval() needs access to basic_state

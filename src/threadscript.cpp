@@ -6,6 +6,7 @@
 #include "threadscript/symbol_table_impl.hpp"
 #include "threadscript/code_impl.hpp"
 #include "threadscript/code_parser_impl.hpp"
+#include "threadscript/predef_impl.hpp"
 #include "threadscript/virtual_machine_impl.hpp"
 #include "threadscript/vm_data_impl.hpp"
 
@@ -63,6 +64,22 @@ template script::script_ptr
 parse_code_file<allocator_any>(const allocator_any& alloc,
                                std::string_view file, std::string_view syntax,
                                parser::context::trace_t trace);
+
+/*** threadscript/predef.hpp *************************************************/
+
+template std::shared_ptr<basic_symbol_table<allocator_any>>
+predef_symbols(const allocator_any& alloc);
+
+template std::shared_ptr<basic_symbol_table<allocator_any>>
+add_predef_symbols<allocator_any>(
+                        std::shared_ptr<basic_symbol_table<allocator_any>> sym,
+                        bool replace);
+
+namespace predef {
+
+template class f_print<allocator_any>;
+
+} // namespace predef
 
 /*** threadscript/symbol_table.hpp *******************************************/
 

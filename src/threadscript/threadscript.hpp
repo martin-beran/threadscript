@@ -10,6 +10,7 @@
 #include "threadscript/code.hpp"
 #include "threadscript/code_builder_impl.hpp"
 #include "threadscript/code_parser.hpp"
+#include "threadscript/predef.hpp"
 #include "threadscript/symbol_table.hpp"
 #include "threadscript/virtual_machine.hpp"
 #include "threadscript/vm_data.hpp"
@@ -109,6 +110,33 @@ extern template script::script_ptr
 parse_code_file<allocator_any>(const allocator_any& alloc,
                                std::string_view file, std::string_view syntax,
                                parser::context::trace_t trace);
+
+/*** threadscript/predef.hpp *************************************************/
+
+//! Creates a new symbol table containing predefined built-in symbols.
+/*! Documentation of the primary template function applies, except that \a A is
+ * fixed to allocator_any:
+ *
+ * \copydetails predef_symbols(const A&) */
+extern template std::shared_ptr<basic_symbol_table<allocator_any>>
+predef_symbols(const allocator_any& alloc);
+
+//! Adds default predefined built-in symbols to a symbol table.
+/*! Documentation of the primary template function applies, except that \a A is
+ * fixed to allocator_any:
+ *
+ * \copydetails add_predef_symbols(std::shared_ptr<basic_symbol_table<A>>,bool)
+ */
+extern template std::shared_ptr<basic_symbol_table<allocator_any>>
+add_predef_symbols<allocator_any>(
+                        std::shared_ptr<basic_symbol_table<allocator_any>> sym,
+                        bool replace);
+
+namespace predef {
+
+extern template class f_print<allocator_any>;
+
+} // namespace predef
 
 /*** threadscript/symbol_table.hpp *******************************************/
 

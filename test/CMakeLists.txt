@@ -15,6 +15,7 @@ set(
     exception
     parser
     parser_ascii
+    predef
     symbol_table
     syntax
     syntax_canon
