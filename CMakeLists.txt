@@ -191,13 +191,23 @@ add_custom_target(
     doc ALL DEPENDS ${DOC}
 )
 
+set(CLEAN_TIDY_CMD "")
+set(CLANG_TIDY_CMD "")
+if (CLANG_TIDY)
+    set(CLEAN_TIDY_CMD COMMAND ${CMAKE_COMMAND} --build . -t clean-tidy)
+    set(
+        CLANG_TIDY_CMD
+        COMMAND ${CMAKE_COMMAND} --build . -t clang-tidy -j `nproc`
+    )
+endif()
+
 add_custom_target(
     full
     COMMAND ${CMAKE_COMMAND} --build . -t clean
     COMMAND ${CMAKE_COMMAND} --build . -t all -j `nproc`
     COMMAND ${CMAKE_COMMAND} --build . -t doxygen
-    COMMAND ${CMAKE_COMMAND} --build . -t clean-tidy
-    COMMAND ${CMAKE_COMMAND} --build . -t clang-tidy -j `nproc`
+    ${CLEAN_TIDY_CMD}
+    ${CLANG_TIDY_CMD}
     COMMAND ${CMAKE_COMMAND} --build . -t test -j `nproc`
 )
 

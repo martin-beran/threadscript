@@ -54,7 +54,9 @@
  * rm -rf build-sanitizer-*
  * ./make-everything.sh
  * \endcode
- * Any parameters passed to the script are forwarded to CMake.
+ * Any parameters passed to the script are forwarded to CMake. The list of
+ * sanitizers can be set by environment variable \c SANITIZERS (see the script
+ * for the default value).
  *
  * \section Tests Tests
  *

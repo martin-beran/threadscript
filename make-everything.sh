@@ -2,7 +2,9 @@
 
 set -e
 
-for s in OFF address leak thread undefined; do
+: ${SANITIZERS:=OFF address leak thread undefined}
+
+for s in $SANITIZERS; do
     dir="build-sanitizer-$s"
     echo
     echo === BEGIN Build with sanitizer $s ===
