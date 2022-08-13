@@ -106,6 +106,8 @@ private:
     friend class basic_script<A>;
     //! basic_value_function::eval() needs access to node internals
     friend class basic_value_function<A>;
+    //! basic_value_native_fun needs access to _children
+    friend class basic_value_native_fun<A>;
 };
 
 //! Writes a textual description of the node to a stream
@@ -310,7 +312,7 @@ template <allocator A> using basic_value_native_fun_base =
 } // namespace impl
 
 //! The value class holding a reference to a function implemented by native C++
-/*! This is the abstract base class for native function. Each derived type
+/*! This is the abstract base class for native functions. Each derived type
  * should override member function eval(). */
 template <impl::allocator A> class basic_value_native_fun:
     public impl::basic_value_native_fun_base<A>
@@ -319,12 +321,36 @@ template <impl::allocator A> class basic_value_native_fun:
         !impl::uses_allocator<typename basic_value_native_fun::value_type, A>);
     using impl::basic_value_native_fun_base<A>::basic_value_native_fun_base;
 protected:
-    //! Evaluates the value to \c nullptr.
-    /*! \copydetails basic_value::eval() */
+    //! Evaluates the value and returns the result.
+    /*! The default implementation in basic_value_native_fun does nothing and
+     * returns \c nullptr. Overriding definitions in derived classes implement
+     * individual native functions and return appropriate values.
+     *
+     * \copydetails basic_value::eval() */
     typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
         const basic_symbol_table<A>& lookup,
         const std::vector<std::reference_wrapper<basic_symbol_table<A>>>& sym,
         const basic_code_node<A>& node, std::string_view fun_name) override;
+    //! Gets the number of arguments.
+    /*! It is intended to be called from eval().
+     * \param[in] node the argument \a node of eval()
+     * \return the number of function arguments. */
+    size_t narg(const basic_code_node<A>& node) const noexcept {
+        return node._children.size();
+    }
+    //! Evaluates an argument and returns its value.
+    /*! It is intended to be called from eval().
+     * \param[in] thread the argument \a thread of the caller eval()
+     * \param[in] lookup the argument \a lookup of the caller eval()
+     * \param[in] sym the argument sym of the caller eval()
+     * \param[in] node the argument \a node of the caller eval()
+     * \param[in] idx the (zero-based) index of the argument
+     * \return the argument value; \c nullptr if \a idx is greater than the
+     * index of the last argument */
+    typename basic_value<A>::value_ptr arg(basic_state<A>& thread,
+        const basic_symbol_table<A>& lookup,
+        const std::vector<std::reference_wrapper<basic_symbol_table<A>>>& sym,
+        const basic_code_node<A>& node, size_t idx);
 };
 
 } //namespace threadscript

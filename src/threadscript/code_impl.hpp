@@ -249,6 +249,19 @@ basic_value_script<A>::eval(basic_state<A>& thread,
 /*** basic_value_native_fun **************************************************/
 
 template <impl::allocator A> typename basic_value<A>::value_ptr
+basic_value_native_fun<A>::arg(basic_state<A>& thread,
+    const basic_symbol_table<A>& lookup,
+    const std::vector<std::reference_wrapper<basic_symbol_table<A>>>& sym,
+    const basic_code_node<A>& node, size_t idx)
+{
+    if (idx >= narg(node))
+        return nullptr;
+    auto p = node._children[idx];
+    assert(p);
+    return p->eval(thread, lookup, sym);
+}
+
+template <impl::allocator A> typename basic_value<A>::value_ptr
 basic_value_native_fun<A>::eval(basic_state<A>&,
     const basic_symbol_table<A>&,
     const std::vector<std::reference_wrapper<basic_symbol_table<A>>>&,

@@ -69,6 +69,11 @@ public:
      * threads will continue to use the old symbol table until they request the
      * new one. */
     std::atomic<std::shared_ptr<const basic_symbol_table<A>>> sh_vars;
+    //! Used as the standard output stream.
+    /*! If \c nullptr, standard output is discarded. It can be overriden
+     * for a thread by basic_state::std_out. The user of this stream must
+     * ensure proper synchronization, e.g., by using std::osyncstream. */
+    std::atomic<std::ostream*> std_out = &std::cout;
 private:
     //! The allocator used by this VM.
     [[no_unique_address]] A alloc;
@@ -116,6 +121,12 @@ public:
      * \return the stack trace */
     [[nodiscard]] stack_trace current_stack() const noexcept;
     vm_t& vm; //!< The virtual machine
+    //! Used as the standard output stream.
+    /*! If \c nullptr, standard output is discarded. If \c std::nullopt, then
+     * \c vm.std_out is used instead. The user of this stream must ensure
+     * proper synchronization if the same stream is used by multiple threads,
+     * e.g., by using std::osyncstream. */
+    std::optional<std::ostream*> std_out;
 private:
     //! A stack frame
     /*! For simplicity, it uses frame_location, which does not use custom
