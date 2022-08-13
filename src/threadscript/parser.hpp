@@ -36,7 +36,7 @@ public:
         runtime_error(make_message(pos, msg)), _pos(pos) {}
     //! Gets the error position
     /*! \return the position */
-    I pos() const { return _pos; }
+    [[nodiscard]] I pos() const { return _pos; }
 private:
     //! Generates an error message.
     /*! Content of \a msg is prepended with the line and column number if \a I

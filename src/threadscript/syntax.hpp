@@ -29,7 +29,8 @@ class script_builder;
  * syntax::canon for an example). It allows to keep a syntax header file (e.g.,
  * threadscript/syntax_common.hpp), which is included in syntax.cpp, short and
  * hide the rules of the grammar in the implementation \c .cpp file (e.g.,
- * syntax_common.cpp). */
+ * syntax_common.cpp).
+ * \test in file test_syntax.cpp */
 class syntax_base {
 public:
     //! Iterator type used by the parser
@@ -103,6 +104,7 @@ public:
     //! Gets all known syntax names
     /*! \return a sorted view containing names registered in _registry */
     static std::ranges::view auto names() {
+        // NOLINTNEXTLINE(clang-diagnostic-error): false positive
         return _registry | std::views::transform([](auto&& r){return r.first;});
     }
 private:

@@ -112,7 +112,7 @@ void test_parse(auto&& sample, auto&& check)
 //! \endcond
 
 /*! \file
- * \test \c dummy -- A dummy test, to be removed and replaced by real tests */
+ * \test \c parse -- Test parsing various valid and invalid source texts */
 //! \cond
 BOOST_DATA_TEST_CASE(parse, (std::vector<test::parsed>{
 // Empty, spaces, comments

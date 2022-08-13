@@ -203,6 +203,7 @@ public:
         runtime_error(std::move(o))
     {
         // this is OK, even if what() result changes after move
+        // NOLINTNEXTLINE(bugprone-use-after-move)
         set_msg(o.msg().size());
     }
     //! Default destructor

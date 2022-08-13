@@ -40,6 +40,8 @@ if (CLANG_TIDY)
         add_custom_command(
             OUTPUT ${O}
             # Do not remove output file on error
+            # Run clang-tidy in "best effort" mode - if clang-tidy crashes
+            # (which happens, unfortunately), do not treat it as failure
             COMMAND ${CLANG_TIDY} ${S} > ${O} | true
             DEPENDS ${S}
         )

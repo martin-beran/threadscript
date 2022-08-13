@@ -39,12 +39,12 @@ struct canon::rules {
     struct tmp_ctx {
         //! Used to construct the top level context
         /*! \param[in] builder the script builder object */
-        tmp_ctx(script_builder& builder): builder(builder) {}
+        explicit tmp_ctx(script_builder& builder): builder(builder) {}
         //! Creates a child context.
         /*! It passes \ref builder and \ref node down from the parent to the
          * child context.
          * \param[in] up a parent context; must not be \c nullptr */
-        tmp_ctx(tmp_ctx* up):
+        explicit tmp_ctx(tmp_ctx* up):
             builder((assert(up), up->builder)), node(up->node) {}
         //! The script builder to be used by handlers
         /*! Its value is valid only during canon::run_parser(). */
@@ -221,7 +221,7 @@ void canon::rules::hnd_null(parser::context&, tmp_ctx& self, tmp_ctx*,
                             iterator_type begin, iterator_type)
 {
     self.builder.add_node(self.node, file_location(begin.line, begin.column),
-                          ""sv, self.builder.create_value_null());
+                          ""sv, script_builder::create_value_null());
 }
 
 void canon::rules::hnd_string(parser::context&, tmp_ctx& self, tmp_ctx*,

@@ -16,6 +16,7 @@ set(
     parser
     parser_ascii
     symbol_table
+    syntax
     syntax_canon
     vm_data
     virtual_machine

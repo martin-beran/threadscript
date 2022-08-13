@@ -36,8 +36,16 @@ public:
     };
     //! Creates a new script builder
     script_builder() = default;
+    //! No copy
+    script_builder(const script_builder&) = delete;
+    //! No move
+    script_builder(script_builder&&) = delete;
     //! A virtual destructor, because this class is polymorphic
     virtual ~script_builder() = default;
+    //! No copy
+    script_builder& operator=(const script_builder&) = delete;
+    //! No move
+    script_builder& operator=(script_builder&&) = delete;
     //! Creates a new script object and stores it internally.
     /*! It may be called only once, the second call cases a failed assert.
      * \param[in] file a script file name, it will be stored in the created
@@ -61,7 +69,7 @@ public:
                                  const value_handle& value = {}) = 0;
     //! Creates a null value
     /*! \return basic_value_ptr with value \c nullptr */
-    value_handle create_value_null() {
+    static value_handle create_value_null() {
         return value_handle{};
     }
     //! Creates a Boolean value

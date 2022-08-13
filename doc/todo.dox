@@ -4,4 +4,11 @@
  * using command <tt>\\todo</tt>. If a ToDo is not related to a particular
  * place in C++ code, add it here.
  *
+ * \todo Review \c NOLINT* suppressions related to false positives that are
+ * probably caused by incorrect detections by \c clang-tidy.
+ *
+ * \todo Resolve \c clang-diagnostic-error reported by \c clang-tidy, which
+ * cannot be suppressed in configuration file \c .clang-tidy or by \c NOLINT.
+ *
+ * \todo Make source to compile by Clang.
  */
