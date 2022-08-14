@@ -248,8 +248,17 @@ basic_value_script<A>::eval(basic_state<A>& thread,
 
 /*** basic_value_native_fun **************************************************/
 
-template <impl::allocator A> typename basic_value<A>::value_ptr
-basic_value_native_fun<A>::arg(basic_state<A>& thread,
+template <class Derived, impl::allocator A>
+basic_value_native_fun<Derived, A>::basic_value_native_fun(
+                                        typename basic_value_native_fun::tag t,
+                                        const A& alloc):
+    impl::basic_value_native_fun_base<Derived, A>(t, alloc),
+    alloc(alloc)
+{
+}
+
+template <class Derived, impl::allocator A> typename basic_value<A>::value_ptr
+basic_value_native_fun<Derived, A>::arg(basic_state<A>& thread,
     const basic_symbol_table<A>& lookup,
     const std::vector<std::reference_wrapper<basic_symbol_table<A>>>& sym,
     const basic_code_node<A>& node, size_t idx)
@@ -261,8 +270,16 @@ basic_value_native_fun<A>::arg(basic_state<A>& thread,
     return p->eval(thread, lookup, sym);
 }
 
-template <impl::allocator A> typename basic_value<A>::value_ptr
-basic_value_native_fun<A>::eval(basic_state<A>&,
+template <class Derived, impl::allocator A> typename basic_value<A>::value_ptr
+basic_value_native_fun<Derived, A>::create(const A& alloc)
+{
+    return std::allocate_shared<Derived>(alloc,
+                                         typename basic_value_native_fun::tag{},
+                                         alloc);
+}
+
+template <class Derived, impl::allocator A> typename basic_value<A>::value_ptr
+basic_value_native_fun<Derived, A>::eval(basic_state<A>&,
     const basic_symbol_table<A>&,
     const std::vector<std::reference_wrapper<basic_symbol_table<A>>>&,
     const basic_code_node<A>&, std::string_view)

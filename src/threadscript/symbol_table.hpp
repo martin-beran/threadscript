@@ -110,6 +110,11 @@ public:
      * \return \c true if the symbol has been deleted, \c if symbol does not
      * exist in the table. */
     bool erase(const key_type& name);
+    //! Get the allocator used by this symbol table.
+    /*! \return a copy of the allocator object */
+    [[nodiscard]] A get_allocator() const noexcept {
+        return data.get_allocator();
+    }
 private:
     storage data; //!< Contents of the symbol table
     //! The optional parent symbol table

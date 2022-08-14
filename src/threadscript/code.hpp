@@ -14,7 +14,7 @@ namespace threadscript {
 template <impl::allocator A> class basic_script;
 template <impl::allocator A> class basic_value_script;
 template <impl::allocator A> class basic_value_function;
-template <impl::allocator A> class basic_value_native_fun;
+template <class Derived, impl::allocator A> class basic_value_native_fun;
 
 //! A single node in a tree representing a parsed script
 /*! \tparam A the allocator type
@@ -107,7 +107,8 @@ private:
     //! basic_value_function::eval() needs access to node internals
     friend class basic_value_function<A>;
     //! basic_value_native_fun needs access to _children
-    friend class basic_value_native_fun<A>;
+    template <class Derived, impl::allocator Alloc>
+        friend class basic_value_native_fun;
 };
 
 //! Writes a textual description of the node to a stream
@@ -306,20 +307,34 @@ inline constexpr char name_value_native_fun[] = "native_fun";
 struct empty {};
 //! The base class of basic_value_native_fun
 /*! \tparam A an allocator type */
-template <allocator A> using basic_value_native_fun_base =
-    basic_typed_value<basic_value_native_fun<A>, empty, name_value_native_fun,
-        A>;
+template <class D, allocator A> using basic_value_native_fun_base =
+    basic_typed_value<basic_value_native_fun<D, A>, empty,
+        name_value_native_fun, A>;
 } // namespace impl
 
 //! The value class holding a reference to a function implemented by native C++
 /*! This is the abstract base class for native functions. Each derived type
- * should override member function eval(). */
-template <impl::allocator A> class basic_value_native_fun:
-    public impl::basic_value_native_fun_base<A>
+ * should override member function eval().
+ * \tparam Derived the derived native function type
+ * \tparam A the allocator type used by the function */
+template <class Derived, impl::allocator A> class basic_value_native_fun:
+    public impl::basic_value_native_fun_base<Derived, A>
 {
     static_assert(
         !impl::uses_allocator<typename basic_value_native_fun::value_type, A>);
-    using impl::basic_value_native_fun_base<A>::basic_value_native_fun_base;
+    using impl::basic_value_native_fun_base<Derived, A>::
+        basic_value_native_fun_base;
+public:
+    //! Stores the allocator
+    /*! \param[in] t an ignored parameter that prevents using this constructor
+     * directly
+     * \param[in] alloc an allocator to be used by this object */
+    basic_value_native_fun(typename basic_value_native_fun::tag t,
+                           const A& alloc);
+    //! Creates the \a Derived native function object
+    /*! \param[in] alloc an allocator to be used by the created object
+     * \return the created object */
+    static typename basic_value<A>::value_ptr create(const A& alloc);
 protected:
     //! Evaluates the value and returns the result.
     /*! The default implementation in basic_value_native_fun does nothing and
@@ -351,6 +366,8 @@ protected:
         const basic_symbol_table<A>& lookup,
         const std::vector<std::reference_wrapper<basic_symbol_table<A>>>& sym,
         const basic_code_node<A>& node, size_t idx);
+    //! The allocator used by this native function
+    A alloc;
 };
 
 } //namespace threadscript

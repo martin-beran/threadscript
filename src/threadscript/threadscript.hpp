@@ -74,13 +74,6 @@ extern template class basic_typed_value<basic_value_script<allocator_any>,
     allocator_any>;
 extern template class basic_value_script<allocator_any>;
 
-//! The \ref basic_value_native_fun using the configured allocator
-using value_native_fun = basic_value_native_fun<allocator_any>;
-extern template class basic_typed_value<basic_value_native_fun<allocator_any>,
-    threadscript::impl::empty, threadscript::impl::name_value_native_fun,
-    allocator_any>;
-extern template class basic_value_native_fun<allocator_any>;
-
 /*** threadscript/code_builder_impl.hpp **************************************/
 
 //! The basic_script_builder_impl using the configured allocator
@@ -135,6 +128,7 @@ add_predef_symbols<allocator_any>(
 namespace predef {
 
 extern template class f_print<allocator_any>;
+extern template class f_seq<allocator_any>;
 
 } // namespace predef
 
@@ -159,6 +153,14 @@ extern template class basic_state<allocator_any>;
 //! The \ref basic_value class using the configured allocator
 using value = basic_value<allocator_any>;
 extern template class basic_value<allocator_any>;
+
+//! The output operator using the configured allocator
+/*! Documentation of the primary template function applies, except that \a A is
+ * fixed to allocator_any:
+ *
+ * \copydetails operator<<(std::ostream&, const typename basic_value<A>::value_ptr&) */
+extern template std::ostream& operator<< <allocator_any>(std::ostream& os,
+                                                 const value::value_ptr& p);
 
 //! The \ref basic_value_bool using the configured allocator
 using value_bool = basic_value_bool<allocator_any>;

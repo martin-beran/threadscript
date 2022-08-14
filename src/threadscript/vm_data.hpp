@@ -100,6 +100,12 @@ public:
     {
         return shallow_copy_impl(alloc, mt_safe);
     }
+    //! Writes a textual representation of this value to a stream
+    /*! The default implementation writes the type name.
+     * \param[in] os the output stream */
+    virtual void write(std::ostream& os) const {
+        os << type_name();
+    }
 protected:
     //! Default constructor
     /*! Protected, because no instances of this class should be created. */
@@ -138,6 +144,16 @@ private:
     //! basic_code_node::eval() calls basic_value::eval()
     friend basic_code_node<A>;
 };
+
+//! Writes a value to a stream
+/*! If \a p is not \c nullptr, then the value is written by its member function
+ * basic_value::write(). If \a p is \c nullptr, then the string \c "null" is
+ * written.
+ * \param[in] os the output stream
+ * \param[in] p the value to be written
+ * \return \a os */
+template <impl::allocator A> std::ostream&
+operator<<(std::ostream& os, const typename basic_value<A>::value_ptr& p);
 
 //! The base class for individual value types.
 /*! If type T does some allocations internally, it should use the provided
@@ -246,6 +262,11 @@ template <impl::allocator A> class basic_value_bool final:
     static_assert(!impl::uses_allocator<typename basic_value_bool::value_type,
                   A>);
     using impl::basic_value_bool_base<A>::basic_value_bool_base;
+public:
+    //! Writes a textual representation of this value to a stream
+    /*! Writes the value as string \c "false" or \c "true"
+     * \param[in] os the output stream */
+    void write(std::ostream& os) const override;
 };
 
 template <impl::allocator A> class basic_value_int;
@@ -269,6 +290,11 @@ template <impl::allocator A> class basic_value_int final:
     static_assert(!impl::uses_allocator<typename basic_value_int::value_type,
                   A>);
     using impl::basic_value_int_base<A>::basic_value_int_base;
+public:
+    //! Writes a textual representation of this value to a stream
+    /*! Writes the value as a decimal integer
+     * \param[in] os the output stream */
+    void write(std::ostream& os) const override;
 };
 
 template <impl::allocator A> class basic_value_unsigned;
@@ -292,6 +318,11 @@ template <impl::allocator A> class basic_value_unsigned final:
     static_assert(
         !impl::uses_allocator<typename basic_value_unsigned::value_type, A>);
     using impl::basic_value_unsigned_base<A>::basic_value_unsigned_base;
+public:
+    //! Writes a textual representation of this value to a stream
+    /*! Writes the value as a decimal integer
+     * \param[in] os the output stream */
+    void write(std::ostream& os) const override;
 };
 
 template <impl::allocator A> class basic_value_string;
@@ -335,6 +366,10 @@ public:
             v.shrink_to_fit();
         return v;
     }
+    //! Writes a textual representation of this value to a stream
+    /*! Writes the raw string value, without any escaping
+     * \param[in] os the output stream */
+    void write(std::ostream& os) const override;
 };
 
 template <impl::allocator A> class basic_value_array;

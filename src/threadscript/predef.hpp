@@ -15,6 +15,9 @@ namespace threadscript {
  * prefix \c f_ in order to not collide with C++ keywords. It also contains
  * definitions of any predefined variables.
  *
+ * Classes in this namespace must be registered in variable \c factory in
+ * function add_predef_symbols().
+ *
  * Declarations in this namespace should be kept in the lexicographical order.
  * \test in file test_predef.cpp */
 namespace predef {
@@ -26,8 +29,8 @@ namespace predef {
  * print is not interleaved by other output to the same stream. It returns \c
  * null. */
 template <impl::allocator A>
-class f_print final: public basic_value_native_fun<A> {
-    using basic_value_native_fun<A>::basic_value_native_fun;
+class f_print final: public basic_value_native_fun<f_print<A>, A> {
+    using basic_value_native_fun<f_print<A>, A>::basic_value_native_fun;
 protected:
     typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
         const basic_symbol_table<A>& lookup,
@@ -39,8 +42,8 @@ protected:
 /*! It evaluates all its arguments sequentially. This is essentially equivalent
  * to a block of commands in other programming languages. It returns \c null. */
 template <impl::allocator A>
-class f_seq final: public basic_value_native_fun<A> {
-    using basic_value_native_fun<A>::basic_value_native_fun;
+class f_seq final: public basic_value_native_fun<f_seq<A>, A> {
+    using basic_value_native_fun<f_seq<A>, A>::basic_value_native_fun;
 protected:
     typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
         const basic_symbol_table<A>& lookup,
@@ -71,7 +74,6 @@ std::shared_ptr<basic_symbol_table<A>> predef_symbols(const A& alloc);
  * replaced by the default value.
  * \return \a sym */
 template <impl::allocator A> std::shared_ptr<basic_symbol_table<A>>
-add_predef_symbols(std::shared_ptr<basic_symbol_table<A>> sym,
-                    bool replace = false);
+add_predef_symbols(std::shared_ptr<basic_symbol_table<A>> sym, bool replace);
 
 } // namespace threadscript

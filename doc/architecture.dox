@@ -242,6 +242,4 @@
  * \section Architecture_Execution Execution of a script
  *
  * See also \ref Script_execution in the language reference.
- *
- * \section Architecture_API ThreadScript API
  */

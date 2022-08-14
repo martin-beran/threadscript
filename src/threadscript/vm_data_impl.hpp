@@ -25,6 +25,16 @@ void basic_value<A>::set_mt_safe()
     _mt_safe = true;
 }
 
+template <impl::allocator A> std::ostream&
+operator<<(std::ostream& os, const typename basic_value<A>::value_ptr& p)
+{
+    if (p)
+        p->write(os);
+    else
+        os << "null";
+    return os;
+}
+
 /*** basic_typed_value ******************************************************/
 
 template <class Derived, class T, str_literal Name, impl::allocator A>
@@ -65,11 +75,42 @@ template <class Derived, class T, str_literal Name, impl::allocator A>
 std::string_view basic_typed_value<Derived, T, Name, A>::type_name()
     const noexcept
 {
-    // It is here and not in the declaration of class basic_typed_value,
-    // because Derived must be a complete type here
-    static_assert(std::is_final_v<Derived> ||
-                  std::is_same_v<Derived, basic_value_native_fun<A>>);
     return Name;
+}
+
+/*** basic_value_bool ********************************************************/
+
+template <impl::allocator A>
+void basic_value_bool<A>::write(std::ostream& os) const
+{
+    if (this->cvalue())
+        os << "true";
+    else
+        os << "false";
+}
+
+/*** basic_value_int *********************************************************/
+
+template <impl::allocator A>
+void basic_value_int<A>::write(std::ostream& os) const
+{
+    os << this->cvalue();
+}
+
+/*** basic_value_unsigned ****************************************************/
+
+template <impl::allocator A>
+void basic_value_unsigned<A>::write(std::ostream& os) const
+{
+    os << this->cvalue();
+}
+
+/*** basic_value_string ******************************************************/
+
+template <impl::allocator A>
+void basic_value_string<A>::write(std::ostream& os) const
+{
+    os << this->cvalue();
 }
 
 /*** basic_value_array *******************************************************/

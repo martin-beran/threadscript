@@ -1,4 +1,8 @@
 /*! \page CppAPI C++ API
  *
  * \tableofcontents
+ *
+ * An example (from test_predef.cpp) of using the API for parsing and running
+ * a script:
+ * \snippet test_predef.cpp parse_run
  */
