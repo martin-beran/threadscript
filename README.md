@@ -15,6 +15,36 @@ Martin Beran
 This software is available under the terms of BSD 2-Clause License, see
 file [LICENSE.md](LICENSE.html).
 
+## Current status (as of 2022-08-14)
+
+This is a work in progress, in active development. It does not do anything
+useful yet.
+
+In order to build code and documentation, recent versions of tools are needed.
+Currently, it is being developed with:
+
+- GCC 12.0.1
+- libstdc++ 12-20220319
+- Doxygen 1.9.3
+- CMake 3.22.1 (3.18.4 should be sufficient)
+
+Already done, possibly usable in other projects:
+
+- build (CMake), documentation (Doxygen), and testing (Boost.Test)
+  infrastructure
+- temporary debugging messages
+- resource management (finalizers, allocators)
+- a generic parser with rules defined directly in C++ code (similar to
+  Boost.Spirit)
+- parsing source code using a simple syntax
+- executing parsed internal representation of a script
+
+Required for at least marginally usable multithreading scripting language:
+
+- implement a basic set of commands and functions
+- complete a public C++ API
+- implement a basic set of thread synchronization and communication functions
+
 ## Repository structure
 
 - `doc/` – documentation

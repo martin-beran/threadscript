@@ -27,6 +27,13 @@
  * temporary debugging mesages. Such debugging messages should not be left in
  * source code indefinitely and they should be removed as soon as not needed.
  *
+ * \section Architecture_Finalizers Finalizers
+ *
+ * Class threadscript::finally provides a simple tool for calling a function at
+ * the end of the current scope regardless of how is the scope finished
+ * (reaching the end, return or goto from the middle, or throwing an
+ * exception). It is similar to \c finally in other programming languages.
+ *
  * \section Architecture_Memory_allocation Memory allocation
  *
  * All ThreadScript classes (e.g., the virtual machine, script code, data,

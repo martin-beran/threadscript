@@ -11,4 +11,6 @@
  * cannot be suppressed in configuration file \c .clang-tidy or by \c NOLINT.
  *
  * \todo Make source to compile by Clang.
+ *
+ * \todo Make it work with libc++.
  */
