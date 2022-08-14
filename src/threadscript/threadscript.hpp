@@ -154,14 +154,6 @@ extern template class basic_state<allocator_any>;
 using value = basic_value<allocator_any>;
 extern template class basic_value<allocator_any>;
 
-//! The output operator using the configured allocator
-/*! Documentation of the primary template function applies, except that \a A is
- * fixed to allocator_any:
- *
- * \copydetails operator<<(std::ostream&, const typename basic_value<A>::value_ptr&) */
-extern template std::ostream& operator<< <allocator_any>(std::ostream& os,
-                                                 const value::value_ptr& p);
-
 //! The \ref basic_value_bool using the configured allocator
 using value_bool = basic_value_bool<allocator_any>;
 extern template class basic_typed_value<value_bool, bool,

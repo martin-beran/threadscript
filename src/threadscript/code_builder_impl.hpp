@@ -48,8 +48,12 @@ public:
     //! Converts a type-erased basic_value::value_ptr to a correct type.
     /*! \param[in] hnd the type-erased value handler
      * \return the converted value pointer */
-    static basic_value<A>::value_ptr cast(const value_handle& hnd) noexcept {
-        return std::reinterpret_pointer_cast<basic_value<A>>(get(hnd));
+    static std::optional<typename basic_value<A>::value_ptr>
+    cast(const value_handle& hnd) noexcept {
+        if (auto opt = get(hnd))
+            return std::reinterpret_pointer_cast<basic_value<A>>(*opt);
+        else
+            return std::nullopt;
     }
 private:
     A alloc; //!< The stored allocator

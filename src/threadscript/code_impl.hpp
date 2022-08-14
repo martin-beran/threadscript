@@ -36,9 +36,7 @@ template <impl::allocator A> basic_code_node<A>::~basic_code_node() {
 
 template <impl::allocator A> typename basic_value<A>::value_ptr
 basic_code_node<A>::eval(basic_state<A>& thread,
-    const basic_symbol_table<A>& lookup,
-    const std::vector<std::reference_wrapper<basic_symbol_table<A>>>& sym
-) const
+                         basic_symbol_table<A>& l_vars) const
 {
     // Called from a script or function, therefore the stack must be nonempty.
     assert(!thread.stack.empty());
@@ -58,12 +56,12 @@ basic_code_node<A>::eval(basic_state<A>& thread,
     // Initialization of the reference extends lifetime of the temporary object
     // returned by lookup().
     const value_t& v = value ? value :
-        static_cast<const value_t&>(lookup.lookup(name));
+        static_cast<const value_t&>(l_vars.lookup(name));
     if (!v)
         throw exception::unknown_symbol(name, thread.current_stack());
     if (!*v)
         return nullptr;
-    return (*v)->eval(thread, lookup, sym, *this, name);
+    return (*v)->eval(thread, l_vars, *this, name);
 }
 
 template <impl::allocator A>
@@ -96,7 +94,7 @@ template <impl::allocator A>
 void basic_code_node<A>::write(std::ostream& os, size_t indent) const
 {
     std::string i_string(indent, ' ');
-    os << indent << name << '@' << location << '[';
+    os << i_string << name << '@' << location << '[';
     if (value)
         os << value->get();
     else
@@ -104,7 +102,7 @@ void basic_code_node<A>::write(std::ostream& os, size_t indent) const
     os << "](\n";
     for (auto c: _children)
         c->write(os, indent + indent_step);
-    os << indent << '\n';
+    os << i_string << ")\n";
 }
 
 template <impl::allocator A>
@@ -169,16 +167,17 @@ auto basic_script<A>::add_node(const node_ptr& parent,
 
 template <impl::allocator A> typename basic_value<A>::value_ptr
 basic_script<A>::eval(basic_state<A>& thread,
-    const basic_symbol_table<A>& lookup,
-    const std::vector<std::reference_wrapper<basic_symbol_table<A>>>& sym
-) const
+                      basic_symbol_table<A>* l_vars) const
 {
     if (_root) {
         auto& frame = thread.push_frame(typename basic_state<A>::stack_frame(
                                                                 alloc, thread));
         finally pop{[&thread]() noexcept { thread.pop_frame(); }};
         frame.location.file = _file;
-        return _root->eval(thread, lookup, sym);
+        auto result = _root->eval(thread, frame.l_vars);
+        if (l_vars)
+            *l_vars = std::move(frame.l_vars);
+        return result;
     }
     return nullptr;
 }
@@ -207,9 +206,9 @@ std::ostream& operator<<(std::ostream& os, const basic_script<A>& script)
 
 template <impl::allocator A> typename basic_value<A>::value_ptr
 basic_value_function<A>::eval(basic_state<A>& thread,
-    const basic_symbol_table<A>& lookup,
-    const std::vector<std::reference_wrapper<basic_symbol_table<A>>>& sym,
-    const basic_code_node<A>& node, std::string_view fun_name)
+                              basic_symbol_table<A>& l_vars,
+                              const basic_code_node<A>& node,
+                              std::string_view fun_name)
 {
     auto alloc = thread.get_allocator();
     auto args = basic_value_array<A>::create(alloc);
@@ -217,7 +216,7 @@ basic_value_function<A>::eval(basic_state<A>& thread,
     a.reserve(node._children.size());
     for (const auto& c: node._children)
         if (c)
-            a.push_back(c->eval(thread, lookup, sym));
+            a.push_back(c->eval(thread, l_vars));
         else
             a.push_back(nullptr);
     if (const auto& f = this->cvalue()) {
@@ -228,7 +227,7 @@ basic_value_function<A>::eval(basic_state<A>& thread,
                             std::move(args));
         frame.location.file = node._file;
         frame.location.function = fun_name;
-        return f->eval(thread, lookup, sym);
+        return f->eval(thread, frame.l_vars);
     } else
         return nullptr;
 }
@@ -237,12 +236,11 @@ basic_value_function<A>::eval(basic_state<A>& thread,
 
 template <impl::allocator A> typename basic_value<A>::value_ptr
 basic_value_script<A>::eval(basic_state<A>& thread,
-    const basic_symbol_table<A>& lookup,
-    const std::vector<std::reference_wrapper<basic_symbol_table<A>>>& sym,
-    const basic_code_node<A>&, std::string_view)
+                            basic_symbol_table<A>& l_vars,
+                            const basic_code_node<A>&, std::string_view)
 {
     if (auto script = this->cvalue())
-        return script->eval(thread, lookup, sym);
+        return script->eval(thread, &l_vars);
     return nullptr;
 }
 
@@ -259,15 +257,15 @@ basic_value_native_fun<Derived, A>::basic_value_native_fun(
 
 template <class Derived, impl::allocator A> typename basic_value<A>::value_ptr
 basic_value_native_fun<Derived, A>::arg(basic_state<A>& thread,
-    const basic_symbol_table<A>& lookup,
-    const std::vector<std::reference_wrapper<basic_symbol_table<A>>>& sym,
-    const basic_code_node<A>& node, size_t idx)
+                                        basic_symbol_table<A>& l_vars,
+                                        const basic_code_node<A>& node,
+                                        size_t idx)
 {
     if (idx >= narg(node))
         return nullptr;
     auto p = node._children[idx];
     assert(p);
-    return p->eval(thread, lookup, sym);
+    return p->eval(thread, l_vars);
 }
 
 template <class Derived, impl::allocator A> typename basic_value<A>::value_ptr
@@ -280,9 +278,7 @@ basic_value_native_fun<Derived, A>::create(const A& alloc)
 
 template <class Derived, impl::allocator A> typename basic_value<A>::value_ptr
 basic_value_native_fun<Derived, A>::eval(basic_state<A>&,
-    const basic_symbol_table<A>&,
-    const std::vector<std::reference_wrapper<basic_symbol_table<A>>>&,
-    const basic_code_node<A>&, std::string_view)
+    basic_symbol_table<A>&, const basic_code_node<A>&, std::string_view)
 {
     return nullptr;
 }

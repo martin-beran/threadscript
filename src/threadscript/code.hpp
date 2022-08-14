@@ -83,16 +83,13 @@ private:
      * and \ref name. Then, the (resolved) value is evaluated by its
      * basic_value::eval().
      * \param[in] thread the current thread
-     * \param[in] lookup the (const) symbol table used for symbol lookups
-     * \param[in] sym the (non-const) symbol tables where new  symbols can be
-     * added; see parameter \a sym of basic_value::eval() for more information
+     * \param[in] l_vars  the symbol table of the current stack frame;
+     see parameter \a l_vars of basic_value::eval() for more information
      * \return the result of evaluation
      * \throw a class derived from exception::base if evaluation fails; other
      * exceptions are wrapped in exception::wrapped */
     typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
-        const basic_symbol_table<A>& lookup,
-        const std::vector<std::reference_wrapper<basic_symbol_table<A>>>& sym
-    ) const;
+                                        basic_symbol_table<A>& l_vars) const;
     //! The script file name
     /*! It always references basic_script::_file of the owner script. */
     const a_basic_string<A>& _file;
@@ -173,14 +170,6 @@ public:
     static script_ptr create(const A& alloc, std::string_view file) {
         return std::allocate_shared<basic_script>(alloc, tag{}, alloc, file);
     }
-    //! Gets the allocator used by this script.
-    /*! \return a copy of the allocator object */
-    [[nodiscard]] A get_allocator() const noexcept { return alloc; }
-    //! Gets the script file name.
-    /*! \return the name */
-    [[nodiscard]] const a_basic_string<A>& file() const noexcept {
-        return _file;
-    }
     //! Adds a new node of this script.
     /*! \param[in] parent the created node will be added as the _root node if
      * \c nullptr, and as the last child of \a parent otherwise
@@ -193,28 +182,36 @@ public:
     node_ptr add_node(const node_ptr& parent, const file_location& location,
                       std::string_view name,
                       typename node_type::value_t value = std::nullopt);
+    //! Evaluates the script and returns the result.
+    /*! If _root is \c nullptr, then \c nullptr is returned. Otherwise, the
+     * root node is evaluated by calling its basic_code_node::eval().
+     * Evaluating a script adds a new stack frame, therefore outside any
+     * function, local variables refer to a script-local symbol table.
+     * This symbol table is returned in \a l_vars, providing access to any
+     * symbols (variables and functions) defined during the script execution.
+     * \param[in] thread the current thread
+     * \param[out] l_vars if not \c nullptr and the script finishes normally
+     * (does not throw an exception), its local symbol table (from its stack
+     * frame) will be moved here
+     * \return the result of evaluation
+     * \throw a class derived from exception::base if evaluation fails; other
+     * exceptions are wrapped in exception::wrapped */
+    typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
+                                basic_symbol_table<A>* l_vars = nullptr) const;
+    //! Gets the allocator used by this script.
+    /*! \return a copy of the allocator object */
+    [[nodiscard]] A get_allocator() const noexcept { return alloc; }
+    //! Gets the script file name.
+    /*! \return the name */
+    [[nodiscard]] const a_basic_string<A>& file() const noexcept {
+        return _file;
+    }
     //! Test of equality.
     /*! It is intended mainly for testing that a parser produces the expected
      * representation of a script. It compares the node trees recursively.
      * \param[in] o another script
      * \return whether \c this and \a o are equal */
     bool operator==(const basic_script& o) const noexcept;
-    //! Evaluates the script and returns the result.
-    /*! If _root is \c nullptr, then \c nullptr is returned. Otherwise, the
-     * root node is evaluated by calling its basic_code_node::eval().
-     * Evaluating a script adds a new stack frame, therefore outside any
-     * function, local variables refer to a script-local symbol table.
-     * \param[in] thread the current thread
-     * \param[in] lookup the (const) symbol table used for symbol lookups
-     * \param[in] sym the (non-const) symbol tables where new  symbols can be
-     * added; see parameter \a sym of basic_value::eval() for more information
-     * \return the result of evaluation
-     * \throw a class derived from exception::base if evaluation fails; other
-     * exceptions are wrapped in exception::wrapped */
-    typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
-        const basic_symbol_table<A>& lookup,
-        const std::vector<std::reference_wrapper<basic_symbol_table<A>>>& sym
-    ) const;
 private:
     //! The script file name
     a_basic_string<A> _file;
@@ -266,9 +263,8 @@ protected:
      * implementation basic_code_node is \c nullptr.
      * \copydetails basic_value::eval() */
     typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
-        const basic_symbol_table<A>& lookup,
-        const std::vector<std::reference_wrapper<basic_symbol_table<A>>>& sym,
-        const basic_code_node<A>& node, std::string_view fun_name) override;
+        basic_symbol_table<A>& l_vars, const basic_code_node<A>& node,
+        std::string_view fun_name) override;
 };
 
 namespace impl {
@@ -294,9 +290,8 @@ protected:
      * Otherwise, basic_script::eval() of the associated script is called.
      * \copydetails basic_value::eval() */
     typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
-        const basic_symbol_table<A>& lookup,
-        const std::vector<std::reference_wrapper<basic_symbol_table<A>>>& sym,
-        const basic_code_node<A>& node, std::string_view fun_name) override;
+        basic_symbol_table<A>& l_vars, const basic_code_node<A>& node,
+        std::string_view fun_name) override;
 };
 
 namespace impl {
@@ -343,9 +338,8 @@ protected:
      *
      * \copydetails basic_value::eval() */
     typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
-        const basic_symbol_table<A>& lookup,
-        const std::vector<std::reference_wrapper<basic_symbol_table<A>>>& sym,
-        const basic_code_node<A>& node, std::string_view fun_name) override;
+        basic_symbol_table<A>& l_vars, const basic_code_node<A>& node,
+        std::string_view fun_name) override;
     //! Gets the number of arguments.
     /*! It is intended to be called from eval().
      * \param[in] node the argument \a node of eval()
@@ -356,16 +350,15 @@ protected:
     //! Evaluates an argument and returns its value.
     /*! It is intended to be called from eval().
      * \param[in] thread the argument \a thread of the caller eval()
-     * \param[in] lookup the argument \a lookup of the caller eval()
-     * \param[in] sym the argument sym of the caller eval()
+     * \param[in] l_vars the argument \a l_vars of the caller eval()
      * \param[in] node the argument \a node of the caller eval()
      * \param[in] idx the (zero-based) index of the argument
      * \return the argument value; \c nullptr if \a idx is greater than the
      * index of the last argument */
     typename basic_value<A>::value_ptr arg(basic_state<A>& thread,
-        const basic_symbol_table<A>& lookup,
-        const std::vector<std::reference_wrapper<basic_symbol_table<A>>>& sym,
-        const basic_code_node<A>& node, size_t idx);
+                                           basic_symbol_table<A>& l_vars,
+                                           const basic_code_node<A>& node,
+                                           size_t idx);
     //! The allocator used by this native function
     A alloc;
 };

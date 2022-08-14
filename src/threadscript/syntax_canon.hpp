@@ -8,6 +8,8 @@
 
 #include "threadscript/syntax.hpp"
 
+#include <limits>
+
 namespace threadscript::syntax {
 
 //! The parser for ThreadScript canonical syntax

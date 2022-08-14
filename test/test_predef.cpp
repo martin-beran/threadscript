@@ -41,9 +41,8 @@ ts::value::value_ptr script_runner::run()
     auto parsed = ts::parse_code(alloc, script, "string");
     // Prepare script runtime environment
     ts::state thread{vm};
-    ts::symbol_table lookup{alloc};
     // Run the script
-    auto result = parsed->eval(thread, lookup, sym);
+    auto result = parsed->eval(thread);
     return result;
 }
 
@@ -56,7 +55,38 @@ ts::value::value_ptr script_runner::run()
 //! \cond
 BOOST_AUTO_TEST_CASE(print)
 {
-    BOOST_CHECK(true);
-    // TODO
+    test::script_runner runner(R"(
+print(
+    null, " ",
+    false, " ", true, " ",
+    +0, " ", +1, " ", -1, " ", +234, " ", -567, " ",
+    0, " ", 1, " ", 234, " ",
+    "ABC"
+)
+    )");
+    BOOST_CHECK(runner.run() == nullptr);
+    BOOST_CHECK_EQUAL(runner.std_out.view(),
+                      "null "sv
+                      "false true "
+                      "0 1 -1 234 -567 "
+                      "0 1 234 "
+                      "ABC");
+}
+//! \endcond
+
+/*! \file
+ * \test \c seq -- Test of threadscript::predef::f_seq */
+//! \cond
+BOOST_AUTO_TEST_CASE(seq)
+{
+    test::script_runner runner(R"(
+seq(
+    print(1),
+    print(2),
+    print(3)
+)
+    )");
+    BOOST_CHECK(runner.run() == nullptr);
+    BOOST_CHECK_EQUAL(runner.std_out.view(), "123"sv);
 }
 //! \endcond

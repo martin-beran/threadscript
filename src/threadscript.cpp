@@ -90,9 +90,6 @@ template class basic_state<allocator_any>;
 
 template class basic_value<allocator_any>;
 
-template std::ostream& operator<< <allocator_any>(std::ostream& os,
-                                                  const value::value_ptr&);
-
 template class basic_typed_value<value_bool, bool,
     threadscript::impl::name_value_bool, allocator_any>;
 template class basic_value_bool<allocator_any>;

@@ -14,32 +14,29 @@ namespace predef {
 
 /*** f_print *****************************************************************/
 
-template <impl::allocator A>
-typename basic_value<A>::value_ptr f_print<A>::eval(
-    basic_state<A>& thread,
-    const basic_symbol_table<A>& lookup,
-    const std::vector<std::reference_wrapper<basic_symbol_table<A>>>& sym,
-    const basic_code_node<A>& node, std::string_view)
+template <impl::allocator A> typename basic_value<A>::value_ptr
+f_print<A>::eval(basic_state<A>& thread, basic_symbol_table<A>&l_vars,
+                 const basic_code_node<A>& node, std::string_view)
 {
     if (auto os = thread.std_out.value_or(thread.vm.std_out)) {
         std::osyncstream sync_os(*os);
         for (size_t i = 0; i < this->narg(node); ++i)
-            sync_os << this->arg(thread, lookup, sym, node, i);
+            if (auto p = this->arg(thread, l_vars, node, i))
+                p->write(sync_os);
+            else
+                sync_os << "null";
     }
     return nullptr;
 }
 
 /*** f_seq *******************************************************************/
 
-template <impl::allocator A>
-typename basic_value<A>::value_ptr f_seq<A>::eval(
-    basic_state<A>& thread,
-    const basic_symbol_table<A>& lookup,
-    const std::vector<std::reference_wrapper<basic_symbol_table<A>>>& sym,
-    const basic_code_node<A>& node, std::string_view)
+template <impl::allocator A> typename basic_value<A>::value_ptr
+f_seq<A>::eval(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
+               const basic_code_node<A>& node, std::string_view)
 {
     for (size_t i = 0; i < this->narg(node); ++i)
-        this->arg(thread, lookup, sym, node, i);
+        this->arg(thread, l_vars, node, i);
     return nullptr;
 }
 

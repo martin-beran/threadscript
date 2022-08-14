@@ -30,8 +30,16 @@ public:
     };
     //! An opaque handle to a value
     class value_handle {
+    public:
+        //! Default constructor
+        value_handle() = default;
+    private:
+        //! Creates the handle object
+        /*! \param[in] ptr the stored pointer */
+        value_handle(const std::optional<std::shared_ptr<void>>& ptr):
+            ptr(ptr) {}
         //! Type-erased basic_value::value_ptr
-        std::shared_ptr<void> ptr;
+        std::optional<std::shared_ptr<void>> ptr;
         friend class script_builder; //!< Needs access to \ref ptr
     };
     //! Creates a new script builder
@@ -70,7 +78,7 @@ public:
     //! Creates a null value
     /*! \return basic_value_ptr with value \c nullptr */
     static value_handle create_value_null() {
-        return value_handle{};
+        return value_handle{nullptr};
     }
     //! Creates a Boolean value
     /*! \param[in] val the value stored in the result
@@ -104,11 +112,13 @@ protected:
     //! Provides access to a value for this and derived classes.
     /*! \param[in] hnd a handle to a value
      * \return type-erased basic_value::value_ptr */
-    static std::shared_ptr<void>& get(value_handle& hnd) noexcept {
+    static std::optional<std::shared_ptr<void>>& get(value_handle& hnd) noexcept
+    {
         return hnd.ptr;
     }
     //! \copydoc get(value_handle&)
-    static const std::shared_ptr<void>& get(const value_handle& hnd) noexcept {
+    static const std::optional<std::shared_ptr<void>>&
+    get(const value_handle& hnd) noexcept {
         return hnd.ptr;
     }
 };

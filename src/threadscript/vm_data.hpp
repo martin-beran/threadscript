@@ -44,11 +44,7 @@ template <impl::allocator A> class basic_code_node;
  * another thread.
  * \tparam A the allocator type
  * \threadsafe{safe,unsafe}
- * \test in file test_vm_data.cpp
- * \todo Add member function call() that evaluates the value, if possible,
- * without a reference to basic_code node, which is needed by eval(). It is
- * intended for calling scripts and functions (scripted and native) from native
- * code, outside of a script. */
+ * \test in file test_vm_data.cpp */
 template <impl::allocator A> class basic_value:
     public std::enable_shared_from_this<basic_value<A>> {
 public:
@@ -122,13 +118,9 @@ protected:
      * basic_value_native_fun), it runs the script or calls the function and
      * returns the result.
      * \param[in] thread the current thread
-     * \param[in] lookup the (const) symbol table used for symbol lookups
-     * \param[in] sym the (non-const) symbol tables where new  symbols can be
-     * added. Usually, \c sym[0] is the same symbol table as \a lookup, which
-     * contains the local variables of the current function; \c sym[1] are the
-     * global variables of the current thread; \c sym[2], if it exists, is a
-     * new symbol table that will eventually become shared by all threads of
-     * the virtual machine
+     * \param[in] l_vars the symbol table of the current stack frame;
+     * in a function, it contains local variables of the current function;
+     * outside of functions, it contains local variable of the current script
      * \param[in] node evaluate in the context of this code node
      * \param[in] fun_name if this evaluation was initiated by a function call,
      * then this is the function name; otherwise, it is empty
@@ -136,24 +128,13 @@ protected:
      * \throw a class derived from exception::base if evaluation fails; other
      * exceptions are wrapped in exception::wrapped */
     virtual value_ptr eval(basic_state<A>& thread,
-        const basic_symbol_table<A>& lookup,
-        const std::vector<std::reference_wrapper<basic_symbol_table<A>>>& sym,
+        basic_symbol_table<A>& l_vars,
         const basic_code_node<A>& node, std::string_view fun_name);
 private:
     bool _mt_safe = false; //!< Whether this value is thread-safe
     //! basic_code_node::eval() calls basic_value::eval()
     friend basic_code_node<A>;
 };
-
-//! Writes a value to a stream
-/*! If \a p is not \c nullptr, then the value is written by its member function
- * basic_value::write(). If \a p is \c nullptr, then the string \c "null" is
- * written.
- * \param[in] os the output stream
- * \param[in] p the value to be written
- * \return \a os */
-template <impl::allocator A> std::ostream&
-operator<<(std::ostream& os, const typename basic_value<A>::value_ptr& p);
 
 //! The base class for individual value types.
 /*! If type T does some allocations internally, it should use the provided
