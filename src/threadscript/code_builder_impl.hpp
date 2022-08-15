@@ -89,6 +89,7 @@ auto basic_script_builder_impl<A>::create_value_bool(bool val)
 {
     auto p = basic_value_bool<A>::create(alloc);
     p->value() = val;
+    p->set_mt_safe(); // This value originated from a literal, must be constant
     value_handle result;
     get(result) = p;
     return result;
@@ -100,6 +101,7 @@ auto basic_script_builder_impl<A>::create_value_int(config::value_int_type val)
 {
     auto p = basic_value_int<A>::create(alloc);
     p->value() = val;
+    p->set_mt_safe(); // This value originated from a literal, must be constant
     value_handle result;
     get(result) = p;
     return result;
@@ -111,6 +113,7 @@ auto basic_script_builder_impl<A>::create_value_string(std::string_view val)
 {
     auto p = basic_value_string<A>::create(alloc);
     p->value() = val;
+    p->set_mt_safe(); // This value originated from a literal, must be constant
     value_handle result;
     get(result) = p;
     return result;
@@ -123,6 +126,7 @@ auto basic_script_builder_impl<A>::create_value_unsigned(
 {
     auto p = basic_value_unsigned<A>::create(alloc);
     p->value() = val;
+    p->set_mt_safe(); // This value originated from a literal, must be constant
     value_handle result;
     get(result) = p;
     return result;

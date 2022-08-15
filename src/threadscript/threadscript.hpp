@@ -127,6 +127,7 @@ add_predef_symbols<allocator_any>(
 
 namespace predef {
 
+extern template class f_bool<allocator_any>;
 extern template class f_print<allocator_any>;
 extern template class f_seq<allocator_any>;
 

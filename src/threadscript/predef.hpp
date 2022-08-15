@@ -18,9 +18,42 @@ namespace threadscript {
  * Classes in this namespace must be registered in variable \c factory in
  * function add_predef_symbols().
  *
+ * Classes in this namespace should be \c final.
+ *
  * Declarations in this namespace should be kept in the lexicographical order.
  * \test in file test_predef.cpp */
 namespace predef {
+
+//! Implementation of function \c bool.
+/*! It must be called with one or two arguments. The last argument is converted
+ * to type \c bool and the result is returned. A \c bool value \c false yields
+ * \c false. Any other non-null value yields \c true. A \c null causes throwing
+ * exception::value_null.
+ *
+ * If called with two arguments and the first one is of type \c bool, it is
+ * reused and the result is stored into it. In any other case, a new value is
+ * allocated for the result.
+ *
+ * It throws exception::op_narg if the number of arguments is not 1 or 2. */
+template <impl::allocator A>
+class f_bool final: public basic_value_native_fun<f_bool<A>, A> {
+    using basic_value_native_fun<f_bool<A>, A>::basic_value_native_fun;
+protected:
+    typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
+                                            basic_symbol_table<A>& l_vars,
+                                            const basic_code_node<A>& node,
+                                            std::string_view fun_name) override;
+    //! Converts a value to basic_value_bool.
+    /*! This is a helper function used by eval() and it should be used (for
+     * consistency) by any other conversion to \c bool, for example, in f_if.
+     * \param[in] thread the current thread
+     * \param[in] val the value to be converted
+     * \return \c false if \a val is basic_value_bool containing \c false;
+     * \c true otherwise
+     * \throw exception::value_null if \a val is \c nullptr */
+    static bool convert(basic_state<A>& thread,
+                        typename basic_value<A>::value_ptr val);
+};
 
 //! Implementation of function \c print.
 /*! It writes all its arguments atomically to the standard output, which can be

@@ -475,7 +475,7 @@ protected:
 };
 
 //! A bad operation.
-/*! It is used if a operation cannot be performed and there is no more specific
+/*! It is used if an operation cannot be performed and there is no more specific
  * exception class. */
 class op_bad: public operation {
 public:
@@ -495,7 +495,18 @@ public:
         operation("Recursion too deep", std::move(trace)) {}
 };
 
-//! The result operation is out of range of the destination value_type.
+//! Invalid number of arguments of an operation
+/*! It is used if a command or a function is called with a wrong number of
+ * arguments. */
+class op_narg: public operation {
+public:
+    //! Stores an error message.
+    /*! \param[in] trace a stack trace */
+    explicit op_narg(stack_trace trace = {}):
+        operation("Bad number of arguments", std::move(trace)) {}
+};
+
+//! The result of an operation is out of range of the destination value_type.
 /*! It is used, e.g., to signal overflow of an arithmetic operation with signed
  * values. */
 class op_overflow: public operation {
