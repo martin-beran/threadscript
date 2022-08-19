@@ -15,6 +15,10 @@ namespace threadscript {
  * prefix \c f_ in order to not collide with C++ keywords. It also contains
  * definitions of any predefined variables.
  *
+ * If a function, e.g., f_bool, has an (usually optional) parameter for storing
+ * the result, a writable value must be passed in this argument. Otherwise,
+ * exception::value_read_only is thrown.
+ *
  * Classes in this namespace must be registered in variable \c factory in
  * function add_predef_symbols().
  *
@@ -54,16 +58,15 @@ protected:
                                             std::string_view fun_name) override;
 };
 
-//! Function \c is_null
-/*! Tests if a value is \c null.
- * \param result (optional) if exists and has type \c bool, the result is
- * stored into it; otherwise, a new value is allocated for the result
- * \param val a value to be tested
- * \return \c true if \a val is \c null; \c false otherwise
- * \throw exception::op_narg if the number of arguments is not 1 or 2 */
+//! Function \c clone
+/*! Creates a copy of a value. 
+ * \param val a value to be copied
+ * \return a writable copy of \a val
+ * \throw exception::op_narg if the number of arguments is not 1
+ * \throw exception::value_null if \a val is \c nullptr */
 template <impl::allocator A>
-class f_is_null final: public basic_value_native_fun<f_is_null<A>, A> {
-    using basic_value_native_fun<f_is_null<A>, A>::basic_value_native_fun;
+class f_clone final: public basic_value_native_fun<f_clone<A>, A> {
+    using basic_value_native_fun<f_clone<A>, A>::basic_value_native_fun;
 protected:
     typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
                                             basic_symbol_table<A>& l_vars,
@@ -82,6 +85,81 @@ protected:
 template <impl::allocator A>
 class f_if final: public basic_value_native_fun<f_if<A>, A> {
     using basic_value_native_fun<f_if<A>, A>::basic_value_native_fun;
+protected:
+    typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
+                                            basic_symbol_table<A>& l_vars,
+                                            const basic_code_node<A>& node,
+                                            std::string_view fun_name) override;
+};
+
+//! Function \c is_mt_safe
+/*! Tests if a value is marked as thread-safe and may be shared among threads.
+ * \param result (optional) if exists and has type \c bool, the result is
+ * stored into it; otherwise, a new value is allocated for the result
+ * \param val a value to be tested
+ * \return \c true if \a val is thread-safe; \c false otherwise
+ * \throw exception::op_narg if the number of arguments is not 1 or 2
+ * \throw exception::value_null if \a val is \c nullptr */
+template <impl::allocator A>
+class f_is_mt_safe final: public basic_value_native_fun<f_is_mt_safe<A>, A> {
+    using basic_value_native_fun<f_is_mt_safe<A>, A>::basic_value_native_fun;
+protected:
+    typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
+                                            basic_symbol_table<A>& l_vars,
+                                            const basic_code_node<A>& node,
+                                            std::string_view fun_name) override;
+};
+
+//! Function \c is_null
+/*! Tests if a value is \c null.
+ * \param result (optional) if exists and has type \c bool, the result is
+ * stored into it; otherwise, a new value is allocated for the result
+ * \param val a value to be tested
+ * \return \c true if \a val is \c null; \c false otherwise
+ * \throw exception::op_narg if the number of arguments is not 1 or 2 */
+template <impl::allocator A>
+class f_is_null final: public basic_value_native_fun<f_is_null<A>, A> {
+    using basic_value_native_fun<f_is_null<A>, A>::basic_value_native_fun;
+protected:
+    typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
+                                            basic_symbol_table<A>& l_vars,
+                                            const basic_code_node<A>& node,
+                                            std::string_view fun_name) override;
+};
+
+//! Function \c is_same
+/*! Tests if two values are the same, that is, if they reference the same
+ * location in memory.
+ * \param result (optional) if exists and has type \c bool, the result is
+ * stored into it; otherwise, a new value is allocated for the result
+ * \param val1 the first value to be tested
+ * \param val2 the second value to be tested
+ * \return \c true if \a val1 and \a val2 refer to the same value; \c false
+ * otherwise
+ * \throw exception::op_narg if the number of arguments is not 2 or 3
+ * \throw exception::value_null if \a val1 or \a val2 is \c nullptr */
+template <impl::allocator A>
+class f_is_same final: public basic_value_native_fun<f_is_same<A>, A> {
+    using basic_value_native_fun<f_is_same<A>, A>::basic_value_native_fun;
+protected:
+    typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
+                                            basic_symbol_table<A>& l_vars,
+                                            const basic_code_node<A>& node,
+                                            std::string_view fun_name) override;
+};
+
+//! Function \c mt_safe
+/*! Sets a value as thread-safe, so that it becomes read-only and can be shared
+ * among threads.
+ * \param val a value to modified
+ * \return \a val
+ * \throw exception::op_narg if the number of arguments is not 1
+ * \throw exception::value_null if \a val is \c nullptr
+ * \throw exception::value_mt_unsafe if this value does not satisfy conditions
+ * for being thread-safe */
+template <impl::allocator A>
+class f_mt_safe final: public basic_value_native_fun<f_mt_safe<A>, A> {
+    using basic_value_native_fun<f_mt_safe<A>, A>::basic_value_native_fun;
 protected:
     typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
                                             basic_symbol_table<A>& l_vars,
@@ -158,6 +236,25 @@ public:
 template <impl::allocator A>
 class f_var final: public basic_value_native_fun<f_var<A>, A> {
     using basic_value_native_fun<f_var<A>, A>::basic_value_native_fun;
+protected:
+    typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
+                                            basic_symbol_table<A>& l_vars,
+                                            const basic_code_node<A>& node,
+                                            std::string_view fun_name) override;
+};
+
+//! Command \c while
+/*! A while-loop. First, \a cond is tested. If \c true, then \a body is
+ * evaluated and the whole cycle is repeated. If \a cond becomes \c false, the
+ * \a body is no more executed and the loop terminates.
+ * \param cond converted to \c bool by f_bool::convert()
+ * \param body evaluated while \a cond is \c true
+ * \return the result of the last evaluation of \a cond, or \c null if \a cond
+ * is not evaluated at least once
+ * \throw exception::op_narg if the number of arguments is not 2 */
+template <impl::allocator A>
+class f_while final: public basic_value_native_fun<f_while<A>, A> {
+    using basic_value_native_fun<f_while<A>, A>::basic_value_native_fun;
 protected:
     typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
                                             basic_symbol_table<A>& l_vars,

@@ -175,6 +175,39 @@ BOOST_DATA_TEST_CASE(f_bool, (std::vector<test::runner_result>{
 //! \endcond
 
 /*! \file
+ * \test \c f_clone -- Test of threadscript::predef::f_clone */
+//! \cond
+BOOST_DATA_TEST_CASE(f_clone, (std::vector<test::runner_result>{
+    {R"(clone())", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(clone(1, 2))", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(clone(null))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(clone(false))", false, ""},
+    {R"(clone(true))", true, ""},
+    {R"(clone(0))", test::uint_t(0), ""},
+    {R"(clone(1))", test::uint_t(1), ""},
+    {R"(clone(+2))", test::int_t(2), ""},
+    {R"(clone(-3))", test::int_t(-3), ""},
+    {R"(clone(""))", "", ""},
+    {R"(clone("Abc"))", "Abc", ""},
+}))
+{
+    test::check_runner(sample);
+}
+//! \endcond
+
+/*! \file
  * \test \c f_if -- Test of threadscript::predef::f_if */
 //! \cond
 BOOST_DATA_TEST_CASE(f_if, (std::vector<test::runner_result>{
@@ -235,6 +268,42 @@ BOOST_DATA_TEST_CASE(f_if, (std::vector<test::runner_result>{
 //! \endcond
 
 /*! \file
+ * \test \c f_is_mt_safe -- Test of threadscript::predef::f_is_mt_safe */
+//! \cond
+BOOST_DATA_TEST_CASE(f_is_mt_safe, (std::vector<test::runner_result>{
+    {R"(is_mt_safe())", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(is_mt_safe(null, false, null))", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(is_mt_safe(null))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(is_mt_safe("constant"))", true, ""},
+    {R"(is_mt_safe(clone("writable")))", false, ""},
+    {R"(is_mt_safe(false, "const"))", test::exc{ // target is constant literal
+        typeid(ts::exception::value_read_only),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Read-only value"
+    }, ""},
+    {R"(is_mt_safe(1, "constant"))", true, ""}, // target is constant,
+                                                // but wrong type
+    {R"(is_mt_safe(clone(false), "const"))", true, ""}, // target is modifiable
+    {R"(is_mt_safe(clone(true), clone("writable")))", false, ""},
+}))
+{
+    test::check_runner(sample);
+}
+//! \endcond
+
+/*! \file
  * \test \c f_is_null -- Test of threadscript::predef::f_is_null */
 //! \cond
 BOOST_DATA_TEST_CASE(f_is_null, (std::vector<test::runner_result>{
@@ -266,6 +335,101 @@ BOOST_DATA_TEST_CASE(f_is_null, (std::vector<test::runner_result>{
     {R"(is_null(1, true))", false, ""}, // target is constant, but wrong type
     {R"(is_null(bool(false), null))", true, ""}, // target is modifiable
     {R"(is_null(bool(true), 1))", false, ""},
+}))
+{
+    test::check_runner(sample);
+}
+//! \endcond
+
+/*! \file
+ * \test \c f_is_same -- Test of threadscript::predef::f_is_same */
+//! \cond
+BOOST_DATA_TEST_CASE(f_is_same, (std::vector<test::runner_result>{
+    {R"(is_same())", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(is_same(1))", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(is_same(null, 1, 2, 3))", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(is_same(null, null))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(is_same(1, null))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(is_same(null, 2))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(is_same(clone(false), 1, null))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(is_same(123, 123))", false, ""},
+    {R"(seq(var("a", 1), var("b", 1), is_same(var("a"), var("b"))))",
+        false, ""},
+    {R"(seq(var("a", 1), var("b", var("a")), is_same(var("a"), var("b"))))",
+        true, ""},
+    {R"(seq(var("a", 1), is_same(var("a"), clone(var("a")))))", false, ""},
+    {R"(is_same(false, 1, 2))", test::exc{ // target is constant literal
+        typeid(ts::exception::value_read_only),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Read-only value"
+    }, ""},
+    {R"(is_same(1, 1, 2))", false, ""}, // target is constant, but wrong type
+    {R"(is_same(clone(true), 1, 2))", false, ""}, // target is modifiable
+}))
+{
+    test::check_runner(sample);
+}
+//! \endcond
+
+/*! \file
+ * \test \c f_mt_safe -- Test of threadscript::predef::f_mt_safe
+ * \todo \c f_mt_safe: test throwing threadscript::exception::value_mt_unsafe */
+//! \cond
+BOOST_DATA_TEST_CASE(f_mt_safe, (std::vector<test::runner_result>{
+    {R"(mt_safe())", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(mt_safe(null, false))", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(mt_safe(null))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(mt_safe(1234))", test::uint_t(1234), ""},
+    {R"(mt_safe(clone(1234)))", test::uint_t(1234), ""},
+    {R"(
+        seq(
+            var("a", clone("XYZ")),
+            print(is_mt_safe(var("a"))),
+            print(" ", is_same(mt_safe(var("a")), var("a"))),
+            print(" ", var("a")),
+            print(" ", is_mt_safe(var("a")))
+        )
+    )", nullptr, "false true XYZ true"},
 }))
 {
     test::check_runner(sample);
@@ -383,6 +547,53 @@ BOOST_DATA_TEST_CASE(f_var, (std::vector<test::runner_result>{
     }, ""},
     {R"(var("v", 123))", test::uint_t(123), ""},
     {R"(seq(var("v", 123), var("v")))", test::uint_t(123), ""},
+}))
+{
+    test::check_runner(sample);
+}
+//! \endcond
+
+/*! \file
+ * \test \c f_while -- Test of threadscript::predef::f_while */
+//! \cond
+BOOST_DATA_TEST_CASE(f_while, (std::vector<test::runner_result>{
+    {R"(while())", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(while(true))", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(while(true, 1, 2))", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(while(null, 1))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(while(false, 1))", nullptr, ""},
+    {R"(
+        seq(
+            var("c0", "c1"),
+            var("c1", "c2"),
+            var("c2", "c3"),
+            var("c3", false),
+            var("cond", "c0"),
+            while(
+                var("cond"),
+                seq(
+                    print(var("cond"), "\n"),
+                    var("cond", var(var("cond")))
+                )
+            )
+        )
+    )", false, "c0\nc1\nc2\nc3\n"},
 }))
 {
     test::check_runner(sample);

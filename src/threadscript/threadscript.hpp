@@ -128,12 +128,17 @@ add_predef_symbols<allocator_any>(
 namespace predef {
 
 extern template class f_bool<allocator_any>;
+extern template class f_clone<allocator_any>;
 extern template class f_if<allocator_any>;
+extern template class f_is_mt_safe<allocator_any>;
 extern template class f_is_null<allocator_any>;
+extern template class f_mt_safe<allocator_any>;
 extern template class f_print<allocator_any>;
+extern template class f_is_same<allocator_any>;
 extern template class f_seq<allocator_any>;
 extern template class f_type<allocator_any>;
 extern template class f_var<allocator_any>;
+extern template class f_while<allocator_any>;
 
 } // namespace predef
 
