@@ -252,7 +252,7 @@
  *
  * Normally, a new threadscript::basic_value object must be dynamically
  * allocated for a result of any operation. Some operations provide an
- * optimization -- if the operation (e.g., threadscript::predef::bool) is
+ * optimization -- if the operation (e.g., threadscript::predef::f_bool) is
  * called with one additional argument (typically passed as the first one),
  * and the parameter is of the correct type, the result is stored into it and
  * this argument is returned, eliminating the allocation.

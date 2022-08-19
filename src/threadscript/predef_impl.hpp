@@ -51,6 +51,49 @@ f_bool<A>::eval(basic_state<A>& thread, basic_symbol_table<A>&l_vars,
     return pr;
 }
 
+/*** f_if ********************************************************************/
+
+template <impl::allocator A> typename basic_value<A>::value_ptr
+f_if<A>::eval(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
+              const basic_code_node<A>& node, std::string_view)
+{
+    size_t narg = this->narg(node);
+    if (narg != 2 && narg != 3)
+        throw exception::op_narg(thread.current_stack());
+    if (f_bool<A>::convert(thread, this->arg(thread, l_vars, node, 0)))
+        return this->arg(thread, l_vars, node, 1);
+    else
+        if (narg > 2)
+            return this->arg(thread, l_vars, node, 2);
+        else
+            return nullptr;
+}
+
+/*** f_is_null ***************************************************************/
+
+template <impl::allocator A> typename basic_value<A>::value_ptr
+f_is_null<A>::eval(basic_state<A>& thread, basic_symbol_table<A>&l_vars,
+                 const basic_code_node<A>& node, std::string_view)
+{
+    size_t narg = this->narg(node);
+    if (narg != 1 && narg != 2)
+        throw exception::op_narg(thread.current_stack());
+    bool result = !this->arg(thread, l_vars, node, narg - 1);
+    if (narg == 2) {
+        auto a0 = this->arg(thread, l_vars, node, 0);
+        if (auto pr = dynamic_cast<basic_value_bool<A>*>(a0.get()))
+            try {
+                pr->value() = result;
+                return a0;
+            } catch (exception::value_read_only& e) {
+                throw exception::value_read_only(thread.current_stack());
+            }
+    }
+    auto pr = basic_value_bool<A>::create(thread.get_allocator());
+    pr->value() = result;
+    return pr;
+}
+
 /*** f_print *****************************************************************/
 
 template <impl::allocator A> typename basic_value<A>::value_ptr
@@ -74,9 +117,65 @@ template <impl::allocator A> typename basic_value<A>::value_ptr
 f_seq<A>::eval(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
                const basic_code_node<A>& node, std::string_view)
 {
+    typename basic_value<A>::value_ptr result = nullptr;
     for (size_t i = 0; i < this->narg(node); ++i)
-        this->arg(thread, l_vars, node, i);
-    return nullptr;
+        result = this->arg(thread, l_vars, node, i);
+    return result;
+}
+
+/*** f_type ******************************************************************/
+
+template <impl::allocator A> typename basic_value<A>::value_ptr
+f_type<A>::eval(basic_state<A>& thread, basic_symbol_table<A>&l_vars,
+                 const basic_code_node<A>& node, std::string_view)
+{
+    size_t narg = this->narg(node);
+    if (narg != 1 && narg != 2)
+        throw exception::op_narg(thread.current_stack());
+    auto val = this->arg(thread, l_vars, node, narg - 1);
+    if (!val)
+        throw exception::value_null(thread.current_stack());
+    if (narg == 2) {
+        auto a0 = this->arg(thread, l_vars, node, 0);
+        if (auto pr = dynamic_cast<basic_value_string<A>*>(a0.get()))
+            try {
+                pr->value() = val->type_name();
+                return a0;
+            } catch (exception::value_read_only& e) {
+                throw exception::value_read_only(thread.current_stack());
+            }
+    }
+    auto pr = basic_value_string<A>::create(thread.get_allocator());
+    pr->value() = val->type_name();
+    return pr;
+}
+
+/*** f_var *******************************************************************/
+
+template <impl::allocator A> typename basic_value<A>::value_ptr
+f_var<A>::eval(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
+               const basic_code_node<A>& node, std::string_view)
+{
+    size_t narg = this->narg(node);
+    if (narg != 1 && narg != 2)
+        throw exception::op_narg(thread.current_stack());
+    auto arg_name = this->arg(thread, l_vars, node, 0);
+    if (!arg_name)
+        throw exception::value_null(thread.current_stack());
+    auto name = dynamic_cast<basic_value_string<A>*>(arg_name.get());
+    if (!name)
+        throw exception::value_type(thread.current_stack());
+    if (narg == 1) {
+        if (auto v = l_vars.lookup(name->cvalue()))
+            return *v;
+        else
+            throw exception::unknown_symbol(name->cvalue(),
+                                            thread.current_stack());
+    } else {
+        auto v = this->arg(thread, l_vars, node, 1);
+        l_vars.insert(name->cvalue(), v);
+        return v;
+    }
 }
 
 } // namespace predef
@@ -96,8 +195,12 @@ add_predef_symbols(std::shared_ptr<basic_symbol_table<A>> sym, bool replace)
             typename basic_value<A>::value_ptr(*)(const A&)>
     >({
         { "bool", predef::f_bool<A>::create },
+        { "if", predef::f_if<A>::create },
+        { "is_null", predef::f_is_null<A>::create },
         { "print", predef::f_print<A>::create },
         { "seq", predef::f_seq<A>::create },
+        { "type", predef::f_type<A>::create },
+        { "var", predef::f_var<A>::create },
     }));
     if (sym) {
         for (auto&& f: factory) {

@@ -136,6 +136,16 @@ void check_runner(const runner_result& sample)
  * \test \c f_bool -- Test of threadscript::predef::f_bool */
 //! \cond
 BOOST_DATA_TEST_CASE(f_bool, (std::vector<test::runner_result>{
+    {R"(bool())", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(bool(false, false, null))", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
     {R"(bool(null))", test::exc{
         typeid(ts::exception::value_null),
         ts::frame_location("", "", 1, 1),
@@ -155,6 +165,7 @@ BOOST_DATA_TEST_CASE(f_bool, (std::vector<test::runner_result>{
         ts::frame_location("", "", 1, 1),
         "Runtime error: Read-only value"
     }, ""},
+    {R"(bool(1, true))", true, ""}, // target is constant, but wrong type
     {R"(bool(bool(false), true))", true, ""}, // target is modifiable
     {R"(bool(bool(true), false))", false, ""},
 }))
@@ -164,42 +175,258 @@ BOOST_DATA_TEST_CASE(f_bool, (std::vector<test::runner_result>{
 //! \endcond
 
 /*! \file
+ * \test \c f_if -- Test of threadscript::predef::f_if */
+//! \cond
+BOOST_DATA_TEST_CASE(f_if, (std::vector<test::runner_result>{
+    {R"(if())", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(if(null))", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(if(true))", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(if(null, 1, 2, 3))", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(if(true, 1, 2, 3))", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(if(null, 1))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(if(null, 1, 2))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(if(true, 1))", test::uint_t(1), ""},
+    {R"(if(true, 1, 2))", test::uint_t(1), ""},
+    {R"(if(false, 1))", nullptr, ""},
+    {R"(if(false, 1, 2))", test::uint_t(2), ""},
+    {R"(if(0, 1, 2))", test::uint_t(1), ""},
+    {R"(if(1, 1, 2))", test::uint_t(1), ""},
+    {R"(if(+0, 1, 2))", test::uint_t(1), ""},
+    {R"(if(-1, 1, 2))", test::uint_t(1), ""},
+    {R"(if("str", 1, 2))", test::uint_t(1), ""},
+    {R"(if(true, seq(print("then"), 1)))", test::uint_t(1), "then"},
+    {R"(if(true, seq(print("then"), 1), print("else")))",
+        test::uint_t(1), "then"},
+    {R"(if(false, seq(print("then"), 1)))", nullptr, ""},
+    {R"(if(false, print("then"), seq(print("else"), 2)))",
+        test::uint_t(2), "else"},
+}))
+{
+    test::check_runner(sample);
+}
+//! \endcond
+
+/*! \file
+ * \test \c f_is_null -- Test of threadscript::predef::f_is_null */
+//! \cond
+BOOST_DATA_TEST_CASE(f_is_null, (std::vector<test::runner_result>{
+    {R"(is_null())", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(is_null(false, false, null))", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(is_null(null))", true, ""},
+    {R"(is_null(false))", false, ""},
+    {R"(is_null(true))", false, ""},
+    {R"(is_null(0))", false, ""},
+    {R"(is_null(1))", false, ""},
+    {R"(is_null(+0))", false, ""},
+    {R"(is_null(+1))", false, ""},
+    {R"(is_null(-1))", false, ""},
+    {R"(is_null(""))", false, ""},
+    {R"(is_null("abc"))", false, ""},
+    {R"(is_null(false, false))", test::exc{ // target is constant literal
+        typeid(ts::exception::value_read_only),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Read-only value"
+    }, ""},
+    {R"(is_null(1, true))", false, ""}, // target is constant, but wrong type
+    {R"(is_null(bool(false), null))", true, ""}, // target is modifiable
+    {R"(is_null(bool(true), 1))", false, ""},
+}))
+{
+    test::check_runner(sample);
+}
+//! \endcond
+
+/*! \file
  * \test \c f_print -- Test of threadscript::predef::f_print */
 //! \cond
-BOOST_AUTO_TEST_CASE(f_print)
+BOOST_DATA_TEST_CASE(f_print, (std::vector<test::runner_result>{
+    { R"(print())", nullptr, "" },
+    { R"(print(null))", nullptr, "null" },
+    { R"(print(false, " ", true))", nullptr, "false true" },
+    { R"(print(+0, " ", +1, " ", -1, " ", +234, " ", -567))", nullptr,
+        "0 1 -1 234 -567" },
+    { R"(print(0, " ", 1, " ", 234))", nullptr, "0 1 234" },
+    { R"(print("ABC"))", nullptr, "ABC" },
+}))
 {
-    test::script_runner runner(R"(
-print(
-    null, " ",
-    false, " ", true, " ",
-    +0, " ", +1, " ", -1, " ", +234, " ", -567, " ",
-    0, " ", 1, " ", 234, " ",
-    "ABC"
-)
-    )");
-    BOOST_CHECK(runner.run() == nullptr);
-    BOOST_CHECK_EQUAL(runner.std_out.view(),
-                      "null "sv
-                      "false true "
-                      "0 1 -1 234 -567 "
-                      "0 1 234 "
-                      "ABC");
+    test::check_runner(sample);
 }
 //! \endcond
 
 /*! \file
  * \test \c f_seq -- Test of threadscript::predef::f_seq */
 //! \cond
-BOOST_AUTO_TEST_CASE(f_seq)
+BOOST_DATA_TEST_CASE(f_seq, (std::vector<test::runner_result>{
+    { R"(seq())", nullptr, "" },
+    { R"(seq(print(1)))", nullptr, "1" },
+    { R"(seq(print(1), print(2)))", nullptr, "12" },
+    { R"(seq(print(1), print(2), print(3)))", nullptr, "123" },
+    { R"(seq(1))", test::uint_t(1), "" },
+    { R"(seq(false, 2))", test::uint_t(2), "" },
+    { R"(seq(1, 2, null))", nullptr, "" },
+}))
 {
-    test::script_runner runner(R"(
-seq(
-    print(1),
-    print(2),
-    print(3)
-)
-    )");
-    BOOST_CHECK(runner.run() == nullptr);
-    BOOST_CHECK_EQUAL(runner.std_out.view(), "123"sv);
+    test::check_runner(sample);
+}
+//! \endcond
+
+/*! \file
+ * \test \c f_type -- Test of threadscript::predef::f_type */
+//! \cond
+BOOST_DATA_TEST_CASE(f_type, (std::vector<test::runner_result>{
+    {R"(type())", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(type(false, false, null))", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(type(null))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(type(false))", "bool", ""},
+    {R"(type(true))", "bool", ""},
+    {R"(type(0))", "unsigned", ""},
+    {R"(type(1))", "unsigned", ""},
+    {R"(type(+0))", "int", ""},
+    {R"(type(+1))", "int", ""},
+    {R"(type(-1))", "int", ""},
+    {R"(type(""))", "string", ""},
+    {R"(type("abc"))", "string", ""},
+    {R"(type("abc", -1))", test::exc{ // target is constant literal
+        typeid(ts::exception::value_read_only),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Read-only value"
+    }, ""},
+    {R"(type(1, -1))", "int", ""}, // target is constant, but wrong type
+    {R"(type(type(false), 123))", "unsigned", ""}, // target is modifiable
+}))
+{
+    test::check_runner(sample);
+}
+//! \endcond
+
+/*! \file
+ * \test \c f_var -- Test of threadscript::predef::f_var */
+//! \cond
+BOOST_DATA_TEST_CASE(f_var, (std::vector<test::runner_result>{
+    {R"(var())", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(var("v", 1, 2))", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(var(null))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(var(null, 1))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(var(1, 2))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(var("foo_goo"))", test::exc{
+        typeid(ts::exception::unknown_symbol),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Symbol not found: foo_goo"
+    }, ""},
+    {R"(var("v", 123))", test::uint_t(123), ""},
+    {R"(seq(var("v", 123), var("v")))", test::uint_t(123), ""},
+}))
+{
+    test::check_runner(sample);
+}
+//! \endcond
+
+/*! \file
+ * \test \c unknown -- Tests an exception throws in an unknown command or
+ * function is called (with or without arguments) */
+//! \cond
+BOOST_DATA_TEST_CASE(unknown, (std::vector<test::runner_result>{
+    {R"(nonexistent())", test::exc{
+        typeid(ts::exception::unknown_symbol),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Symbol not found: nonexistent"
+    }, ""},
+    {R"(nonexistent(1, 2, 3))", test::exc{
+        typeid(ts::exception::unknown_symbol),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Symbol not found: nonexistent"
+    }, ""},
+    {R"(seq(1, nonexistent(2), 3))", test::exc{
+        typeid(ts::exception::unknown_symbol),
+        ts::frame_location("", "", 1, 8),
+        "Runtime error: Symbol not found: nonexistent"
+    }, ""},
+}))
+{
+    test::check_runner(sample);
+}
+//! \endcond
+
+/*! \file
+ * \test \c variable -- Tests getting the value of a non-function variable by
+ * calling it as a function */
+//! \cond
+BOOST_DATA_TEST_CASE(variable, (std::vector<test::runner_result>{
+    {R"(nonexistent())", test::exc{
+        typeid(ts::exception::unknown_symbol),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Symbol not found: nonexistent"
+    }, ""},
+}))
+{
+    test::check_runner(sample);
 }
 //! \endcond
