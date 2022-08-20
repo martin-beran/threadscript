@@ -71,6 +71,23 @@ using handler = parser::default_handler<Ctx, Self, Up, Info, It>;
     return char(c >= 'a' && c <= 'z' ? c - 'a' + 'A' : c);
 }
 
+//! Converts a hexadecimal digit to an integer.
+/*! It handles boths upper and lowercase.
+ * \param[in] c a character
+ * \return the value of hexadecimal digit \a c; 0 if \a c is not a hexadecimal
+ * digit */
+[[nodiscard]] inline char hex_to_int(char c) noexcept
+{
+    if (c >= '0' && c <= '9')
+        return c - '0';
+    else if (c >= 'A' && c <= 'F')
+        return c - 'A' + 10;
+    else if (c >= 'a' && c <= 'f')
+        return c - 'a' + 10;
+    else
+        return 0;
+}
+
 //! A function object that performs case-insensitive comparison of characters.
 /*! It treats corresponding characters from ASCII uppercase (A--Z) and
  * lowercase (a--z) as equal. It does not depend on the current locale. */

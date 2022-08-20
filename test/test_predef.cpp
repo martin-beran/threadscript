@@ -19,6 +19,7 @@
 
 //! [parse_run]
 namespace ts = threadscript;
+using namespace std::string_literals;
 using namespace std::string_view_literals;
 
 namespace test {
@@ -64,8 +65,16 @@ struct exc {
 };
 
 struct runner_result {
+    template <class T> runner_result(std::string script, T result,
+                                     std::string std_out):
+        script(std::move(script)), result(result), std_out(std::move(std_out))
+    {}
+    runner_result(std::string script, const char* result, std::string std_out):
+        script(std::move(script)), result(std::string_view(result)),
+        std_out(std::move(std_out))
+    {}
     std::string script;
-    std::variant<std::nullptr_t, bool, int_t, uint_t, const char*, exc>
+    std::variant<std::nullptr_t, bool, int_t, uint_t, std::string_view, exc>
         result;
     std::string std_out;
 };
@@ -121,7 +130,7 @@ void check_runner(const runner_result& sample)
                 check_value<ts::value_int>(result, ps);
             } else if (auto ps = std::get_if<uint_t>(&sample.result)) {
                 check_value<ts::value_unsigned>(result, ps);
-            } else if (auto ps = std::get_if<const char*>(&sample.result)) {
+            } else if (auto ps = std::get_if<std::string_view>(&sample.result)) {
                 check_value<ts::value_string>(result, ps);
             }
         }
@@ -447,6 +456,8 @@ BOOST_DATA_TEST_CASE(f_print, (std::vector<test::runner_result>{
         "0 1 -1 234 -567" },
     { R"(print(0, " ", 1, " ", 234))", nullptr, "0 1 234" },
     { R"(print("ABC"))", nullptr, "ABC" },
+    { R"(print("\0\t\n\r\"\\"))", nullptr, "\0\t\n\r\"\\"s },
+    { R"(print("\x41\x4a\x5A\X6c\X6B"))", nullptr, "AJZlk" },
 }))
 {
     test::check_runner(sample);
@@ -547,6 +558,8 @@ BOOST_DATA_TEST_CASE(f_var, (std::vector<test::runner_result>{
     }, ""},
     {R"(var("v", 123))", test::uint_t(123), ""},
     {R"(seq(var("v", 123), var("v")))", test::uint_t(123), ""},
+    {R"(var("str", "\0\t\n\r\"\\"))", "\0\t\n\r\"\\"sv, ""},
+    {R"(var("str", "\x41\x4a\x5A\X6c\X6B"))", "AJZlk", ""},
 }))
 {
     test::check_runner(sample);

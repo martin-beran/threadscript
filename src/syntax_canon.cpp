@@ -45,12 +45,14 @@ struct canon::rules {
          * child context.
          * \param[in] up a parent context; must not be \c nullptr */
         explicit tmp_ctx(tmp_ctx* up):
-            builder((assert(up), up->builder)), node(up->node) {}
+            builder((assert(up), up->builder)), node(up->node), str(up->str) {}
         //! The script builder to be used by handlers
         /*! Its value is valid only during canon::run_parser(). */
         script_builder& builder;
         //! The current node being built
         script_builder::node_handle node;
+        //! The current string being built
+        std::shared_ptr<std::string> str;
     };
     //! The rule factory used by the parser
     using rf =
@@ -77,6 +79,8 @@ struct canon::rules {
          ["Invalid escape"sv]);
     RULE(string_char,
          lit_char | esc_char);
+    RULE(string_begin,
+         rf::t('"'));
     RULE(string_data,
          *string_char);
 
@@ -90,8 +94,7 @@ struct canon::rules {
          (rf::t('+') | rf::t('-'))("Sign"sv) >> rf::uint()
          ["Expected number"sv]);
     RULE(val_string,
-         rf::t('"') >> string_data >> rf::t('"')
-         ["Expected '\"'"sv]);
+         string_begin >> (string_data >> rf::t('"')["Expected '\"'"sv]));
     RULE(node_val,
          val_null | val_bool | val_unsigned | val_int | val_string);
 
@@ -148,6 +151,28 @@ struct canon::rules {
     static void hnd_unsigned(parser::context& ctx, tmp_ctx& self, tmp_ctx* up,
                         decltype(val_unsigned)::info_type info,
                         iterator_type begin, iterator_type end);
+    //! The handler for rule \c string_begin (used by \c val_string)
+    /*! \copydetails hnd_null() */
+    static void hnd_string_begin(parser::context& ctx, tmp_ctx& self,
+                                 tmp_ctx* up,
+                                 decltype(string_begin)::info_type info,
+                                 iterator_type begin, iterator_type end);
+    //! The handler for rule \c lit_char (used by \c val_string)
+    /*! \copydetails hnd_null() */
+    static void hnd_lit_char(parser::context& ctx, tmp_ctx& self,
+                             tmp_ctx* up,
+                             decltype(lit_char)::info_type info,
+                             iterator_type begin, iterator_type end);
+    //! The handler for rule \c lit_esc_name (used by \c val_string)
+    /*! \copydetails hnd_null() */
+    static void hnd_esc_name(parser::context& ctx, tmp_ctx& self, tmp_ctx* up,
+                             decltype(esc_name)::info_type info,
+                             iterator_type begin, iterator_type end);
+    //! The handler for rule \c lit_esc_hex (used by \c val_string)
+    /*! \copydetails hnd_null() */
+    static void hnd_esc_hex(parser::context& ctx, tmp_ctx& self, tmp_ctx* up,
+                            decltype(esc_hex)::info_type info,
+                            iterator_type begin, iterator_type end);
     //! The handler for rule \c string_data (used by \c val_string)
     /*! \copydetails hnd_null() */
     static void hnd_string(parser::context& ctx, tmp_ctx& self, tmp_ctx* up,
@@ -166,6 +191,10 @@ struct canon::rules {
         val_bool[hnd_bool];
         val_int[hnd_int];
         val_unsigned[hnd_unsigned];
+        string_begin[hnd_string_begin];
+        lit_char[hnd_lit_char];
+        esc_name[hnd_esc_name];
+        esc_hex[hnd_esc_hex];
         string_data[hnd_string];
         fun_name[hnd_fun];
     }
@@ -179,6 +208,46 @@ void canon::rules::hnd_bool(parser::context&, tmp_ctx& self, tmp_ctx*,
     assert(begin != end);
     self.builder.add_node(self.node, file_location(begin.line, begin.column),
                           ""sv, self.builder.create_value_bool(*begin == 't'));
+}
+
+void canon::rules::hnd_esc_hex(parser::context&, tmp_ctx& self, tmp_ctx*,
+                               decltype(esc_hex)::info_type,
+                               iterator_type begin, iterator_type end)
+{
+    assert(self.str);
+    assert(std::distance(begin, end) == 3);
+    self.str->push_back(16 * parser_ascii::hex_to_int(*std::next(begin, 1)) +
+                        parser_ascii::hex_to_int(*std::next(begin, 2)));
+}
+
+void canon::rules::hnd_esc_name(parser::context&, tmp_ctx& self, tmp_ctx*,
+                                decltype(esc_name)::info_type,
+                                iterator_type begin, iterator_type end)
+{
+    assert(self.str);
+    assert(std::distance(begin,end) == 1);
+    switch (*begin) {
+    case '0':
+        self.str->push_back('\0');
+        break;
+    case 't':
+        self.str->push_back('\t');
+        break;
+    case 'n':
+        self.str->push_back('\n');
+        break;
+    case 'r':
+        self.str->push_back('\r');
+        break;
+    case '"':
+        self.str->push_back('"');
+        break;
+    case '\\':
+        self.str->push_back('\\');
+        break;
+    default:
+        assert(false);
+    }
 }
 
 void canon::rules::hnd_fun(parser::context&, tmp_ctx&, tmp_ctx* up,
@@ -216,6 +285,15 @@ void canon::rules::hnd_int(parser::context&, tmp_ctx& self, tmp_ctx*,
     throw parser::error(begin, "Invalid number");
 }
 
+void canon::rules::hnd_lit_char(parser::context&, tmp_ctx& self, tmp_ctx*,
+                                decltype(lit_char)::info_type,
+                                iterator_type begin, iterator_type end)
+{
+    assert(self.str);
+    assert(begin != end);
+    self.str->push_back(*begin);
+}
+
 void canon::rules::hnd_null(parser::context&, tmp_ctx& self, tmp_ctx*,
                             decltype(val_null)::info_type,
                             iterator_type begin, iterator_type)
@@ -226,11 +304,18 @@ void canon::rules::hnd_null(parser::context&, tmp_ctx& self, tmp_ctx*,
 
 void canon::rules::hnd_string(parser::context&, tmp_ctx& self, tmp_ctx*,
                               decltype(string_data)::info_type,
-                              iterator_type begin, iterator_type end)
+                              iterator_type begin, iterator_type)
 {
+    assert(self.str);
     self.builder.add_node(self.node, file_location(begin.line, begin.column),
-        ""sv, self.builder.create_value_string(
-            std::string_view(&*begin, std::distance(begin, end))));
+        ""sv, self.builder.create_value_string(*self.str));
+}
+
+void canon::rules::hnd_string_begin(parser::context&, tmp_ctx&, tmp_ctx* up,
+                                    decltype(string_begin)::info_type,
+                                    iterator_type, iterator_type)
+{
+    up->str = std::make_shared<std::string>();
 }
 
 void canon::rules::hnd_unsigned(parser::context&, tmp_ctx& self, tmp_ctx*,
