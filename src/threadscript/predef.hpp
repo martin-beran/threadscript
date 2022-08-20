@@ -167,6 +167,25 @@ protected:
                                             std::string_view fun_name) override;
 };
 
+//! Function \c not
+/*! Negates a Boolean value.
+ * \param result (optional) if exists and has type \c bool, the result is
+ * stored into it; otherwise, a new value is allocated for the result
+ * \param val a value converted to \c bool by f_bool::convert()
+ * \return negated \a val (\c true if \a val is \c false; \c false if \a val is
+ * \c true)
+ * \throw exception::op_narg if the number of arguments is not 1 or 2
+ * \throw exception::value_null if \a val is \c nullptr */
+template <impl::allocator A>
+class f_not final: public basic_value_native_fun<f_not<A>, A> {
+    using basic_value_native_fun<f_not<A>, A>::basic_value_native_fun;
+protected:
+    typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
+                                            basic_symbol_table<A>& l_vars,
+                                            const basic_code_node<A>& node,
+                                            std::string_view fun_name) override;
+};
+
 //! Function \c print
 /*! It writes all its arguments atomically to the standard output, which can be
  * redirected to any \c std::ostream by basic_state::std_out or

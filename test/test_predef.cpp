@@ -446,6 +446,43 @@ BOOST_DATA_TEST_CASE(f_mt_safe, (std::vector<test::runner_result>{
 //! \endcond
 
 /*! \file
+ * \test \c f_not -- Test of threadscript::predef::f_not */
+//! \cond
+BOOST_DATA_TEST_CASE(f_not, (std::vector<test::runner_result>{
+    {R"(not())", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(not(null, false, null))", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(not(null))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(not(false))", true, ""},
+    {R"(not(true))", false, ""},
+    {R"(not(1))", false, ""},
+    {R"(not(-2))", false, ""},
+    {R"(not("str"))", false, ""},
+    {R"(not(false, false))", test::exc{ // target is constant literal
+        typeid(ts::exception::value_read_only),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Read-only value"
+    }, ""},
+    {R"(not(1, true))", false, ""}, // target is constant, but wrong type
+    {R"(not(clone(true), true))", false, ""}, // target is modifiable
+}))
+{
+    test::check_runner(sample);
+}
+//! \endcond
+
+/*! \file
  * \test \c f_print -- Test of threadscript::predef::f_print */
 //! \cond
 BOOST_DATA_TEST_CASE(f_print, (std::vector<test::runner_result>{

@@ -78,6 +78,7 @@ template class f_if<allocator_any>;
 template class f_is_mt_safe<allocator_any>;
 template class f_is_null<allocator_any>;
 template class f_mt_safe<allocator_any>;
+template class f_not<allocator_any>;
 template class f_print<allocator_any>;
 template class f_is_same<allocator_any>;
 template class f_seq<allocator_any>;
