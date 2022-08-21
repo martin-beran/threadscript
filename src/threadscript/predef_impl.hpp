@@ -43,16 +43,13 @@ f_and_r<A>::eval(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
 {
     size_t narg = this->narg(node);
     if (narg == 0)
-        throw exception::op_narg(thread.current_stack());
+        throw exception::op_narg();
     bool result = this->eval_impl(thread, l_vars, node, 1);
     auto a0 = this->arg(thread, l_vars, node, 0);
-    if (auto pr = dynamic_cast<basic_value_bool<A>*>(a0.get()))
-        try {
-            pr->value() = result;
-            return a0;
-        } catch (exception::value_read_only&) {
-            throw exception::value_read_only(thread.current_stack());
-        }
+    if (auto pr = dynamic_cast<basic_value_bool<A>*>(a0.get())) {
+        pr->value() = result;
+        return a0;
+    }
     auto pr = basic_value_bool<A>::create(thread.get_allocator());
     pr->value() = result;
     return pr;
@@ -61,11 +58,10 @@ f_and_r<A>::eval(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
 /*** f_bool ******************************************************************/
 
 template <impl::allocator A>
-bool f_bool<A>::convert(basic_state<A>& thread,
-                        typename basic_value<A>::value_ptr val)
+bool f_bool<A>::convert(basic_state<A>&, typename basic_value<A>::value_ptr val)
 {
     if (!val)
-        throw exception::value_null(thread.current_stack());
+        throw exception::value_null();
     if (auto p = dynamic_cast<basic_value_bool<A>*>(val.get());
         p && !p->cvalue())
     {
@@ -80,17 +76,14 @@ f_bool<A>::eval(basic_state<A>& thread, basic_symbol_table<A>&l_vars,
 {
     size_t narg = this->narg(node);
     if (narg != 1 && narg != 2)
-        throw exception::op_narg(thread.current_stack());
+        throw exception::op_narg();
     bool result = convert(thread, this->arg(thread, l_vars, node, narg - 1));
     if (narg == 2) {
         auto a0 = this->arg(thread, l_vars, node, 0);
-        if (auto pr = dynamic_cast<basic_value_bool<A>*>(a0.get()))
-            try {
-                pr->value() = result;
-                return a0;
-            } catch (exception::value_read_only&) {
-                throw exception::value_read_only(thread.current_stack());
-            }
+        if (auto pr = dynamic_cast<basic_value_bool<A>*>(a0.get())) {
+            pr->value() = result;
+            return a0;
+        }
     }
     auto pr = basic_value_bool<A>::create(thread.get_allocator());
     pr->value() = result;
@@ -105,10 +98,10 @@ f_clone<A>::eval(basic_state<A>& thread, basic_symbol_table<A>&l_vars,
 {
     size_t narg = this->narg(node);
     if (narg != 1)
-        throw exception::op_narg(thread.current_stack());
+        throw exception::op_narg();
     auto val = this->arg(thread, l_vars, node, 0);
     if (!val)
-        throw exception::value_null(thread.current_stack());
+        throw exception::value_null();
     return val->shallow_copy(thread.get_allocator(), false);
 }
 
@@ -120,7 +113,7 @@ f_if<A>::eval(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
 {
     size_t narg = this->narg(node);
     if (narg != 2 && narg != 3)
-        throw exception::op_narg(thread.current_stack());
+        throw exception::op_narg();
     if (f_bool<A>::convert(thread, this->arg(thread, l_vars, node, 0)))
         return this->arg(thread, l_vars, node, 1);
     else
@@ -138,20 +131,17 @@ f_is_mt_safe<A>::eval(basic_state<A>& thread, basic_symbol_table<A>&l_vars,
 {
     size_t narg = this->narg(node);
     if (narg != 1 && narg != 2)
-        throw exception::op_narg(thread.current_stack());
+        throw exception::op_narg();
     auto val = this->arg(thread, l_vars, node, narg - 1);
     if (!val)
-        throw exception::value_null(thread.current_stack());
+        throw exception::value_null();
     bool result = val->mt_safe();
     if (narg == 2) {
         auto a0 = this->arg(thread, l_vars, node, 0);
-        if (auto pr = dynamic_cast<basic_value_bool<A>*>(a0.get()))
-            try {
-                pr->value() = result;
-                return a0;
-            } catch (exception::value_read_only&) {
-                throw exception::value_read_only(thread.current_stack());
-            }
+        if (auto pr = dynamic_cast<basic_value_bool<A>*>(a0.get())) {
+            pr->value() = result;
+            return a0;
+        }
     }
     auto pr = basic_value_bool<A>::create(thread.get_allocator());
     pr->value() = result;
@@ -166,17 +156,14 @@ f_is_null<A>::eval(basic_state<A>& thread, basic_symbol_table<A>&l_vars,
 {
     size_t narg = this->narg(node);
     if (narg != 1 && narg != 2)
-        throw exception::op_narg(thread.current_stack());
+        throw exception::op_narg();
     bool result = !this->arg(thread, l_vars, node, narg - 1);
     if (narg == 2) {
         auto a0 = this->arg(thread, l_vars, node, 0);
-        if (auto pr = dynamic_cast<basic_value_bool<A>*>(a0.get()))
-            try {
-                pr->value() = result;
-                return a0;
-            } catch (exception::value_read_only&) {
-                throw exception::value_read_only(thread.current_stack());
-            }
+        if (auto pr = dynamic_cast<basic_value_bool<A>*>(a0.get())) {
+            pr->value() = result;
+            return a0;
+        }
     }
     auto pr = basic_value_bool<A>::create(thread.get_allocator());
     pr->value() = result;
@@ -191,21 +178,18 @@ f_is_same<A>::eval(basic_state<A>& thread, basic_symbol_table<A>&l_vars,
 {
     size_t narg = this->narg(node);
     if (narg != 2 && narg != 3)
-        throw exception::op_narg(thread.current_stack());
+        throw exception::op_narg();
     auto val1 = this->arg(thread, l_vars, node, narg - 2);
     auto val2 = this->arg(thread, l_vars, node, narg - 1);
     if (!val1 || !val2)
-        throw exception::value_null(thread.current_stack());
+        throw exception::value_null();
     bool result = val1 == val2;
     if (narg == 3) {
         auto a0 = this->arg(thread, l_vars, node, 0);
-        if (auto pr = dynamic_cast<basic_value_bool<A>*>(a0.get()))
-            try {
-                pr->value() = result;
-                return a0;
-            } catch (exception::value_read_only&) {
-                throw exception::value_read_only(thread.current_stack());
-            }
+        if (auto pr = dynamic_cast<basic_value_bool<A>*>(a0.get())) {
+            pr->value() = result;
+            return a0;
+        }
     }
     auto pr = basic_value_bool<A>::create(thread.get_allocator());
     pr->value() = result;
@@ -220,15 +204,15 @@ f_mt_safe<A>::eval(basic_state<A>& thread, basic_symbol_table<A>&l_vars,
 {
     size_t narg = this->narg(node);
     if (narg != 1)
-        throw exception::op_narg(thread.current_stack());
+        throw exception::op_narg();
     auto val = this->arg(thread, l_vars, node, 0);
     if (!val)
-        throw exception::value_null(thread.current_stack());
+        throw exception::value_null();
     try {
         val->set_mt_safe();
         return val;
     } catch (exception::value_mt_unsafe& e) {
-        throw exception::value_mt_unsafe(thread.current_stack());
+        throw exception::value_mt_unsafe();
     }
 }
 
@@ -240,19 +224,16 @@ f_not<A>::eval(basic_state<A>& thread, basic_symbol_table<A>&l_vars,
 {
     size_t narg = this->narg(node);
     if (narg != 1 && narg != 2)
-        throw exception::op_narg(thread.current_stack());
+        throw exception::op_narg();
     bool val = f_bool<A>::convert(thread,
                                   this->arg(thread, l_vars, node, narg - 1));
     bool result = !val;
     if (narg == 2) {
         auto a0 = this->arg(thread, l_vars, node, 0);
-        if (auto pr = dynamic_cast<basic_value_bool<A>*>(a0.get()))
-            try {
-                pr->value() = result;
-                return a0;
-            } catch (exception::value_read_only&) {
-                throw exception::value_read_only(thread.current_stack());
-            }
+        if (auto pr = dynamic_cast<basic_value_bool<A>*>(a0.get())) {
+            pr->value() = result;
+            return a0;
+        }
     }
     auto pr = basic_value_bool<A>::create(thread.get_allocator());
     pr->value() = result;
@@ -290,16 +271,13 @@ f_or_r<A>::eval(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
 {
     size_t narg = this->narg(node);
     if (narg == 0)
-        throw exception::op_narg(thread.current_stack());
+        throw exception::op_narg();
     bool result = this->eval_impl(thread, l_vars, node, 1);
     auto a0 = this->arg(thread, l_vars, node, 0);
-    if (auto pr = dynamic_cast<basic_value_bool<A>*>(a0.get()))
-        try {
-            pr->value() = result;
-            return a0;
-        } catch (exception::value_read_only&) {
-            throw exception::value_read_only(thread.current_stack());
-        }
+    if (auto pr = dynamic_cast<basic_value_bool<A>*>(a0.get())) {
+        pr->value() = result;
+        return a0;
+    }
     auto pr = basic_value_bool<A>::create(thread.get_allocator());
     pr->value() = result;
     return pr;
@@ -342,19 +320,16 @@ f_type<A>::eval(basic_state<A>& thread, basic_symbol_table<A>&l_vars,
 {
     size_t narg = this->narg(node);
     if (narg != 1 && narg != 2)
-        throw exception::op_narg(thread.current_stack());
+        throw exception::op_narg();
     auto val = this->arg(thread, l_vars, node, narg - 1);
     if (!val)
-        throw exception::value_null(thread.current_stack());
+        throw exception::value_null();
     if (narg == 2) {
         auto a0 = this->arg(thread, l_vars, node, 0);
-        if (auto pr = dynamic_cast<basic_value_string<A>*>(a0.get()))
-            try {
-                pr->value() = val->type_name();
-                return a0;
-            } catch (exception::value_read_only& e) {
-                throw exception::value_read_only(thread.current_stack());
-            }
+        if (auto pr = dynamic_cast<basic_value_string<A>*>(a0.get())) {
+            pr->value() = val->type_name();
+            return a0;
+        }
     }
     auto pr = basic_value_string<A>::create(thread.get_allocator());
     pr->value() = val->type_name();
@@ -369,19 +344,18 @@ f_var<A>::eval(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
 {
     size_t narg = this->narg(node);
     if (narg != 1 && narg != 2)
-        throw exception::op_narg(thread.current_stack());
+        throw exception::op_narg();
     auto arg_name = this->arg(thread, l_vars, node, 0);
     if (!arg_name)
-        throw exception::value_null(thread.current_stack());
+        throw exception::value_null();
     auto name = dynamic_cast<basic_value_string<A>*>(arg_name.get());
     if (!name)
-        throw exception::value_type(thread.current_stack());
+        throw exception::value_type();
     if (narg == 1) {
         if (auto v = l_vars.lookup(name->cvalue()))
             return *v;
         else
-            throw exception::unknown_symbol(name->cvalue(),
-                                            thread.current_stack());
+            throw exception::unknown_symbol(name->cvalue());
     } else {
         auto v = this->arg(thread, l_vars, node, 1);
         l_vars.insert(name->cvalue(), v);
@@ -397,7 +371,7 @@ f_while<A>::eval(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
 {
     size_t narg = this->narg(node);
     if (narg != 2)
-        throw exception::op_narg(thread.current_stack());
+        throw exception::op_narg();
     typename basic_value<A>::value_ptr result = nullptr;
     while (f_bool<A>::convert(thread, this->arg(thread, l_vars, node, 0)))
         result = this->arg(thread, l_vars, node, 1);

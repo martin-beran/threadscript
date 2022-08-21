@@ -182,8 +182,7 @@ public:
     /*! \param[in] msg the error message (after the location)
      * \param[in] trace an optional stack trace */
     explicit base(const std::string& msg, stack_trace trace = {}):
-        runtime_error((trace.empty() ? std::string{} :
-                       trace.front().to_string() + ": ") + msg),
+        runtime_error(make_msg(msg, trace)),
         _trace(std::move(trace))
     {
         set_msg(msg.size());
@@ -231,6 +230,13 @@ public:
         }
         return *this;
     }
+    //! Creates the message to be stored in the exception.
+    /*! \param[in] msg the error message (after the location)
+     * \param[in] trace a stack trace
+     * \return the message */
+    std::string make_msg(const std::string& msg, const stack_trace& trace);
+    //! Replaces the stored stack trace
+    void set_trace(stack_trace trace);
     //! Gets the stored part of the message after the location.
     /*! \return the message */
     [[nodiscard]] std::string_view msg() const noexcept {

@@ -61,7 +61,17 @@ basic_code_node<A>::eval(basic_state<A>& thread,
         throw exception::unknown_symbol(name, thread.current_stack());
     if (!*v)
         return nullptr;
-    return (*v)->eval(thread, l_vars, *this, name);
+    try {
+        return (*v)->eval(thread, l_vars, *this, name);
+    } catch (exception::base& e) {
+        if (e.trace().empty())
+            e.set_trace(thread.current_stack());
+        throw;
+    } catch (std::exception& e) {
+        throw exception::wrapped(e, thread.current_stack());
+    } catch (...) {
+        throw exception::wrapped(thread.current_stack());
+    }
 }
 
 template <impl::allocator A>

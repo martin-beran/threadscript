@@ -64,12 +64,28 @@ namespace exception {
 
 /*** base ********************************************************************/
 
+std::string base::make_msg(const std::string& msg, const stack_trace& trace)
+{
+    return (trace.empty() ?
+            std::string{} : trace.front().to_string() + ": ") + msg;
+}
+
 void base::set_msg(size_t sz)
 {
     const char* p = what();
     size_t pl = strlen(p);
     assert(pl >= sz);
     _msg = std::string_view(p + pl - sz, sz);
+}
+
+void base::set_trace(stack_trace trace)
+{
+    _trace = std::move(trace);
+    std::string saved_msg{msg()};
+    // intentional object slicing used to set what()
+    static_cast<std::runtime_error&>(*this) =
+        std::runtime_error(make_msg(saved_msg, trace));
+    set_msg(saved_msg.size());
 }
 
 std::string base::to_string(bool full) const {
