@@ -268,12 +268,14 @@ basic_value_native_fun<Derived, A>::arg(basic_state<A>& thread,
     return p->eval(thread, l_vars);
 }
 
-template <class Derived, impl::allocator A> typename basic_value<A>::value_ptr
+template <class Derived, impl::allocator A>
+template <std::derived_from<Derived> T>
+typename basic_value<A>::value_ptr
 basic_value_native_fun<Derived, A>::create(const A& alloc)
 {
-    return std::allocate_shared<Derived>(alloc,
-                                         typename basic_value_native_fun::tag{},
-                                         alloc);
+    return std::allocate_shared<T>(alloc,
+                                   typename basic_value_native_fun::tag{},
+                                   alloc);
 }
 
 template <class Derived, impl::allocator A> typename basic_value<A>::value_ptr

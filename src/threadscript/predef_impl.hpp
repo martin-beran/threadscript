@@ -12,6 +12,52 @@ namespace threadscript {
 
 namespace predef {
 
+/*** f_and_base **************************************************************/
+
+template <impl::allocator A> bool
+f_and_base<A>::eval_impl(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
+                         const basic_code_node<A>& node, size_t begin)
+{
+    for (size_t i = begin; i < this->narg(node); ++i)
+        if (!f_bool<A>::convert(thread, this->arg(thread, l_vars, node, i)))
+            return false;
+    return true;
+}
+
+/*** f_and *******************************************************************/
+
+template <impl::allocator A> typename basic_value<A>::value_ptr
+f_and<A>::eval(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
+              const basic_code_node<A>& node, std::string_view)
+{
+    auto pr = basic_value_bool<A>::create(thread.get_allocator());
+    pr->value() = this->eval_impl(thread, l_vars, node);
+    return pr;
+}
+
+/*** f_and_r *****************************************************************/
+
+template <impl::allocator A> typename basic_value<A>::value_ptr
+f_and_r<A>::eval(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
+                 const basic_code_node<A>& node, std::string_view)
+{
+    size_t narg = this->narg(node);
+    if (narg == 0)
+        throw exception::op_narg(thread.current_stack());
+    bool result = this->eval_impl(thread, l_vars, node, 1);
+    auto a0 = this->arg(thread, l_vars, node, 0);
+    if (auto pr = dynamic_cast<basic_value_bool<A>*>(a0.get()))
+        try {
+            pr->value() = result;
+            return a0;
+        } catch (exception::value_read_only&) {
+            throw exception::value_read_only(thread.current_stack());
+        }
+    auto pr = basic_value_bool<A>::create(thread.get_allocator());
+    pr->value() = result;
+    return pr;
+}
+
 /*** f_bool ******************************************************************/
 
 template <impl::allocator A>
@@ -213,6 +259,52 @@ f_not<A>::eval(basic_state<A>& thread, basic_symbol_table<A>&l_vars,
     return pr;
 }
 
+/*** f_or_base ***************************************************************/
+
+template <impl::allocator A> bool
+f_or_base<A>::eval_impl(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
+                        const basic_code_node<A>& node, size_t begin)
+{
+    for (size_t i = begin; i < this->narg(node); ++i)
+        if (f_bool<A>::convert(thread, this->arg(thread, l_vars, node, i)))
+            return true;
+    return false;
+}
+
+/*** f_or ********************************************************************/
+
+template <impl::allocator A> typename basic_value<A>::value_ptr
+f_or<A>::eval(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
+              const basic_code_node<A>& node, std::string_view)
+{
+    auto pr = basic_value_bool<A>::create(thread.get_allocator());
+    pr->value() = this->eval_impl(thread, l_vars, node);
+    return pr;
+}
+
+/*** f_or_r ******************************************************************/
+
+template <impl::allocator A> typename basic_value<A>::value_ptr
+f_or_r<A>::eval(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
+                const basic_code_node<A>& node, std::string_view)
+{
+    size_t narg = this->narg(node);
+    if (narg == 0)
+        throw exception::op_narg(thread.current_stack());
+    bool result = this->eval_impl(thread, l_vars, node, 1);
+    auto a0 = this->arg(thread, l_vars, node, 0);
+    if (auto pr = dynamic_cast<basic_value_bool<A>*>(a0.get()))
+        try {
+            pr->value() = result;
+            return a0;
+        } catch (exception::value_read_only&) {
+            throw exception::value_read_only(thread.current_stack());
+        }
+    auto pr = basic_value_bool<A>::create(thread.get_allocator());
+    pr->value() = result;
+    return pr;
+}
+
 /*** f_print *****************************************************************/
 
 template <impl::allocator A> typename basic_value<A>::value_ptr
@@ -328,6 +420,8 @@ add_predef_symbols(std::shared_ptr<basic_symbol_table<A>> sym, bool replace)
         std::pair<a_basic_string<A>,
             typename basic_value<A>::value_ptr(*)(const A&)>
     >({
+        { "and", predef::f_and<A>::template create<predef::f_and<A>> },
+        { "and_r", predef::f_and<A>::template create<predef::f_and_r<A>> },
         { "bool", predef::f_bool<A>::create },
         { "clone", predef::f_clone<A>::create },
         { "if", predef::f_if<A>::create },
@@ -336,6 +430,8 @@ add_predef_symbols(std::shared_ptr<basic_symbol_table<A>> sym, bool replace)
         { "is_same", predef::f_is_same<A>::create },
         { "mt_safe", predef::f_mt_safe<A>::create },
         { "not", predef::f_not<A>::create },
+        { "or", predef::f_or<A>::template create<predef::f_or<A>> },
+        { "or_r", predef::f_or<A>::template create<predef::f_or_r<A>> },
         { "print", predef::f_print<A>::create },
         { "seq", predef::f_seq<A>::create },
         { "type", predef::f_type<A>::create },

@@ -127,6 +127,8 @@ add_predef_symbols<allocator_any>(
 
 namespace predef {
 
+extern template class f_and<allocator_any>;
+extern template class f_and_r<allocator_any>;
 extern template class f_bool<allocator_any>;
 extern template class f_clone<allocator_any>;
 extern template class f_if<allocator_any>;
@@ -134,6 +136,8 @@ extern template class f_is_mt_safe<allocator_any>;
 extern template class f_is_null<allocator_any>;
 extern template class f_mt_safe<allocator_any>;
 extern template class f_not<allocator_any>;
+extern template class f_or<allocator_any>;
+extern template class f_or_r<allocator_any>;
 extern template class f_print<allocator_any>;
 extern template class f_is_same<allocator_any>;
 extern template class f_seq<allocator_any>;

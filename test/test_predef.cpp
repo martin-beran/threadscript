@@ -142,6 +142,88 @@ void check_runner(const runner_result& sample)
 //! \endcond
 
 /*! \file
+ * \test \c f_and -- Test of threadscript::predef::f_and, which also applies to
+ * threadscript::predef::f_and_base (the part of implementation shared with
+ * threadscript::predef::f_and_r) */
+//! \cond
+BOOST_DATA_TEST_CASE(f_and, (std::vector<test::runner_result>{
+    {R"(and(null))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(and(false, null))", false, ""},
+    {R"(and(true, null))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(and(true, null, false))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(and())", true, ""},
+    {R"(and(seq(print(1), false)))", false, "1"},
+    {R"(and(seq(print(1), true)))", true, "1"},
+    {R"(and(1))", true, ""},
+    {R"(and(-1))", true, ""},
+    {R"(and("str"))", true, ""},
+    {R"(and(seq(print(1), false), seq(print(2), false)))", false, "1"},
+    {R"(and(seq(print(1), false), seq(print(2), true)))", false, "1"},
+    {R"(and(seq(print(1), true), seq(print(2), false)))", false, "12"},
+    {R"(and(seq(print(1), true), seq(print(2), true)))", true, "12"},
+    {R"(and(seq(print(1), false), seq(print(2), false), seq(print(3), false)))",
+        false, "1"},
+    {R"(and(seq(print(1), false), seq(print(2), false), seq(print(3), true)))",
+        false, "1"},
+    {R"(and(seq(print(1), false), seq(print(2), true), seq(print(3), false)))",
+        false, "1"},
+    {R"(and(seq(print(1), false), seq(print(2), true), seq(print(3), true)))",
+        false, "1"},
+    {R"(and(seq(print(1), true), seq(print(2), false), seq(print(3), false)))",
+        false, "12"},
+    {R"(and(seq(print(1), true), seq(print(2), false), seq(print(3), true)))",
+        false, "12"},
+    {R"(and(seq(print(1), true), seq(print(2), true), seq(print(3), false)))",
+        false, "123"},
+    {R"(and(seq(print(1), true), seq(print(2), true), seq(print(3), true)))",
+        true, "123"},
+}))
+{
+    test::check_runner(sample);
+}
+//! \endcond
+
+/*! \file
+ * \test \c f_and_r -- Test of threadscript::predef::f_and_r */
+//! \cond
+BOOST_DATA_TEST_CASE(f_and_r, (std::vector<test::runner_result>{
+    {R"(and_r())", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(and_r(false, true, false))", test::exc{ // target is constant literal
+        typeid(ts::exception::value_read_only),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Read-only value"
+    }, ""},
+    {R"(and_r(null, true, false))", false, ""}, // target is null
+    {R"(and_r(1, true, false))", false, ""}, // target is constant, but a
+                                               // wrong type
+    {R"(and_r(clone(true), true, false))", false, ""}, // target is modifiable
+    {R"(and_r(clone(false), true, true))", true, ""},
+    {R"(and_r(clone(false)))", true, ""},
+    {R"(and_r(clone(false), false))", false, ""},
+    {R"(and_r(clone(false), true))", true, ""},
+}))
+{
+    test::check_runner(sample);
+}
+//! \endcond
+
+/*! \file
  * \test \c f_bool -- Test of threadscript::predef::f_bool */
 //! \cond
 BOOST_DATA_TEST_CASE(f_bool, (std::vector<test::runner_result>{
@@ -174,6 +256,7 @@ BOOST_DATA_TEST_CASE(f_bool, (std::vector<test::runner_result>{
         ts::frame_location("", "", 1, 1),
         "Runtime error: Read-only value"
     }, ""},
+    {R"(bool(null, true))", true, ""}, // target is null
     {R"(bool(1, true))", true, ""}, // target is constant, but wrong type
     {R"(bool(bool(false), true))", true, ""}, // target is modifiable
     {R"(bool(bool(true), false))", false, ""},
@@ -302,6 +385,7 @@ BOOST_DATA_TEST_CASE(f_is_mt_safe, (std::vector<test::runner_result>{
         ts::frame_location("", "", 1, 1),
         "Runtime error: Read-only value"
     }, ""},
+    {R"(is_mt_safe(null, "constant"))", true, ""}, // target is null
     {R"(is_mt_safe(1, "constant"))", true, ""}, // target is constant,
                                                 // but wrong type
     {R"(is_mt_safe(clone(false), "const"))", true, ""}, // target is modifiable
@@ -341,6 +425,7 @@ BOOST_DATA_TEST_CASE(f_is_null, (std::vector<test::runner_result>{
         ts::frame_location("", "", 1, 1),
         "Runtime error: Read-only value"
     }, ""},
+    {R"(is_null(null, true))", false, ""}, // target is null
     {R"(is_null(1, true))", false, ""}, // target is constant, but wrong type
     {R"(is_null(bool(false), null))", true, ""}, // target is modifiable
     {R"(is_null(bool(true), 1))", false, ""},
@@ -400,6 +485,7 @@ BOOST_DATA_TEST_CASE(f_is_same, (std::vector<test::runner_result>{
         ts::frame_location("", "", 1, 1),
         "Runtime error: Read-only value"
     }, ""},
+    {R"(is_same(null, 1, 2))", false, ""}, // target is null
     {R"(is_same(1, 1, 2))", false, ""}, // target is constant, but wrong type
     {R"(is_same(clone(true), 1, 2))", false, ""}, // target is modifiable
 }))
@@ -474,8 +560,91 @@ BOOST_DATA_TEST_CASE(f_not, (std::vector<test::runner_result>{
         ts::frame_location("", "", 1, 1),
         "Runtime error: Read-only value"
     }, ""},
+    {R"(not(null, true))", false, ""}, // target is null
     {R"(not(1, true))", false, ""}, // target is constant, but wrong type
     {R"(not(clone(true), true))", false, ""}, // target is modifiable
+}))
+{
+    test::check_runner(sample);
+}
+//! \endcond
+
+/*! \file
+ * \test \c f_or -- Test of threadscript::predef::f_or, which also applies to
+ * threadscript::predef::f_or_base (the part of implementation shared with
+ * threadscript::predef::f_or_r) */
+//! \cond
+BOOST_DATA_TEST_CASE(f_or, (std::vector<test::runner_result>{
+    {R"(or(null))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(or(true, null))", true, ""},
+    {R"(or(false, null))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(or(false, null, false))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(or())", false, ""},
+    {R"(or(seq(print(1), false)))", false, "1"},
+    {R"(or(seq(print(1), true)))", true, "1"},
+    {R"(or(1))", true, ""},
+    {R"(or(-1))", true, ""},
+    {R"(or("str"))", true, ""},
+    {R"(or(seq(print(1), false), seq(print(2), false)))", false, "12"},
+    {R"(or(seq(print(1), false), seq(print(2), true)))", true, "12"},
+    {R"(or(seq(print(1), true), seq(print(2), false)))", true, "1"},
+    {R"(or(seq(print(1), true), seq(print(2), true)))", true, "1"},
+    {R"(or(seq(print(1), false), seq(print(2), false), seq(print(3), false)))",
+        false, "123"},
+    {R"(or(seq(print(1), false), seq(print(2), false), seq(print(3), true)))",
+        true, "123"},
+    {R"(or(seq(print(1), false), seq(print(2), true), seq(print(3), false)))",
+        true, "12"},
+    {R"(or(seq(print(1), false), seq(print(2), true), seq(print(3), true)))",
+        true, "12"},
+    {R"(or(seq(print(1), true), seq(print(2), false), seq(print(3), false)))",
+        true, "1"},
+    {R"(or(seq(print(1), true), seq(print(2), false), seq(print(3), true)))",
+        true, "1"},
+    {R"(or(seq(print(1), true), seq(print(2), true), seq(print(3), false)))",
+        true, "1"},
+    {R"(or(seq(print(1), true), seq(print(2), true), seq(print(3), true)))",
+        true, "1"},
+}))
+{
+    test::check_runner(sample);
+}
+//! \endcond
+
+/*! \file
+ * \test \c f_or_r -- Test of threadscript::predef::f_or_r */
+//! \cond
+BOOST_DATA_TEST_CASE(f_or_r, (std::vector<test::runner_result>{
+    {R"(or_r())", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(or_r(false, true, false))", test::exc{ // target is constant literal
+        typeid(ts::exception::value_read_only),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Read-only value"
+    }, ""},
+    {R"(or_r(null, true, false))", true, ""}, // target is null
+    {R"(or_r(1, true, false))", true, ""}, // target is constant, but a
+                                               // wrong type
+    {R"(or_r(clone(true), false, false))", false, ""}, // target is modifiable
+    {R"(or_r(clone(false), true, true))", true, ""},
+    {R"(or_r(clone(false)))", false, ""},
+    {R"(or_r(clone(false), false))", false, ""},
+    {R"(or_r(clone(false), true))", true, ""},
 }))
 {
     test::check_runner(sample);
@@ -551,6 +720,7 @@ BOOST_DATA_TEST_CASE(f_type, (std::vector<test::runner_result>{
         ts::frame_location("", "", 1, 1),
         "Runtime error: Read-only value"
     }, ""},
+    {R"(type(null, -1))", "int", ""}, // target is null
     {R"(type(1, -1))", "int", ""}, // target is constant, but wrong type
     {R"(type(type(false), 123))", "unsigned", ""}, // target is modifiable
 }))

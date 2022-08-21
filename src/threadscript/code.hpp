@@ -326,9 +326,12 @@ public:
      * \param[in] alloc an allocator to be used by this object */
     basic_value_native_fun(typename basic_value_native_fun::tag t,
                            const A& alloc);
-    //! Creates the \a Derived native function object
-    /*! \param[in] alloc an allocator to be used by the created object
+    //! Creates a native function object
+    /*! \tparam T the type of the created object, must be \a Derived or derived
+     * from it
+     * \param[in] alloc an allocator to be used by the created object
      * \return the created object */
+    template <std::derived_from<Derived> T = Derived>
     static typename basic_value<A>::value_ptr create(const A& alloc);
 protected:
     //! Evaluates the value and returns the result.

@@ -28,6 +28,65 @@ namespace threadscript {
  * \test in file test_predef.cpp */
 namespace predef {
 
+//! Common functionality of classes f_and and f_and_r
+/*! \tparam A an allocator type */
+template <impl::allocator A>
+class f_and_base: public basic_value_native_fun<f_and_base<A>, A> {
+    using basic_value_native_fun<f_and_base<A>, A>::basic_value_native_fun;
+protected:
+    //! Computes a result.
+    /*! This is the common part of evaluation used by both f_and::eval() and
+     * f_and_r::eval(). All arguments are the same as in eval():
+     * \param[in] thread
+     * \param[in] l_vars
+     * \param[in] node
+     * \param[in] begin index of the first input argument
+     * \return the result of evaluation
+     * \throw exception::value_null if any evaluated \a val is \c null */
+    bool eval_impl(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
+                   const basic_code_node<A>& node, size_t begin = 0);
+};
+
+//! Function \c and
+/*! Logical conjunction. It uses short-circuit evaluation, that is, arguments
+ * are evaluated in order only until the final result is known (until the first
+ * \c false or until all values are tested).
+ * \param val (0 or more) input values converted to \c bool by
+ * f_bool::convert()
+ * \return \c true if all \a val are \c true (including an empty list of
+ * arguments); \c false otherwise
+ * \throw exception::value_null if any evaluated \a val is \c null */
+template <impl::allocator A>
+class f_and final: public f_and_base<A> {
+    using f_and_base<A>::f_and_base;
+protected:
+    typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
+                                            basic_symbol_table<A>& l_vars,
+                                            const basic_code_node<A>& node,
+                                            std::string_view fun_name) override;
+};
+
+//! Function \c and_r
+/*! It is similar to f_and, but the first argument is used for storing the
+ * result.
+ * \param result if it has type \c bool, the result is stored into it;
+ * otherwise, a new value is allocated for the result
+ * \param val (0 or more) input values converted to \c bool by
+ * f_bool::convert()
+ * \return \c true if all \c val are \c true (including an empty list of
+ * arguments); \c false otherwise
+ * \throw exception::op_narg if the number of arguments is 0
+ * \throw exception::value_null if any evaluated \a val is \c null */
+template <impl::allocator A>
+class f_and_r final: public f_and_base<A> {
+    using f_and_base<A>::f_and_base;
+protected:
+    typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
+                                            basic_symbol_table<A>& l_vars,
+                                            const basic_code_node<A>& node,
+                                            std::string_view fun_name) override;
+};
+
 //! Function \c bool
 /*! Converts a value to \c bool. A \c bool value \c false yields \c false. Any
  * other non-null value yields \c true.
@@ -36,7 +95,7 @@ namespace predef {
  * \param val a value to be converted
  * \return \a val converted to \c bool
  * \throw exception::op_narg if the number of arguments is not 1 or 2
- * \throw exception::value_null if \a val is \c nullptr */
+ * \throw exception::value_null if \a val is \c null */
 template <impl::allocator A>
 class f_bool final: public basic_value_native_fun<f_bool<A>, A> {
     using basic_value_native_fun<f_bool<A>, A>::basic_value_native_fun;
@@ -48,7 +107,7 @@ public:
      * \param[in] val the value to be converted
      * \return \c false if \a val is basic_value_bool containing \c false;
      * \c true otherwise
-     * \throw exception::value_null if \a val is \c nullptr */
+     * \throw exception::value_null if \a val is \c null */
     static bool convert(basic_state<A>& thread,
                         typename basic_value<A>::value_ptr val);
 protected:
@@ -63,7 +122,7 @@ protected:
  * \param val a value to be copied
  * \return a writable copy of \a val
  * \throw exception::op_narg if the number of arguments is not 1
- * \throw exception::value_null if \a val is \c nullptr */
+ * \throw exception::value_null if \a val is \c null */
 template <impl::allocator A>
 class f_clone final: public basic_value_native_fun<f_clone<A>, A> {
     using basic_value_native_fun<f_clone<A>, A>::basic_value_native_fun;
@@ -99,7 +158,7 @@ protected:
  * \param val a value to be tested
  * \return \c true if \a val is thread-safe; \c false otherwise
  * \throw exception::op_narg if the number of arguments is not 1 or 2
- * \throw exception::value_null if \a val is \c nullptr */
+ * \throw exception::value_null if \a val is \c null */
 template <impl::allocator A>
 class f_is_mt_safe final: public basic_value_native_fun<f_is_mt_safe<A>, A> {
     using basic_value_native_fun<f_is_mt_safe<A>, A>::basic_value_native_fun;
@@ -137,7 +196,7 @@ protected:
  * \return \c true if \a val1 and \a val2 refer to the same value; \c false
  * otherwise
  * \throw exception::op_narg if the number of arguments is not 2 or 3
- * \throw exception::value_null if \a val1 or \a val2 is \c nullptr */
+ * \throw exception::value_null if \a val1 or \a val2 is \c null */
 template <impl::allocator A>
 class f_is_same final: public basic_value_native_fun<f_is_same<A>, A> {
     using basic_value_native_fun<f_is_same<A>, A>::basic_value_native_fun;
@@ -154,7 +213,7 @@ protected:
  * \param val a value to modified
  * \return \a val
  * \throw exception::op_narg if the number of arguments is not 1
- * \throw exception::value_null if \a val is \c nullptr
+ * \throw exception::value_null if \a val is \c null
  * \throw exception::value_mt_unsafe if this value does not satisfy conditions
  * for being thread-safe */
 template <impl::allocator A>
@@ -175,10 +234,69 @@ protected:
  * \return negated \a val (\c true if \a val is \c false; \c false if \a val is
  * \c true)
  * \throw exception::op_narg if the number of arguments is not 1 or 2
- * \throw exception::value_null if \a val is \c nullptr */
+ * \throw exception::value_null if \a val is \c null */
 template <impl::allocator A>
 class f_not final: public basic_value_native_fun<f_not<A>, A> {
     using basic_value_native_fun<f_not<A>, A>::basic_value_native_fun;
+protected:
+    typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
+                                            basic_symbol_table<A>& l_vars,
+                                            const basic_code_node<A>& node,
+                                            std::string_view fun_name) override;
+};
+
+//! Common functionality of classes f_or and f_or_r
+/*! \tparam A an allocator type */
+template <impl::allocator A>
+class f_or_base: public basic_value_native_fun<f_or_base<A>, A> {
+    using basic_value_native_fun<f_or_base<A>, A>::basic_value_native_fun;
+protected:
+    //! Computes a result.
+    /*! This is the common part of evaluation used by both f_or::eval() and
+     * f_or_r::eval(). All arguments are the same as in eval():
+     * \param[in] thread
+     * \param[in] l_vars
+     * \param[in] node
+     * \param[in] begin index of the first input argument
+     * \return the result of evaluation
+     * \throw exception::value_null if any evaluated \a val is \c null */
+    bool eval_impl(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
+                   const basic_code_node<A>& node, size_t begin = 0);
+};
+
+//! Function \c or
+/*! Logical disjunction. It uses short-circuit evaluation, that is, arguments
+ * are evaluated in order only until the final result is known (until the first
+ * \c true or until all values are tested).
+ * \param val (0 or more) input values converted to \c bool by
+ * f_bool::convert()
+ * \return \c true if at least one \a val is \c true; \c false otherwise
+ * (including an empty list of arguments)
+ * \throw exception::value_null if any evaluated \a val is \c null */
+template <impl::allocator A>
+class f_or final: public f_or_base<A> {
+    using f_or_base<A>::f_or_base;
+protected:
+    typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
+                                            basic_symbol_table<A>& l_vars,
+                                            const basic_code_node<A>& node,
+                                            std::string_view fun_name) override;
+};
+
+//! Function \c or_r
+/*! It is similar to f_or, but the first argument is used for storing the
+ * result.
+ * \param result if it has type \c bool, the result is stored into it;
+ * otherwise, a new value is allocated for the result
+ * \param val (0 or more) input values converted to \c bool by
+ * f_bool::convert()
+ * \return \c true if at least one \a val is \c true; \c false otherwise
+ * (including an empty list of arguments)
+ * \throw exception::op_narg if the number of arguments is 0
+ * \throw exception::value_null if any evaluated \a val is \c null */
+template <impl::allocator A>
+class f_or_r final: public f_or_base<A> {
+    using f_or_base<A>::f_or_base;
 protected:
     typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
                                             basic_symbol_table<A>& l_vars,
@@ -228,7 +346,7 @@ protected:
  * \param val get the type of this value
  * \return the type name of \a val
  * \throw exception::op_narg if the number of arguments is not 1 or 2
- * \throw exception::value_null if \a val is \c nullptr */
+ * \throw exception::value_null if \a val is \c null */
 template <impl::allocator A>
 class f_type final: public basic_value_native_fun<f_type<A>, A> {
     using basic_value_native_fun<f_type<A>, A>::basic_value_native_fun;
