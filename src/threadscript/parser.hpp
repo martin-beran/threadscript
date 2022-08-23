@@ -190,7 +190,8 @@ template <class T> struct up_type {
 
 //! A template specialization for a context type providing a parent type
 /*! This specialization uses \c std::remove_cvref_t<T>::up_type to get the
- * parent context type */
+ * parent context type
+ * \tparam T a temporary context type of a rule */
 template <class T>
     requires requires { typename std::remove_cvref_t<T>::up_type; }
 struct up_type<T> {
@@ -203,6 +204,30 @@ struct up_type<T> {
  * member type \c up_type, then it is returned. Otherwise, \a T is returned.
  * \tparam T a temporary context type of a rule */
 template <class T> using up_type_t = typename up_type<T>::type;
+
+//! Get a temporary context initializer type
+/*! This primary template returns empty.
+ * \tparam T a temporary context type of a rule */
+template <class T> struct self_init_type {
+    //! The temporary context initializer type
+    using type = empty;
+};
+
+//! A template specialization for a context type providing an initializer type
+/*! This specialization returns \c T::init_type as the initializer type
+ * \tparam T a temporary context type of a rule */
+template <class T>
+    requires requires { typename T::init_type; }
+struct self_init_type<T> {
+    //! The temporary context initializer type
+    using type = typename T::init_type;
+};
+
+//! Get a temporary context initializer type
+/*! If \a T has member type \c init_type, the it is returned. Otherwise, \ref
+ * empty is returned.
+ * \tparam T a temporary context type of a rule */
+template <class T> using self_init_type_t = typename self_init_type<T>::type;
 
 //! A base class of all rules
 /*! Member functions in this class are not virtual, but they can be overriden
@@ -341,6 +366,23 @@ public:
         set_error_msg(msg);
         return static_cast<Rule&&>(*this);
     }
+    //! Sets a temporary context initializer
+    /*! \param[i] i the new initializer */
+    void set_self_init(self_init_type_t<Self> i) {
+        self_init = std::move(i);
+    }
+    /*! \copydoc set_self_init()
+     * \return \c *this */
+    Rule& operator()(self_init_type_t<Self> i) & {
+        set_self_init(std::move(i));
+        return static_cast<Rule&>(*this);
+    }
+    /*! \copydoc set_self_init()
+     * \return \c *this */
+    Rule operator()(self_init_type_t<Self> i) && {
+        set_self_init(std::move(i));
+        return static_cast<Rule&&>(*this);
+    }
     //! Sets rule name for tracing.
     /*! If \a name is nonempty and tracing is enabled in \ref context, this
      * rule will be traced. If \a name is empty, this rule will not be traced.
@@ -372,6 +414,12 @@ public:
     /*! The rule evaluation is reported when tracing is enabled in \ref
      * context. */
     std::string trace{};
+    //! The initializer for the temporary context of this rule.
+    /*! It is used to initialize the temporary context object in parse() if \a
+     * Self has a constuctor accepting the initializer type. This member is
+     * initialized using default initialization and can be later changed by
+     * set_self_init(). */
+    self_init_type_t<Self> self_init{};
 protected:
     //! Creates temporary private data usable in this parsing operation.
     /*! Unless this function is overriden, temporary private data type is \ref
@@ -887,12 +935,16 @@ auto rule_base<Rule, Ctx, Self, Up, Info, It, Handler>::parse(
     }
     parse_result result;
     try {
-        Self self = [up]() {
-            if constexpr (requires (Up* up) { Self(up); }) {
+        Self self = [this, up]() {
+            using i_t = self_init_type_t<Self>;
+            if constexpr (requires (Up* up, i_t i) { Self(up, i); })
+                return Self(up, self_init);
+            else if constexpr (requires (Up* up) { Self(up); })
                 return Self(up);
-            } else {
+            else if constexpr (requires (i_t i) { Self(i); })
+                return Self(self_init);
+            else
                 return Self{};
-            }
         }();
         auto saved_msg = ctx.error_msg;
         if (!error_msg.empty()) {

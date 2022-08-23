@@ -37,15 +37,20 @@ using namespace std::string_view_literals;
 struct canon::rules {
     //! The temporary context used by rules
     struct tmp_ctx {
+        //! The initializer type
+        using init_type = bool;
         //! Used to construct the top level context
         /*! \param[in] builder the script builder object */
         explicit tmp_ctx(script_builder& builder): builder(builder) {}
         //! Creates a child context.
         /*! It passes \ref builder and \ref node down from the parent to the
          * child context.
-         * \param[in] up a parent context; must not be \c nullptr */
-        explicit tmp_ctx(tmp_ctx* up):
-            builder((assert(up), up->builder)), node(up->node), str(up->str) {}
+         * \param[in] up a parent context; must not be \c nullptr
+         * \param[in] is_string whether the current rule is the \c val_string
+         * rule */
+        explicit tmp_ctx(tmp_ctx* up, init_type is_string):
+            builder((assert(up), up->builder)), node(up->node),
+            str(is_string ? std::make_shared<std::string>() : up->str) {}
         //! The script builder to be used by handlers
         /*! Its value is valid only during canon::run_parser(). */
         script_builder& builder;
@@ -151,12 +156,6 @@ struct canon::rules {
     static void hnd_unsigned(parser::context& ctx, tmp_ctx& self, tmp_ctx* up,
                         decltype(val_unsigned)::info_type info,
                         iterator_type begin, iterator_type end);
-    //! The handler for rule \c string_begin (used by \c val_string)
-    /*! \copydetails hnd_null() */
-    static void hnd_string_begin(parser::context& ctx, tmp_ctx& self,
-                                 tmp_ctx* up,
-                                 decltype(string_begin)::info_type info,
-                                 iterator_type begin, iterator_type end);
     //! The handler for rule \c lit_char (used by \c val_string)
     /*! \copydetails hnd_null() */
     static void hnd_lit_char(parser::context& ctx, tmp_ctx& self,
@@ -191,7 +190,7 @@ struct canon::rules {
         val_bool[hnd_bool];
         val_int[hnd_int];
         val_unsigned[hnd_unsigned];
-        string_begin[hnd_string_begin];
+        val_string(true);
         lit_char[hnd_lit_char];
         esc_name[hnd_esc_name];
         esc_hex[hnd_esc_hex];
@@ -309,13 +308,6 @@ void canon::rules::hnd_string(parser::context&, tmp_ctx& self, tmp_ctx*,
     assert(self.str);
     self.builder.add_node(self.node, file_location(begin.line, begin.column),
         ""sv, self.builder.create_value_string(*self.str));
-}
-
-void canon::rules::hnd_string_begin(parser::context&, tmp_ctx&, tmp_ctx* up,
-                                    decltype(string_begin)::info_type,
-                                    iterator_type, iterator_type)
-{
-    up->str = std::make_shared<std::string>();
 }
 
 void canon::rules::hnd_unsigned(parser::context&, tmp_ctx& self, tmp_ctx*,
