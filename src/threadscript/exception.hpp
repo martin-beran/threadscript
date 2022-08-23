@@ -236,6 +236,7 @@ public:
      * \return the message */
     std::string make_msg(const std::string& msg, const stack_trace& trace);
     //! Replaces the stored stack trace
+    /*! \param[in] trace a stack trace */
     void set_trace(stack_trace trace);
     //! Gets the stored part of the message after the location.
     /*! \return the message */
