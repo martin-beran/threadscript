@@ -76,6 +76,7 @@ template class f_and<allocator_any>;
 template class f_and_r<allocator_any>;
 template class f_bool<allocator_any>;
 template class f_clone<allocator_any>;
+template class f_eq<allocator_any>;
 template class f_if<allocator_any>;
 template class f_is_mt_safe<allocator_any>;
 template class f_is_null<allocator_any>;

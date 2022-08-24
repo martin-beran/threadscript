@@ -300,6 +300,22 @@ BOOST_DATA_TEST_CASE(f_clone, (std::vector<test::runner_result>{
 //! \endcond
 
 /*! \file
+ * \test \c f_eq -- Test of threadscript::predef::f_eq */
+//! \cond
+BOOST_DATA_TEST_CASE(f_eq, (std::vector<test::runner_result>{
+    {R"(eq())", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+}))
+{
+    test::check_runner(sample);
+    BOOST_REQUIRE(false); // TODO
+}
+//! \endcond
+
+/*! \file
  * \test \c f_if -- Test of threadscript::predef::f_if */
 //! \cond
 BOOST_DATA_TEST_CASE(f_if, (std::vector<test::runner_result>{

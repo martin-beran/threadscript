@@ -131,6 +131,7 @@ extern template class f_and<allocator_any>;
 extern template class f_and_r<allocator_any>;
 extern template class f_bool<allocator_any>;
 extern template class f_clone<allocator_any>;
+extern template class f_eq<allocator_any>;
 extern template class f_if<allocator_any>;
 extern template class f_is_mt_safe<allocator_any>;
 extern template class f_is_null<allocator_any>;

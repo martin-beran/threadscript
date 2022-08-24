@@ -19,7 +19,7 @@ f_and_base<A>::eval_impl(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
                          const basic_code_node<A>& node, size_t begin)
 {
     for (size_t i = begin; i < this->narg(node); ++i)
-        if (!f_bool<A>::convert(thread, this->arg(thread, l_vars, node, i)))
+        if (!f_bool<A>::convert(this->arg(thread, l_vars, node, i)))
             return false;
     return true;
 }
@@ -58,7 +58,7 @@ f_and_r<A>::eval(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
 /*** f_bool ******************************************************************/
 
 template <impl::allocator A>
-bool f_bool<A>::convert(basic_state<A>&, typename basic_value<A>::value_ptr val)
+bool f_bool<A>::convert(typename basic_value<A>::value_ptr val)
 {
     if (!val)
         throw exception::value_null();
@@ -77,7 +77,7 @@ f_bool<A>::eval(basic_state<A>& thread, basic_symbol_table<A>&l_vars,
     size_t narg = this->narg(node);
     if (narg != 1 && narg != 2)
         throw exception::op_narg();
-    bool result = convert(thread, this->arg(thread, l_vars, node, narg - 1));
+    bool result = convert(this->arg(thread, l_vars, node, narg - 1));
     if (narg == 2) {
         auto a0 = this->arg(thread, l_vars, node, 0);
         if (auto pr = dynamic_cast<basic_value_bool<A>*>(a0.get())) {
@@ -105,6 +105,64 @@ f_clone<A>::eval(basic_state<A>& thread, basic_symbol_table<A>&l_vars,
     return val->shallow_copy(thread.get_allocator(), false);
 }
 
+/*** f_eq ********************************************************************/
+
+template <impl::allocator A>
+bool f_eq<A>::compare(typename basic_value<A>::value_ptr val1,
+                      typename basic_value<A>::value_ptr val2)
+{
+    if (!val1 || !val2)
+        throw exception::value_null();
+    if (auto v1 = dynamic_cast<basic_value_bool<A>*>(val1.get()))
+        return v1->cvalue() == f_bool<A>::convert(val2);
+    else if (auto v2 = dynamic_cast<basic_value_bool<A>*>(val2.get()))
+        return f_bool<A>::convert(val1) == v2->cvalue();
+    else if (auto v1 = dynamic_cast<basic_value_int<A>*>(val1.get())) {
+        if (auto v2 = dynamic_cast<basic_value_int<A>*>(val2.get()))
+            return v1->cvalue() == v2->cvalue();
+        else if (auto v2 = dynamic_cast<basic_value_unsigned<A>*>(val2.get())) {
+            if (v1->cvalue() < 0)
+                return false;
+            else
+                return
+                    config::value_unsigned_type(v1->cvalue()) == v2->cvalue();
+        }
+    } else if (auto v1 = dynamic_cast<basic_value_unsigned<A>*>(val1.get())) {
+        if (auto v2 = dynamic_cast<basic_value_int<A>*>(val2.get())) {
+            if (v2->cvalue() < 0)
+                return false;
+            else
+                return
+                    v1->cvalue() == config::value_unsigned_type(v2->cvalue());
+        } else if (auto v2 = dynamic_cast<basic_value_unsigned<A>*>(val2.get()))
+            return v1->cvalue() == v2->cvalue();
+    } else if (auto v1 = dynamic_cast<basic_value_string<A>*>(val1.get()))
+        if (auto v2 = dynamic_cast<basic_value_string<A>*>(val2.get()))
+            return v1->cvalue() == v2->cvalue();
+    throw exception::value_type();
+}
+
+template <impl::allocator A> typename basic_value<A>::value_ptr
+f_eq<A>::eval(basic_state<A>& thread, basic_symbol_table<A>&l_vars,
+              const basic_code_node<A>& node, std::string_view)
+{
+    size_t narg = this->narg(node);
+    if (narg != 2 && narg != 3)
+        throw exception::op_narg();
+    auto result = compare(this->arg(thread, l_vars, node, narg - 2),
+                          this->arg(thread, l_vars, node, narg - 1));
+    if (narg == 3) {
+        auto a0 = this->arg(thread, l_vars, node, 0);
+        if (auto pr = dynamic_cast<basic_value_bool<A>*>(a0.get())) {
+            pr->value() = result;
+            return a0;
+        }
+    }
+    auto pr = basic_value_bool<A>::create(thread.get_allocator());
+    pr->value() = result;
+    return pr;
+}
+
 /*** f_if ********************************************************************/
 
 template <impl::allocator A> typename basic_value<A>::value_ptr
@@ -114,7 +172,7 @@ f_if<A>::eval(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
     size_t narg = this->narg(node);
     if (narg != 2 && narg != 3)
         throw exception::op_narg();
-    if (f_bool<A>::convert(thread, this->arg(thread, l_vars, node, 0)))
+    if (f_bool<A>::convert(this->arg(thread, l_vars, node, 0)))
         return this->arg(thread, l_vars, node, 1);
     else
         if (narg > 2)
@@ -225,8 +283,7 @@ f_not<A>::eval(basic_state<A>& thread, basic_symbol_table<A>&l_vars,
     size_t narg = this->narg(node);
     if (narg != 1 && narg != 2)
         throw exception::op_narg();
-    bool val = f_bool<A>::convert(thread,
-                                  this->arg(thread, l_vars, node, narg - 1));
+    bool val = f_bool<A>::convert(this->arg(thread, l_vars, node, narg - 1));
     bool result = !val;
     if (narg == 2) {
         auto a0 = this->arg(thread, l_vars, node, 0);
@@ -247,7 +304,7 @@ f_or_base<A>::eval_impl(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
                         const basic_code_node<A>& node, size_t begin)
 {
     for (size_t i = begin; i < this->narg(node); ++i)
-        if (f_bool<A>::convert(thread, this->arg(thread, l_vars, node, i)))
+        if (f_bool<A>::convert(this->arg(thread, l_vars, node, i)))
             return true;
     return false;
 }
@@ -373,7 +430,7 @@ f_while<A>::eval(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
     if (narg != 2)
         throw exception::op_narg();
     typename basic_value<A>::value_ptr result = nullptr;
-    while (f_bool<A>::convert(thread, this->arg(thread, l_vars, node, 0)))
+    while (f_bool<A>::convert(this->arg(thread, l_vars, node, 0)))
         result = this->arg(thread, l_vars, node, 1);
     return result;
 }
@@ -398,6 +455,7 @@ add_predef_symbols(std::shared_ptr<basic_symbol_table<A>> sym, bool replace)
         { "and_r", predef::f_and<A>::template create<predef::f_and_r<A>> },
         { "bool", predef::f_bool<A>::create },
         { "clone", predef::f_clone<A>::create },
+        { "eq", predef::f_eq<A>::create },
         { "if", predef::f_if<A>::create },
         { "is_mt_safe", predef::f_is_mt_safe<A>::create },
         { "is_null", predef::f_is_null<A>::create },

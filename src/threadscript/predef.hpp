@@ -103,13 +103,11 @@ public:
     //! Converts a value to basic_value_bool.
     /*! This is a helper function used by eval() and it should be used (for
      * consistency) by any other conversion to \c bool, for example, in f_if.
-     * \param[in] thread the current thread
      * \param[in] val the value to be converted
      * \return \c false if \a val is basic_value_bool containing \c false;
      * \c true otherwise
      * \throw exception::value_null if \a val is \c null */
-    static bool convert(basic_state<A>& thread,
-                        typename basic_value<A>::value_ptr val);
+    static bool convert(typename basic_value<A>::value_ptr val);
 protected:
     typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
                                             basic_symbol_table<A>& l_vars,
@@ -126,6 +124,48 @@ protected:
 template <impl::allocator A>
 class f_clone final: public basic_value_native_fun<f_clone<A>, A> {
     using basic_value_native_fun<f_clone<A>, A>::basic_value_native_fun;
+protected:
+    typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
+                                            basic_symbol_table<A>& l_vars,
+                                            const basic_code_node<A>& node,
+                                            std::string_view fun_name) override;
+};
+
+//! Function \c eq
+/*! Compares two values for equality. Unlike f_is_same, this function compares
+ * the contents of values, not their location in memory. If both values are of
+ * the same type, the rules of equality for that type apply. If the values are
+ * of different types, the following rules apply:
+ * \arg If one value is of type \c bool, the other is converted using
+ * f_bool::convert() and the resulting \c bool value is used in comparison.
+ * \arg Otherwise, if each value is \c int or \c unsigned, their numeric values
+ * are compared.
+ *
+ * \param result (optional) if exists and has type \c bool, the result is
+ * stored into it; otherwise, a new value is allocated for the result
+ * \param val1 the first value to be compared
+ * \param val2 the second value to be compared
+ * \return \c true if \a val1 and \a val2 are equal; \c false otherwise
+ * \throw exception::op_narg if the number of arguments is not 2 or 3
+ * \throw exception::op_value_null if \a val1 or \a val2 is \c null
+ * \throw exception::value_type if \a val1 or \a val2 has a type other than \c
+ * bool, \c int, \c unsigned, or \c string; also if \a val1 or \a val2 have
+ * a different type combination than allowed by the rules above */
+template <impl::allocator A>
+class f_eq final: public basic_value_native_fun<f_eq<A>, A> {
+    using basic_value_native_fun<f_eq<A>, A>::basic_value_native_fun;
+public:
+    //! Performs the equality comparison.
+    /*! This is a helper function used by eval() and it should be used (for
+     * consistency) by any other equality-comparing function, e.g., f_ne.
+     * \param[in] val1 the first value to be compared
+     * \param[in] val2 the second value to be compared
+     * \return \c true if \a val1 and \a val2 are equal; \c false otherwise
+     * \throw exception::op_value_null if \a val1 or \a val2 is \c null
+     * \throw exception::value_type under the same conditions as specified for
+     * class f_eq itself */
+    static bool compare(typename basic_value<A>::value_ptr val1,
+                        typename basic_value<A>::value_ptr val2);
 protected:
     typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
                                             basic_symbol_table<A>& l_vars,
