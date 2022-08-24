@@ -45,14 +45,8 @@ f_and_r<A>::eval(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
     if (narg == 0)
         throw exception::op_narg();
     bool result = this->eval_impl(thread, l_vars, node, 1);
-    auto a0 = this->arg(thread, l_vars, node, 0);
-    if (auto pr = dynamic_cast<basic_value_bool<A>*>(a0.get())) {
-        pr->value() = result;
-        return a0;
-    }
-    auto pr = basic_value_bool<A>::create(thread.get_allocator());
-    pr->value() = result;
-    return pr;
+    return this->template make_result<basic_value_bool<A>>(thread, l_vars, node,
+                                                       std::move(result), true);
 }
 
 /*** f_bool ******************************************************************/
@@ -78,16 +72,8 @@ f_bool<A>::eval(basic_state<A>& thread, basic_symbol_table<A>&l_vars,
     if (narg != 1 && narg != 2)
         throw exception::op_narg();
     bool result = convert(this->arg(thread, l_vars, node, narg - 1));
-    if (narg == 2) {
-        auto a0 = this->arg(thread, l_vars, node, 0);
-        if (auto pr = dynamic_cast<basic_value_bool<A>*>(a0.get())) {
-            pr->value() = result;
-            return a0;
-        }
-    }
-    auto pr = basic_value_bool<A>::create(thread.get_allocator());
-    pr->value() = result;
-    return pr;
+    return this->template make_result<basic_value_bool<A>>(thread, l_vars, node,
+                                               std::move(result), narg == 2);
 }
 
 /*** f_clone *****************************************************************/
@@ -151,16 +137,8 @@ f_eq<A>::eval(basic_state<A>& thread, basic_symbol_table<A>&l_vars,
         throw exception::op_narg();
     auto result = compare(this->arg(thread, l_vars, node, narg - 2),
                           this->arg(thread, l_vars, node, narg - 1));
-    if (narg == 3) {
-        auto a0 = this->arg(thread, l_vars, node, 0);
-        if (auto pr = dynamic_cast<basic_value_bool<A>*>(a0.get())) {
-            pr->value() = result;
-            return a0;
-        }
-    }
-    auto pr = basic_value_bool<A>::create(thread.get_allocator());
-    pr->value() = result;
-    return pr;
+    return this->template make_result<basic_value_bool<A>>(thread, l_vars, node,
+                                               std::move(result), narg == 3);
 }
 
 /*** f_if ********************************************************************/
@@ -194,16 +172,8 @@ f_is_mt_safe<A>::eval(basic_state<A>& thread, basic_symbol_table<A>&l_vars,
     if (!val)
         throw exception::value_null();
     bool result = val->mt_safe();
-    if (narg == 2) {
-        auto a0 = this->arg(thread, l_vars, node, 0);
-        if (auto pr = dynamic_cast<basic_value_bool<A>*>(a0.get())) {
-            pr->value() = result;
-            return a0;
-        }
-    }
-    auto pr = basic_value_bool<A>::create(thread.get_allocator());
-    pr->value() = result;
-    return pr;
+    return this->template make_result<basic_value_bool<A>>(thread, l_vars, node,
+                                               std::move(result), narg == 2);
 }
 
 /*** f_is_null ***************************************************************/
@@ -216,16 +186,8 @@ f_is_null<A>::eval(basic_state<A>& thread, basic_symbol_table<A>&l_vars,
     if (narg != 1 && narg != 2)
         throw exception::op_narg();
     bool result = !this->arg(thread, l_vars, node, narg - 1);
-    if (narg == 2) {
-        auto a0 = this->arg(thread, l_vars, node, 0);
-        if (auto pr = dynamic_cast<basic_value_bool<A>*>(a0.get())) {
-            pr->value() = result;
-            return a0;
-        }
-    }
-    auto pr = basic_value_bool<A>::create(thread.get_allocator());
-    pr->value() = result;
-    return pr;
+    return this->template make_result<basic_value_bool<A>>(thread, l_vars, node,
+                                               std::move(result), narg == 2);
 }
 
 /*** f_is_same ***************************************************************/
@@ -242,16 +204,8 @@ f_is_same<A>::eval(basic_state<A>& thread, basic_symbol_table<A>&l_vars,
     if (!val1 || !val2)
         throw exception::value_null();
     bool result = val1 == val2;
-    if (narg == 3) {
-        auto a0 = this->arg(thread, l_vars, node, 0);
-        if (auto pr = dynamic_cast<basic_value_bool<A>*>(a0.get())) {
-            pr->value() = result;
-            return a0;
-        }
-    }
-    auto pr = basic_value_bool<A>::create(thread.get_allocator());
-    pr->value() = result;
-    return pr;
+    return this->template make_result<basic_value_bool<A>>(thread, l_vars, node,
+                                               std::move(result), narg == 3);
 }
 
 /*** f_mt_safe ***************************************************************/
@@ -285,16 +239,8 @@ f_not<A>::eval(basic_state<A>& thread, basic_symbol_table<A>&l_vars,
         throw exception::op_narg();
     bool val = f_bool<A>::convert(this->arg(thread, l_vars, node, narg - 1));
     bool result = !val;
-    if (narg == 2) {
-        auto a0 = this->arg(thread, l_vars, node, 0);
-        if (auto pr = dynamic_cast<basic_value_bool<A>*>(a0.get())) {
-            pr->value() = result;
-            return a0;
-        }
-    }
-    auto pr = basic_value_bool<A>::create(thread.get_allocator());
-    pr->value() = result;
-    return pr;
+    return this->template make_result<basic_value_bool<A>>(thread, l_vars, node,
+                                               std::move(result), narg == 2);
 }
 
 /*** f_or_base ***************************************************************/
@@ -330,14 +276,8 @@ f_or_r<A>::eval(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
     if (narg == 0)
         throw exception::op_narg();
     bool result = this->eval_impl(thread, l_vars, node, 1);
-    auto a0 = this->arg(thread, l_vars, node, 0);
-    if (auto pr = dynamic_cast<basic_value_bool<A>*>(a0.get())) {
-        pr->value() = result;
-        return a0;
-    }
-    auto pr = basic_value_bool<A>::create(thread.get_allocator());
-    pr->value() = result;
-    return pr;
+    return this->template make_result<basic_value_bool<A>>(thread, l_vars, node,
+                                                       std::move(result), true);
 }
 
 /*** f_print *****************************************************************/
@@ -381,16 +321,9 @@ f_type<A>::eval(basic_state<A>& thread, basic_symbol_table<A>&l_vars,
     auto val = this->arg(thread, l_vars, node, narg - 1);
     if (!val)
         throw exception::value_null();
-    if (narg == 2) {
-        auto a0 = this->arg(thread, l_vars, node, 0);
-        if (auto pr = dynamic_cast<basic_value_string<A>*>(a0.get())) {
-            pr->value() = val->type_name();
-            return a0;
-        }
-    }
-    auto pr = basic_value_string<A>::create(thread.get_allocator());
-    pr->value() = val->type_name();
-    return pr;
+    a_basic_string<A> result{val->type_name(), thread.get_allocator()};
+    return this->template make_result<basic_value_string<A>>(thread, l_vars,
+                                         node, std::move(result), narg == 2);
 }
 
 /*** f_var *******************************************************************/
