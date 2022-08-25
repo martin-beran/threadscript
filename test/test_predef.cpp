@@ -399,7 +399,13 @@ BOOST_DATA_TEST_CASE(f_eq, (std::vector<test::runner_result>{
     {R"(eq(null, 1, 2))", false, ""}, // target is null
     {R"(eq(1, 1, 1))", true, ""}, // target is constant, but wrong type
     {R"(eq(clone(false), 24, 24))", true, ""}, // target is modifiable
-    {R"(eq(clone(true), -1, +2))", false, ""},
+    {R"(
+        seq(
+            var("r", clone(true)),
+            print(is_same(eq(var("r"), -1, +2), var("r"))),
+            var("r")
+        )
+    )", false, "true"},
 }))
 {
     test::check_runner(sample);
