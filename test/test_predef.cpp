@@ -308,10 +308,101 @@ BOOST_DATA_TEST_CASE(f_eq, (std::vector<test::runner_result>{
         ts::frame_location("", "", 1, 1),
         "Runtime error: Bad number of arguments"
     }, ""},
+    {R"(eq(null, "2", 3, 4))", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(eq(null, 2))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(eq(null, null, 2))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(eq(1, null))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(eq(null, 1, null))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(eq(1, "1"))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(eq(-1, "1"))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(eq("1", 1))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(eq("1", -1))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(eq(false, false))", true, ""},
+    {R"(eq(false, true))", false, ""},
+    {R"(eq(true, false))", false, ""},
+    {R"(eq(true, true))", true, ""},
+    {R"(eq(false, 0))", false, ""},
+    {R"(eq(true, 0))", true, ""},
+    {R"(eq(false, -1))", false, ""},
+    {R"(eq(true, -1))", true, ""},
+    {R"(eq(false, "str"))", false, ""},
+    {R"(eq(true, "str"))", true, ""},
+    {R"(eq(0, false))", false, ""},
+    {R"(eq(0, true))", true, ""},
+    {R"(eq(-1, false))", false, ""},
+    {R"(eq(-1, true))", true, ""},
+    {R"(eq("str", false))", false, ""},
+    {R"(eq("str", true))", true, ""},
+    {R"(eq(0, 1))", false, ""},
+    {R"(eq(0, 0))", true, ""},
+    {R"(eq(12, 23))", false, ""},
+    {R"(eq(12, 12))", true, ""},
+    {R"(eq(-123, +123))", false, ""},
+    {R"(eq(-123, -123))", true, ""},
+    {R"(eq(+123, -123))", false, ""},
+    {R"(eq(+12, +12))", true, ""},
+    {R"(eq(+1, +2))", false, ""},
+    {R"(eq(-1, -2))", false, ""},
+    {R"(eq(-123, 456))", false, ""},
+    {R"(eq(-456, 456))", false, ""},
+    {R"(eq(456, -123))", false, ""},
+    {R"(eq(456, -456))", false, ""},
+    {R"(eq(+123, 456))", false, ""},
+    {R"(eq(+456, 456))", true, ""},
+    {R"(eq(456, +123))", false, ""},
+    {R"(eq(456, +456))", true, ""},
+    {R"(eq("", ""))", true, ""},
+    {R"(eq("", "xy"))", false, ""},
+    {R"(eq("xy", ""))", false, ""},
+    {R"(eq("xy", "xy"))", true, ""},
+    {R"(eq(false, 1, 2))", test::exc{ // target is constant literal
+        typeid(ts::exception::value_read_only),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Read-only value"
+    }, ""},
+    {R"(eq(null, 1, 2))", false, ""}, // target is null
+    {R"(eq(1, 1, 1))", true, ""}, // target is constant, but wrong type
+    {R"(eq(clone(false), 24, 24))", true, ""}, // target is modifiable
+    {R"(eq(clone(true), -1, +2))", false, ""},
 }))
 {
     test::check_runner(sample);
-    BOOST_REQUIRE(false); // TODO
 }
 //! \endcond
 
