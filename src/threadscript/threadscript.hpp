@@ -136,6 +136,7 @@ extern template class f_if<allocator_any>;
 extern template class f_is_mt_safe<allocator_any>;
 extern template class f_is_null<allocator_any>;
 extern template class f_mt_safe<allocator_any>;
+extern template class f_ne<allocator_any>;
 extern template class f_not<allocator_any>;
 extern template class f_or<allocator_any>;
 extern template class f_or_r<allocator_any>;

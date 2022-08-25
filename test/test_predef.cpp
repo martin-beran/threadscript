@@ -645,6 +645,52 @@ BOOST_DATA_TEST_CASE(f_mt_safe, (std::vector<test::runner_result>{
 //! \endcond
 
 /*! \file
+ * \test \c f_ne -- Test of threadscript::predef::f_ne. Almost all
+ * implementation of f_ne is shared with f_eq (except testing the number of
+ * arguments), therefore we do only a small number of checks here, assuming
+ * that tests of f_eq apply here, too. */
+//! \cond
+BOOST_DATA_TEST_CASE(f_ne, (std::vector<test::runner_result>{
+    {R"(ne())", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(ne(null, "2", 3, 4))", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(ne(null, 2))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(ne(null, 1, null))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(ne(1, "1"))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(ne(false, false))", false, ""},
+    {R"(ne(false, true))", true, ""},
+    {R"(ne(0, 1))", true, ""},
+    {R"(ne(12, 12))", false, ""},
+    {R"(ne(-123, +123))", true, ""},
+    {R"(ne(-123, -123))", false, ""},
+    {R"(ne("", "xy"))", true, ""},
+    {R"(ne("xy", "xy"))", false, ""},
+}))
+{
+    test::check_runner(sample);
+}
+//! \endcond
+
+/*! \file
  * \test \c f_not -- Test of threadscript::predef::f_not */
 //! \cond
 BOOST_DATA_TEST_CASE(f_not, (std::vector<test::runner_result>{

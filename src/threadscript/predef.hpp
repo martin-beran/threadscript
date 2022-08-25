@@ -266,6 +266,37 @@ protected:
                                             std::string_view fun_name) override;
 };
 
+//! Function \c ne
+/*! Compares two values for inquality. It is the negation of f_eq. Unlike
+ * f_is_same, this function compares the contents of values, not their location
+ * in memory. If both values are of the same type, the rules of equality for
+ * that type apply. If the values are of different types, the following rules
+ * apply:
+ * \arg If one value is of type \c bool, the other is converted using
+ * f_bool::convert() and the resulting \c bool value is used in comparison.
+ * \arg Otherwise, if each value is \c int or \c unsigned, their numeric values
+ * are compared.
+ *
+ * \param result (optional) if exists and has type \c bool, the result is
+ * stored into it; otherwise, a new value is allocated for the result
+ * \param val1 the first value to be compared
+ * \param val2 the second value to be compared
+ * \return \c true if \a val1 and \a val2 are not equal; \c false otherwise
+ * \throw exception::op_narg if the number of arguments is not 2 or 3
+ * \throw exception::op_value_null if \a val1 or \a val2 is \c null
+ * \throw exception::value_type if \a val1 or \a val2 has a type other than \c
+ * bool, \c int, \c unsigned, or \c string; also if \a val1 or \a val2 have
+ * a different type combination than allowed by the rules above */
+template <impl::allocator A>
+class f_ne final: public basic_value_native_fun<f_ne<A>, A> {
+    using basic_value_native_fun<f_ne<A>, A>::basic_value_native_fun;
+protected:
+    typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
+                                            basic_symbol_table<A>& l_vars,
+                                            const basic_code_node<A>& node,
+                                            std::string_view fun_name) override;
+};
+
 //! Function \c not
 /*! Negates a Boolean value.
  * \param result (optional) if exists and has type \c bool, the result is
