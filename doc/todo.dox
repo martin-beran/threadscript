@@ -1,4 +1,33 @@
-/*! \page To_do_items Miscellaneous to-do tasks
+/*! \page To_do_first_release To-do list for the first release
+ *
+ * \todo Comparison functions (\c lt, \c le, \c gt, \c ge)
+ *
+ * \todo Arithmetic functions for \c int and \c unsigned (\c add, \c sub, \c
+ * mul, \c div, \c mod)
+ *
+ * \todo Conversion functions between \c int and \c unsigned
+ *
+ * \todo Conversion from \c string to \c int and \c unsigned
+ *
+ * \todo Operations with threadscript::value_array
+ *
+ * \todo Operations with threadscript::value_hash
+ *
+ * \todo Defining and calling user-defined functions
+ *
+ * \todo Throwing and catching exceptions
+ *
+ * \todo Running in multiple threads
+ *
+ * \todo Sharing data among threads
+ *
+ * \todo Passing data between threads
+ *
+ * \todo Resolving names in a parsed script before running the script
+ *
+ * \todo Command line interface to ThreadScript -- \ref Cmdline_ts.
+ *
+ * \page To_do_items Miscellaneous to-do tasks
  *
  * ToDo items should be added at appropriate places in Doxygen documentation
  * using command <tt>\\todo</tt>. If a ToDo is not related to a particular
