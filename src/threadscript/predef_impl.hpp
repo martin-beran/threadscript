@@ -141,6 +141,36 @@ f_eq<A>::eval(basic_state<A>& thread, basic_symbol_table<A>&l_vars,
                                                std::move(result), narg == 3);
 }
 
+/*** f_ge ********************************************************************/
+
+template <impl::allocator A> typename basic_value<A>::value_ptr
+f_ge<A>::eval(basic_state<A>& thread, basic_symbol_table<A>&l_vars,
+              const basic_code_node<A>& node, std::string_view)
+{
+    size_t narg = this->narg(node);
+    if (narg != 2 && narg != 3)
+        throw exception::op_narg();
+    auto result = !f_lt<A>::compare(this->arg(thread, l_vars, node, narg - 2),
+                                    this->arg(thread, l_vars, node, narg - 1));
+    return this->template make_result<basic_value_bool<A>>(thread, l_vars, node,
+                                               std::move(result), narg == 3);
+}
+
+/*** f_gt ********************************************************************/
+
+template <impl::allocator A> typename basic_value<A>::value_ptr
+f_gt<A>::eval(basic_state<A>& thread, basic_symbol_table<A>&l_vars,
+              const basic_code_node<A>& node, std::string_view)
+{
+    size_t narg = this->narg(node);
+    if (narg != 2 && narg != 3)
+        throw exception::op_narg();
+    auto result = f_lt<A>::compare(this->arg(thread, l_vars, node, narg - 1),
+                                   this->arg(thread, l_vars, node, narg - 2));
+    return this->template make_result<basic_value_bool<A>>(thread, l_vars, node,
+                                               std::move(result), narg == 3);
+}
+
 /*** f_if ********************************************************************/
 
 template <impl::allocator A> typename basic_value<A>::value_ptr
@@ -204,6 +234,71 @@ f_is_same<A>::eval(basic_state<A>& thread, basic_symbol_table<A>&l_vars,
     if (!val1 || !val2)
         throw exception::value_null();
     bool result = val1 == val2;
+    return this->template make_result<basic_value_bool<A>>(thread, l_vars, node,
+                                               std::move(result), narg == 3);
+}
+
+/*** f_le ********************************************************************/
+
+template <impl::allocator A> typename basic_value<A>::value_ptr
+f_le<A>::eval(basic_state<A>& thread, basic_symbol_table<A>&l_vars,
+              const basic_code_node<A>& node, std::string_view)
+{
+    size_t narg = this->narg(node);
+    if (narg != 2 && narg != 3)
+        throw exception::op_narg();
+    auto result = !f_lt<A>::compare(this->arg(thread, l_vars, node, narg - 1),
+                                    this->arg(thread, l_vars, node, narg - 2));
+    return this->template make_result<basic_value_bool<A>>(thread, l_vars, node,
+                                               std::move(result), narg == 3);
+}
+
+/*** f_lt ********************************************************************/
+
+template <impl::allocator A>
+bool f_lt<A>::compare(typename basic_value<A>::value_ptr val1,
+                      typename basic_value<A>::value_ptr val2)
+{
+    if (!val1 || !val2)
+        throw exception::value_null();
+    if (auto v1 = dynamic_cast<basic_value_bool<A>*>(val1.get()))
+        return v1->cvalue() < f_bool<A>::convert(val2);
+    else if (auto v2 = dynamic_cast<basic_value_bool<A>*>(val2.get()))
+        return f_bool<A>::convert(val1) < v2->cvalue();
+    else if (auto v1 = dynamic_cast<basic_value_int<A>*>(val1.get())) {
+        if (auto v2 = dynamic_cast<basic_value_int<A>*>(val2.get()))
+            return v1->cvalue() < v2->cvalue();
+        else if (auto v2 = dynamic_cast<basic_value_unsigned<A>*>(val2.get())) {
+            if (v1->cvalue() < 0)
+                return true;
+            else
+                return
+                    config::value_unsigned_type(v1->cvalue()) < v2->cvalue();
+        }
+    } else if (auto v1 = dynamic_cast<basic_value_unsigned<A>*>(val1.get())) {
+        if (auto v2 = dynamic_cast<basic_value_int<A>*>(val2.get())) {
+            if (v2->cvalue() < 0)
+                return false;
+            else
+                return
+                    v1->cvalue() < config::value_unsigned_type(v2->cvalue());
+        } else if (auto v2 = dynamic_cast<basic_value_unsigned<A>*>(val2.get()))
+            return v1->cvalue() < v2->cvalue();
+    } else if (auto v1 = dynamic_cast<basic_value_string<A>*>(val1.get()))
+        if (auto v2 = dynamic_cast<basic_value_string<A>*>(val2.get()))
+            return v1->cvalue() < v2->cvalue();
+    throw exception::value_type();
+}
+
+template <impl::allocator A> typename basic_value<A>::value_ptr
+f_lt<A>::eval(basic_state<A>& thread, basic_symbol_table<A>&l_vars,
+              const basic_code_node<A>& node, std::string_view)
+{
+    size_t narg = this->narg(node);
+    if (narg != 2 && narg != 3)
+        throw exception::op_narg();
+    auto result = compare(this->arg(thread, l_vars, node, narg - 2),
+                          this->arg(thread, l_vars, node, narg - 1));
     return this->template make_result<basic_value_bool<A>>(thread, l_vars, node,
                                                std::move(result), narg == 3);
 }
@@ -404,10 +499,14 @@ add_predef_symbols(std::shared_ptr<basic_symbol_table<A>> sym, bool replace)
         { "bool", predef::f_bool<A>::create },
         { "clone", predef::f_clone<A>::create },
         { "eq", predef::f_eq<A>::create },
+        { "ge", predef::f_ge<A>::create },
+        { "gt", predef::f_gt<A>::create },
         { "if", predef::f_if<A>::create },
         { "is_mt_safe", predef::f_is_mt_safe<A>::create },
         { "is_null", predef::f_is_null<A>::create },
         { "is_same", predef::f_is_same<A>::create },
+        { "le", predef::f_le<A>::create },
+        { "lt", predef::f_lt<A>::create },
         { "mt_safe", predef::f_mt_safe<A>::create },
         { "ne", predef::f_ne<A>::create },
         { "not", predef::f_not<A>::create },

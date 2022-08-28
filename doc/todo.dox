@@ -1,7 +1,5 @@
 /*! \page To_do_first_release To-do list for the first release
  *
- * \todo Comparison functions (\c lt, \c le, \c gt, \c ge)
- *
  * \todo Arithmetic functions for \c int and \c unsigned (\c add, \c sub, \c
  * mul, \c div, \c mod)
  *

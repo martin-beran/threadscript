@@ -413,6 +413,106 @@ BOOST_DATA_TEST_CASE(f_eq, (std::vector<test::runner_result>{
 //! \endcond
 
 /*! \file
+ * \test \c f_ge -- Test of threadscript::predef::f_ge. Almost all
+ * implementation of f_ge is shared with f_lt (except testing the number of
+ * arguments), therefore we do only a small number of checks here, assuming
+ * that tests of f_lt apply here, too. */
+//! \cond
+BOOST_DATA_TEST_CASE(f_ge, (std::vector<test::runner_result>{
+    {R"(ge())", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(ge(null, "2", 3, 4))", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(ge(null, 2))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(ge(null, 1, null))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(ge(1, "1"))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(ge(false, false))", true, ""},
+    {R"(ge(false, true))", false, ""},
+    {R"(ge(true, false))", true, ""},
+    {R"(ge(0, 1))", false, ""},
+    {R"(ge(12, 12))", true, ""},
+    {R"(ge(123, 12))", true, ""},
+    {R"(ge(-123, +123))", false, ""},
+    {R"(ge(-123, -123))", true, ""},
+    {R"(ge(+123, -123))", true, ""},
+    {R"(ge("", "xy"))", false, ""},
+    {R"(ge("xy", "xy"))", true, ""},
+    {R"(ge("z", "xy"))", true, ""},
+}))
+{
+    test::check_runner(sample);
+}
+//! \endcond
+
+/*! \file
+ * \test \c f_gt -- Test of threadscript::predef::f_gt. Almost all
+ * implementation of f_gt is shared with f_lt (except testing the number of
+ * arguments), therefore we do only a small number of checks here, assuming
+ * that tests of f_lt apply here, too. */
+//! \cond
+BOOST_DATA_TEST_CASE(f_gt, (std::vector<test::runner_result>{
+    {R"(gt())", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(gt(null, "2", 3, 4))", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(gt(null, 2))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(gt(null, 1, null))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(gt(1, "1"))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(gt(false, false))", false, ""},
+    {R"(gt(false, true))", false, ""},
+    {R"(gt(true, false))", true, ""},
+    {R"(gt(0, 1))", false, ""},
+    {R"(gt(12, 12))", false, ""},
+    {R"(gt(123, 12))", true, ""},
+    {R"(gt(-123, +123))", false, ""},
+    {R"(gt(-123, -123))", false, ""},
+    {R"(gt(+123, -123))", true, ""},
+    {R"(gt("", "xy"))", false, ""},
+    {R"(gt("xy", "xy"))", false, ""},
+    {R"(gt("z", "xy"))", true, ""},
+}))
+{
+    test::check_runner(sample);
+}
+//! \endcond
+
+/*! \file
  * \test \c f_if -- Test of threadscript::predef::f_if */
 //! \cond
 BOOST_DATA_TEST_CASE(f_if, (std::vector<test::runner_result>{
@@ -601,6 +701,172 @@ BOOST_DATA_TEST_CASE(f_is_same, (std::vector<test::runner_result>{
     {R"(is_same(null, 1, 2))", false, ""}, // target is null
     {R"(is_same(1, 1, 2))", false, ""}, // target is constant, but wrong type
     {R"(is_same(clone(true), 1, 2))", false, ""}, // target is modifiable
+}))
+{
+    test::check_runner(sample);
+}
+//! \endcond
+
+/*! \file
+ * \test \c f_le -- Test of threadscript::predef::f_le. Almost all
+ * implementation of f_le is shared with f_lt (except testing the number of
+ * arguments), therefore we do only a small number of checks here, assuming
+ * that tests of f_lt apply here, too. */
+//! \cond
+BOOST_DATA_TEST_CASE(f_le, (std::vector<test::runner_result>{
+    {R"(le())", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(le(null, "2", 3, 4))", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(le(null, 2))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(le(null, 1, null))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(le(1, "1"))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(le(false, false))", true, ""},
+    {R"(le(false, true))", true, ""},
+    {R"(le(true, false))", false, ""},
+    {R"(le(0, 1))", true, ""},
+    {R"(le(12, 12))", true, ""},
+    {R"(le(123, 12))", false, ""},
+    {R"(le(-123, +123))", true, ""},
+    {R"(le(-123, -123))", true, ""},
+    {R"(le(+123, -123))", false, ""},
+    {R"(le("", "xy"))", true, ""},
+    {R"(le("xy", "xy"))", true, ""},
+    {R"(le("z", "xy"))", false, ""},
+}))
+{
+    test::check_runner(sample);
+}
+//! \endcond
+
+/*! \file
+ * \test \c f_lt -- Test of threadscript::predef::f_lt */
+//! \cond
+BOOST_DATA_TEST_CASE(f_lt, (std::vector<test::runner_result>{
+    {R"(lt())", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(lt(null, "2", 3, 4))", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(lt(null, 2))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(lt(null, null, 2))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(lt(1, null))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(lt(null, 1, null))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(lt(1, "1"))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(lt(-1, "1"))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(lt("1", 1))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(lt("1", -1))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(lt(false, false))", false, ""},
+    {R"(lt(false, true))", true, ""},
+    {R"(lt(true, false))", false, ""},
+    {R"(lt(true, true))", false, ""},
+    {R"(lt(false, 0))", true, ""},
+    {R"(lt(true, 0))", false, ""},
+    {R"(lt(false, -1))", true, ""},
+    {R"(lt(true, -1))", false, ""},
+    {R"(lt(false, "str"))", true, ""},
+    {R"(lt(true, "str"))", false, ""},
+    {R"(lt(0, false))", false, ""},
+    {R"(lt(0, true))", false, ""},
+    {R"(lt(-1, false))", false, ""},
+    {R"(lt(-1, true))", false, ""},
+    {R"(lt("str", false))", false, ""},
+    {R"(lt("str", true))", false, ""},
+    {R"(lt(0, 1))", true, ""},
+    {R"(lt(0, 0))", false, ""},
+    {R"(lt(12, 23))", true, ""},
+    {R"(lt(12, 12))", false, ""},
+    {R"(lt(23, 12))", false, ""},
+    {R"(lt(-123, +123))", true, ""},
+    {R"(lt(-123, -123))", false, ""},
+    {R"(lt(+123, -123))", false, ""},
+    {R"(lt(+12, +12))", false, ""},
+    {R"(lt(+1, +2))", true, ""},
+    {R"(lt(-1, -2))", false, ""},
+    {R"(lt(-123, 456))", true, ""},
+    {R"(lt(-456, 456))", true, ""},
+    {R"(lt(456, -123))", false, ""},
+    {R"(lt(456, -456))", false, ""},
+    {R"(lt(+123, 456))", true, ""},
+    {R"(lt(+456, 456))", false, ""},
+    {R"(lt(456, +123))", false, ""},
+    {R"(lt(456, +456))", false, ""},
+    {R"(lt(456, +567))", true, ""},
+    {R"(lt("", ""))", false, ""},
+    {R"(lt("", "xy"))", true, ""},
+    {R"(lt("xy", ""))", false, ""},
+    {R"(lt("xy", "xy"))", false, ""},
+    {R"(lt("xy", "yza"))", true, ""},
+    {R"(lt(false, 1, 2))", test::exc{ // target is constant literal
+        typeid(ts::exception::value_read_only),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Read-only value"
+    }, ""},
+    {R"(lt(null, 1, 2))", true, ""}, // target is null
+    {R"(lt(1, 1, 1))", false, ""}, // target is constant, but wrong type
+    {R"(lt(clone(true), 24, 24))", false, ""}, // target is modifiable
+    {R"(
+        seq(
+            var("r", clone(false)),
+            print(is_same(lt(var("r"), -1, +2), var("r"))),
+            var("r")
+        )
+    )", true, "true"},
 }))
 {
     test::check_runner(sample);

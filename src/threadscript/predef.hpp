@@ -173,6 +173,68 @@ protected:
                                             std::string_view fun_name) override;
 };
 
+//! Function \c ge
+/*! Compares two values for greater-or-equal relation. Unlike f_is_same, this
+ * function compares the contents of values, not their location in memory. If
+ * both values are of the same type, the rules of ordering for that type apply.
+ * If the values are of different types, the following rules apply:
+ * \arg If one value is of type \c bool, the other is converted using
+ * f_bool::convert() and the resulting \c bool value is used in comparison,
+ * with \c false being less than \c true.
+ * \arg Otherwise, if each value is \c int or \c unsigned, their numeric values
+ * are compared.
+ *
+ * \param result (optional) if exists and has type \c bool, the result is
+ * stored into it; otherwise, a new value is allocated for the result
+ * \param val1 the first value to be compared
+ * \param val2 the second value to be compared
+ * \return \c true if \a val1 is greater or equal to \a val2; \c false otherwise
+ * \throw exception::op_narg if the number of arguments is not 2 or 3
+ * \throw exception::op_value_null if \a val1 or \a val2 is \c null
+ * \throw exception::value_type if \a val1 or \a val2 has a type other than \c
+ * bool, \c int, \c unsigned, or \c string; also if \a val1 or \a val2 have
+ * a different type combination than allowed by the rules above */
+template <impl::allocator A>
+class f_ge final: public basic_value_native_fun<f_ge<A>, A> {
+    using basic_value_native_fun<f_ge<A>, A>::basic_value_native_fun;
+protected:
+    typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
+                                            basic_symbol_table<A>& l_vars,
+                                            const basic_code_node<A>& node,
+                                            std::string_view fun_name) override;
+};
+
+//! Function \c gt
+/*! Compares two values for greater-than relation. Unlike f_is_same, this
+ * function compares the contents of values, not their location in memory. If
+ * both values are of the same type, the rules of ordering for that type apply.
+ * If the values are of different types, the following rules apply:
+ * \arg If one value is of type \c bool, the other is converted using
+ * f_bool::convert() and the resulting \c bool value is used in comparison,
+ * with \c false being less than \c true.
+ * \arg Otherwise, if each value is \c int or \c unsigned, their numeric values
+ * are compared.
+ *
+ * \param result (optional) if exists and has type \c bool, the result is
+ * stored into it; otherwise, a new value is allocated for the result
+ * \param val1 the first value to be compared
+ * \param val2 the second value to be compared
+ * \return \c true if \a val1 is greater thant \a val2; \c false otherwise
+ * \throw exception::op_narg if the number of arguments is not 2 or 3
+ * \throw exception::op_value_null if \a val1 or \a val2 is \c null
+ * \throw exception::value_type if \a val1 or \a val2 has a type other than \c
+ * bool, \c int, \c unsigned, or \c string; also if \a val1 or \a val2 have
+ * a different type combination than allowed by the rules above */
+template <impl::allocator A>
+class f_gt final: public basic_value_native_fun<f_gt<A>, A> {
+    using basic_value_native_fun<f_gt<A>, A>::basic_value_native_fun;
+protected:
+    typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
+                                            basic_symbol_table<A>& l_vars,
+                                            const basic_code_node<A>& node,
+                                            std::string_view fun_name) override;
+};
+
 //! Command \c if
 /*! A conditional statement.
  * \param cond converted to \c bool by f_bool::convert().
@@ -247,6 +309,81 @@ protected:
                                             std::string_view fun_name) override;
 };
 
+//! Function \c le
+/*! Compares two values for less-or-equal relation. Unlike f_is_same, this
+ * function compares the contents of values, not their location in memory. If
+ * both values are of the same type, the rules of ordering for that type apply.
+ * If the values are of different types, the following rules apply:
+ * \arg If one value is of type \c bool, the other is converted using
+ * f_bool::convert() and the resulting \c bool value is used in comparison,
+ * with \c false being less than \c true.
+ * \arg Otherwise, if each value is \c int or \c unsigned, their numeric values
+ * are compared.
+ *
+ * \param result (optional) if exists and has type \c bool, the result is
+ * stored into it; otherwise, a new value is allocated for the result
+ * \param val1 the first value to be compared
+ * \param val2 the second value to be compared
+ * \return \c true if \a val1 is less or equal to \a val2; \c false otherwise
+ * \throw exception::op_narg if the number of arguments is not 2 or 3
+ * \throw exception::op_value_null if \a val1 or \a val2 is \c null
+ * \throw exception::value_type if \a val1 or \a val2 has a type other than \c
+ * bool, \c int, \c unsigned, or \c string; also if \a val1 or \a val2 have
+ * a different type combination than allowed by the rules above */
+template <impl::allocator A>
+class f_le final: public basic_value_native_fun<f_le<A>, A> {
+    using basic_value_native_fun<f_le<A>, A>::basic_value_native_fun;
+protected:
+    typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
+                                            basic_symbol_table<A>& l_vars,
+                                            const basic_code_node<A>& node,
+                                            std::string_view fun_name) override;
+};
+
+//! Function \c lt
+/*! Compares two values for less-than relation. Unlike f_is_same, this function
+ * compares the contents of values, not their location in memory. If both
+ * values are of the same type, the rules of ordering for that type apply. If
+ * the values are of different types, the following rules apply:
+ * \arg If one value is of type \c bool, the other is converted using
+ * f_bool::convert() and the resulting \c bool value is used in comparison,
+ * with \c false being less than \c true.
+ * \arg Otherwise, if each value is \c int or \c unsigned, their numeric values
+ * are compared.
+ *
+ * \param result (optional) if exists and has type \c bool, the result is
+ * stored into it; otherwise, a new value is allocated for the result
+ * \param val1 the first value to be compared
+ * \param val2 the second value to be compared
+ * \return \c true if \a val1 is less than \a val2; \c false otherwise
+ * \throw exception::op_narg if the number of arguments is not 2 or 3
+ * \throw exception::op_value_null if \a val1 or \a val2 is \c null
+ * \throw exception::value_type if \a val1 or \a val2 has a type other than \c
+ * bool, \c int, \c unsigned, or \c string; also if \a val1 or \a val2 have
+ * a different type combination than allowed by the rules above */
+template <impl::allocator A>
+class f_lt final: public basic_value_native_fun<f_lt<A>, A> {
+    using basic_value_native_fun<f_lt<A>, A>::basic_value_native_fun;
+public:
+    //! Performs the less-than comparison.
+    /*! This is a helper function used by eval() and it should be used (for
+     * consistency) by any other ordering function, e.g., f_lt, f_le, f_gt,
+     * f_ge.
+     * \param[in] val1 the first value to be compared
+     * \param[in] val2 the second value to be compared
+     * \return \c true if \a val1 is less than \a val2; \c false otherwise
+     * \throw exception::op_value_null if \a val1 or \a val2 is \c null
+     * \throw exception::value_type under the same conditions as specified for
+     * class f_eq itself */
+    static bool compare(typename basic_value<A>::value_ptr val1,
+                        typename basic_value<A>::value_ptr val2);
+protected:
+    typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
+                                            basic_symbol_table<A>& l_vars,
+                                            const basic_code_node<A>& node,
+                                            std::string_view fun_name) override;
+};
+
 //! Function \c mt_safe
 /*! Sets a value as thread-safe, so that it becomes read-only and can be shared
  * among threads.
@@ -267,7 +404,7 @@ protected:
 };
 
 //! Function \c ne
-/*! Compares two values for inquality. It is the negation of f_eq. Unlike
+/*! Compares two values for inequality. It is the negation of f_eq. Unlike
  * f_is_same, this function compares the contents of values, not their location
  * in memory. If both values are of the same type, the rules of equality for
  * that type apply. If the values are of different types, the following rules
