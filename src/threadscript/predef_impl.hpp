@@ -29,17 +29,32 @@ f_add<A>::eval(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
         auto v2 = dynamic_cast<basic_value_int<A>*>(a2.get());
         if (!v2)
             throw exception::value_type();
-        // TODO
-    } else if (auto v1 = dynamic_cast<basic_value_unsigned*>(a1.get())) {
+        auto s1 = v1->cvalue();
+        auto u1 = config::value_unsigned_type(s1);
+        auto s2 = v1->cvalue();
+        auto u2 = config::value_unsigned_type(s2);
+        config::value_int_type result = u1 + u2;
+        if ((s1 > 0 && s2 > 0 && (result < s1 || result < s2)) ||
+            (s1 < 0 && s2 < 0 && (result > s1 || result > s2)))
+        {
+            throw exception::op_overflow();
+        }
+        return this->template make_result<basic_value_int<A>>(thread, l_vars,
+                                            node, std::move(result), narg == 3);
+    } else if (auto v1 = dynamic_cast<basic_value_unsigned<A>*>(a1.get())) {
         auto v2 = dynamic_cast<basic_value_unsigned<A>*>(a2.get());
         if (!v2)
             throw exception::value_type();
-        // TODO
-    } else if (auto v1 = dynamic_cast<basic_value_string*>(a1.get())) {
+        auto result = v1->cvalue() + v2->cvalue();
+        return this->template make_result<basic_value_unsigned<A>>(thread,
+                                    l_vars, node, std::move(result), narg == 3);
+    } else if (auto v1 = dynamic_cast<basic_value_string<A>*>(a1.get())) {
         auto v2 = dynamic_cast<basic_value_string<A>*>(a2.get());
         if (!v2)
             throw exception::value_type();
-        // TODO
+        auto result = v1->cvalue() + v2->cvalue();
+        return this->template make_result<basic_value_string<A>>(thread, l_vars,
+                                            node, std::move(result), narg == 3);
     } else
         throw exception::value_type();
 }

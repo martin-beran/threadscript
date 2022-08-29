@@ -51,8 +51,8 @@ namespace predef {
  * at most once. It would also need two variants of addition, one with the
  * result argument and one without it (like f_and and f_and_r). */
 template <impl::allocator A>
-class f_add final: public f_add_base<A> {
-    using f_add_base<A>::f_add_base;
+class f_add final: public basic_value_native_fun<f_add<A>, A> {
+    using basic_value_native_fun<f_add<A>, A>::basic_value_native_fun;
 protected:
     typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
                                             basic_symbol_table<A>& l_vars,
