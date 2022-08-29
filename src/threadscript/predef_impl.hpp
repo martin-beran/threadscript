@@ -12,6 +12,38 @@ namespace threadscript {
 
 namespace predef {
 
+/*** f_add *******************************************************************/
+
+template <impl::allocator A> typename basic_value<A>::value_ptr
+f_add<A>::eval(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
+              const basic_code_node<A>& node, std::string_view)
+{
+    size_t narg = this->narg(node);
+    if (narg != 2 && narg != 3)
+        throw exception::op_narg();
+    auto a1 = this->arg(thread, l_vars, node, narg - 2);
+    auto a2 = this->arg(thread, l_vars, node, narg - 1);
+    if (!a1 || !a2)
+        throw exception::value_null();
+    if (auto v1 = dynamic_cast<basic_value_int<A>*>(a1.get())) {
+        auto v2 = dynamic_cast<basic_value_int<A>*>(a2.get());
+        if (!v2)
+            throw exception::value_type();
+        // TODO
+    } else if (auto v1 = dynamic_cast<basic_value_unsigned*>(a1.get())) {
+        auto v2 = dynamic_cast<basic_value_unsigned<A>*>(a2.get());
+        if (!v2)
+            throw exception::value_type();
+        // TODO
+    } else if (auto v1 = dynamic_cast<basic_value_string*>(a1.get())) {
+        auto v2 = dynamic_cast<basic_value_string<A>*>(a2.get());
+        if (!v2)
+            throw exception::value_type();
+        // TODO
+    } else
+        throw exception::value_type();
+}
+
 /*** f_and_base **************************************************************/
 
 template <impl::allocator A> bool
@@ -494,6 +526,7 @@ add_predef_symbols(std::shared_ptr<basic_symbol_table<A>> sym, bool replace)
         std::pair<a_basic_string<A>,
             typename basic_value<A>::value_ptr(*)(const A&)>
     >({
+        { "add", predef::f_add<A>::create },
         { "and", predef::f_and<A>::template create<predef::f_and<A>> },
         { "and_r", predef::f_and<A>::template create<predef::f_and_r<A>> },
         { "bool", predef::f_bool<A>::create },

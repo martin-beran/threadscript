@@ -28,6 +28,38 @@ namespace threadscript {
  * \test in file test_predef.cpp */
 namespace predef {
 
+//! Function \c add
+/*! Numeric addition and string concatenation. Unsigned addition is done using
+ * modulo arithmetic, signed overflow causes exception::op_overflow.
+ * \param result (optional) if it exists and has the same type as \a val1 and
+ * \a val2, the result is stored into it; otherwise, a new value is allocated
+ * for the result
+ * \param val1 the first operand, it must be \c int, \c unsigned, or \c string
+ * \param val2 the second operand, it must have the same type as \a val1
+ * \return \a val1 + \a val2 if they are \c int or \c unsigned; concatenation
+ * of \a val1 and \a val2 if they are \c string
+ * \throw exception::op_narg if the number of arguments is not 2 or 3
+ * \throw exception::value_null if \a val1 or \a val2 is \c null
+ * \throw exception::value_type if \a val1 and \a val2 do not have the same
+ * type or if their type is not \c int, \c unsigned, or \c string
+ * \throw exception::op_overflow if \a val1 and \a val2 have type \c int and
+ * overflow occurs
+ * \note An alternative would be to allow more than two operands. String
+ * concatenation could then first compute the final string length and use a
+ * single allocation for the concatenated string. But it would need another
+ * allocation for a vector of strings, because each argument may be evaluated
+ * at most once. It would also need two variants of addition, one with the
+ * result argument and one without it (like f_and and f_and_r). */
+template <impl::allocator A>
+class f_add final: public f_add_base<A> {
+    using f_add_base<A>::f_add_base;
+protected:
+    typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
+                                            basic_symbol_table<A>& l_vars,
+                                            const basic_code_node<A>& node,
+                                            std::string_view fun_name) override;
+};
+
 //! Common functionality of classes f_and and f_and_r
 /*! \tparam A an allocator type */
 template <impl::allocator A>
@@ -36,7 +68,7 @@ class f_and_base: public basic_value_native_fun<f_and_base<A>, A> {
 protected:
     //! Computes a result.
     /*! This is the common part of evaluation used by both f_and::eval() and
-     * f_and_r::eval(). All arguments are the same as in eval():
+     * f_and_r::eval(). Arguments are the same as in eval():
      * \param[in] thread
      * \param[in] l_vars
      * \param[in] node
@@ -461,7 +493,7 @@ class f_or_base: public basic_value_native_fun<f_or_base<A>, A> {
 protected:
     //! Computes a result.
     /*! This is the common part of evaluation used by both f_or::eval() and
-     * f_or_r::eval(). All arguments are the same as in eval():
+     * f_or_r::eval(). Arguments are the same as in eval():
      * \param[in] thread
      * \param[in] l_vars
      * \param[in] node

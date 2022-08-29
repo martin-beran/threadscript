@@ -72,6 +72,7 @@ add_predef_symbols<allocator_any>(
 
 namespace predef {
 
+template class f_add<allocator_any>;
 template class f_and<allocator_any>;
 template class f_and_r<allocator_any>;
 template class f_bool<allocator_any>;

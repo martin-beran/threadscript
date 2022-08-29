@@ -68,4 +68,17 @@
  *
  * Built-in commands and functions are defined as classes in namespace
  * threadscript::predef. A name \c FUN used in ThreadScript source code
- * corresponds to a declaration \c f_FUN in the namespace. */
+ * corresponds to a declaration \c f_FUN in the namespace.
+ *
+ * \section Integer_arithmetic Integer arithmetic
+ *
+ * Semantics of arithmetic operations with integers is based on rules of C++20.
+ * Unsigned arithmetic (with arguments of type \c unsigned) is performed
+ * <em>modulo 2<sup>N</sup></em>, where \e N is the number of bits in
+ * threadscript::config::value_unsigned_type. Overflow of signed arithmetic
+ * operations (with arguments of type \c int) throws exception
+ * threadscript::exception::op_overflow.
+ *
+ * Due to different rules of signed and unsigned arithmentics, signed and
+ * unsigned values may not be mixed in a single expression. Otherwise,
+ * exception threadscript::exception::value_type is thrown. */
