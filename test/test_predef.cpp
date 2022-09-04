@@ -138,7 +138,183 @@ void check_runner(const runner_result& sample)
     BOOST_CHECK_EQUAL(runner.std_out.view(), sample.std_out);
 }
 
+constexpr auto u_max = std::numeric_limits<uint_t>::max();
+constexpr auto u_half = u_max / 2;
+constexpr auto i_min = std::numeric_limits<int_t>::min();
+constexpr auto i_n_half = i_min / 2; // negative
+constexpr auto i_max = std::numeric_limits<int_t>::max();
+constexpr auto i_p_half = i_max / 2; // positive
+
+std::string u_op(const std::string op, uint_t a, uint_t b)
+{
+    return op + "(" + std::to_string(a) + ", " + std::to_string(b) + ")";
+}
+
+std::string i_op(const std::string op, int_t a, int_t b)
+{
+    return op + "(" + (a >= 0 ? "+" : "") +  std::to_string(a) + ", " +
+        (b >= 0 ? "+" : "") + std::to_string(b) + ")";
+}
+
 } // namespace test
+//! \endcond
+
+/*! \file
+ * \test \c f_add -- Test of threadscript::predef::f_add */
+//! \cond
+BOOST_DATA_TEST_CASE(f_add, (std::vector<test::runner_result>{
+    {R"(add())", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(add(1))", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(add(null, 2, 3, 4))", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(add(null, 2))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(add(null, null, 2))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(add(1, null))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(add(null, 1, null))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(add(false, true))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(add(1, +2))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(add(-1, 2))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(add(1, "a"))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(add("b", -2))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {test::u_op("add", 0, 0), test::uint_t(0), ""},
+    {test::u_op("add", 12, 34), test::uint_t(46), ""},
+    {test::u_op("add", test::u_half, test::u_half),
+        test::uint_t(test::u_max - 1U), ""},
+    {test::u_op("add", test::u_half + 1U, test::u_half),
+        test::uint_t(test::u_max), ""},
+    {test::u_op("add", test::u_half, test::u_half + 2U), test::uint_t(0), ""},
+    {test::u_op("add", test::u_half + 1U, test::u_half + 2U),
+        test::uint_t(1U), ""},
+    {test::u_op("add", test::u_max, 0U), test::uint_t(test::u_max), ""},
+    {test::u_op("add", test::u_max, 1U), test::uint_t(0U), ""},
+    {test::u_op("add", test::u_max, test::u_half),
+        test::uint_t(test::u_half - 1U), ""},
+    {test::i_op("add", 0, 0), test::int_t(0), ""},
+    {test::i_op("add", 12, 34), test::int_t(46), ""},
+    {test::i_op("add", -12, 34), test::int_t(22), ""},
+    {test::i_op("add", 12, -34), test::int_t(-22), ""},
+    {test::i_op("add", -12, -34), test::int_t(-46), ""},
+    {test::i_op("add", test::i_p_half, test::i_p_half),
+        test::int_t(test::i_max - 1), ""},
+    {test::i_op("add", test::i_p_half + 1, test::i_p_half),
+        test::int_t(test::i_max), ""},
+    {test::i_op("add", test::i_p_half, test::i_p_half + 2), test::exc{
+        typeid(ts::exception::op_overflow),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Overflow"
+    }, ""},
+    {test::i_op("add", test::i_p_half + 1, test::i_p_half + 2), test::exc{
+        typeid(ts::exception::op_overflow),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Overflow"
+    }, ""},
+    {test::i_op("add", test::i_n_half, test::i_n_half),
+        test::int_t(test::i_min), ""},
+    {test::i_op("add", test::i_n_half, test::i_n_half - 1), test::exc{
+        typeid(ts::exception::op_overflow),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Overflow"
+    }, ""},
+    {test::i_op("add", test::i_n_half - 2, test::i_n_half), test::exc{
+        typeid(ts::exception::op_overflow),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Overflow"
+    }, ""},
+    {test::i_op("add", test::i_max, 0), test::int_t(test::i_max), ""},
+    {test::i_op("add", 0, test::i_max), test::int_t(test::i_max), ""},
+    {test::i_op("add", test::i_max, 1), test::exc{
+        typeid(ts::exception::op_overflow),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Overflow"
+    }, ""},
+    {test::i_op("add", -1, test::i_min), test::exc{
+        typeid(ts::exception::op_overflow),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Overflow"
+    }, ""},
+    {R"(add("", ""))", "", ""},
+    {R"(add("A", ""))", "A", ""},
+    {R"(add("ABC", "xy"))", "ABCxy", ""},
+    {R"(add(0, 1, 2))", test::exc{ // target is constant literal
+        typeid(ts::exception::value_read_only),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Read-only value"
+    }, ""},
+    {R"(add(null, 1, 2))", test::uint_t(3), ""}, // target is null
+    {R"(add(true, 1, 1))", test::uint_t(2), ""}, // target constant, wrong type
+    // target is modifiable
+    {R"(
+        seq(
+            var("r", clone(0)),
+            print(is_same(add(var("r"), 2, 3), var("r"))),
+            var("r")
+        )
+    )", test::uint_t(5), "true"},
+    {R"(
+        seq(
+            var("r", clone(+0)),
+            print(is_same(add(var("r"), -1, +3), var("r"))),
+            var("r")
+        )
+    )", test::int_t(2), "true"},
+    {R"(
+        seq(
+            var("r", clone("")),
+            print(is_same(add(var("r"), "Hello ", "World!"), var("r"))),
+            var("r")
+        )
+    )", "Hello World!", "true"},
+}))
+{
+    test::check_runner(sample);
+}
 //! \endcond
 
 /*! \file
@@ -308,6 +484,11 @@ BOOST_DATA_TEST_CASE(f_eq, (std::vector<test::runner_result>{
         ts::frame_location("", "", 1, 1),
         "Runtime error: Bad number of arguments"
     }, ""},
+    {R"(eq(1))", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
     {R"(eq(null, "2", 3, 4))", test::exc{
         typeid(ts::exception::op_narg),
         ts::frame_location("", "", 1, 1),
@@ -424,6 +605,11 @@ BOOST_DATA_TEST_CASE(f_ge, (std::vector<test::runner_result>{
         ts::frame_location("", "", 1, 1),
         "Runtime error: Bad number of arguments"
     }, ""},
+    {R"(ge(1))", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
     {R"(ge(null, "2", 3, 4))", test::exc{
         typeid(ts::exception::op_narg),
         ts::frame_location("", "", 1, 1),
@@ -470,6 +656,11 @@ BOOST_DATA_TEST_CASE(f_ge, (std::vector<test::runner_result>{
 //! \cond
 BOOST_DATA_TEST_CASE(f_gt, (std::vector<test::runner_result>{
     {R"(gt())", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(gt(1))", test::exc{
         typeid(ts::exception::op_narg),
         ts::frame_location("", "", 1, 1),
         "Runtime error: Bad number of arguments"
@@ -719,6 +910,11 @@ BOOST_DATA_TEST_CASE(f_le, (std::vector<test::runner_result>{
         ts::frame_location("", "", 1, 1),
         "Runtime error: Bad number of arguments"
     }, ""},
+    {R"(le(1))", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
     {R"(le(null, "2", 3, 4))", test::exc{
         typeid(ts::exception::op_narg),
         ts::frame_location("", "", 1, 1),
@@ -762,6 +958,11 @@ BOOST_DATA_TEST_CASE(f_le, (std::vector<test::runner_result>{
 //! \cond
 BOOST_DATA_TEST_CASE(f_lt, (std::vector<test::runner_result>{
     {R"(lt())", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(lt(1))", test::exc{
         typeid(ts::exception::op_narg),
         ts::frame_location("", "", 1, 1),
         "Runtime error: Bad number of arguments"
@@ -918,6 +1119,11 @@ BOOST_DATA_TEST_CASE(f_mt_safe, (std::vector<test::runner_result>{
 //! \cond
 BOOST_DATA_TEST_CASE(f_ne, (std::vector<test::runner_result>{
     {R"(ne())", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(ne(1))", test::exc{
         typeid(ts::exception::op_narg),
         ts::frame_location("", "", 1, 1),
         "Runtime error: Bad number of arguments"
