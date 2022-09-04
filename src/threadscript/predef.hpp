@@ -579,6 +579,31 @@ protected:
                                             std::string_view fun_name) override;
 };
 
+//! Function \c sub
+/*! Numeric subtraction. Unsigned subtraction is done using modulo arithmetic,
+ * signed overflow causes exception::op_overflow.
+ * \param result (optional) if it exists and has the same type as \a val1 and
+ * \a val2, the result is stored into it; otherwise, a new value is allocated
+ * for the result
+ * \param val1 the first operand, it must be \c int or \c unsigned
+ * \param val2 the second operand, it must have the same type as \a val1
+ * \return \a val1 - \a val2
+ * \throw exception::op_narg if the number of arguments is not 2 or 3
+ * \throw exception::value_null if \a val1 or \a val2 is \c null
+ * \throw exception::value_type if \a val1 and \a val2 do not have the same
+ * type or if their type is not \c int or \c unsigned
+ * \throw exception::op_overflow if \a val1 and \a val2 have type \c int and
+ * overflow occurs */
+template <impl::allocator A>
+class f_sub final: public basic_value_native_fun<f_sub<A>, A> {
+    using basic_value_native_fun<f_sub<A>, A>::basic_value_native_fun;
+protected:
+    typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
+                                            basic_symbol_table<A>& l_vars,
+                                            const basic_code_node<A>& node,
+                                            std::string_view fun_name) override;
+};
+
 //! Function \c type
 /*! Gets a type name of a value.
  * \param result (optional) if exists and has type \c string, the result is

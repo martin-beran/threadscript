@@ -466,6 +466,46 @@ f_seq<A>::eval(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
     return result;
 }
 
+/*** f_sub *******************************************************************/
+
+template <impl::allocator A> typename basic_value<A>::value_ptr
+f_sub<A>::eval(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
+              const basic_code_node<A>& node, std::string_view)
+{
+    size_t narg = this->narg(node);
+    if (narg != 2 && narg != 3)
+        throw exception::op_narg();
+    auto a1 = this->arg(thread, l_vars, node, narg - 2);
+    auto a2 = this->arg(thread, l_vars, node, narg - 1);
+    if (!a1 || !a2)
+        throw exception::value_null();
+    if (auto v1 = dynamic_cast<basic_value_int<A>*>(a1.get())) {
+        auto v2 = dynamic_cast<basic_value_int<A>*>(a2.get());
+        if (!v2)
+            throw exception::value_type();
+        auto s1 = v1->cvalue();
+        auto u1 = config::value_unsigned_type(s1);
+        auto s2 = v2->cvalue();
+        auto u2 = config::value_unsigned_type(s2);
+        config::value_int_type result = u1 - u2;
+        if ((s1 > 0 && s2 < 0 && result < s1) ||
+            (s1 < 0 && s2 > 0 && result > s1))
+        {
+            throw exception::op_overflow();
+        }
+        return this->template make_result<basic_value_int<A>>(thread, l_vars,
+                                            node, std::move(result), narg == 3);
+    } else if (auto v1 = dynamic_cast<basic_value_unsigned<A>*>(a1.get())) {
+        auto v2 = dynamic_cast<basic_value_unsigned<A>*>(a2.get());
+        if (!v2)
+            throw exception::value_type();
+        auto result = v1->cvalue() - v2->cvalue();
+        return this->template make_result<basic_value_unsigned<A>>(thread,
+                                    l_vars, node, std::move(result), narg == 3);
+    } else
+        throw exception::value_type();
+}
+
 /*** f_type ******************************************************************/
 
 template <impl::allocator A> typename basic_value<A>::value_ptr
@@ -562,6 +602,7 @@ add_predef_symbols(std::shared_ptr<basic_symbol_table<A>> sym, bool replace)
         { "or_r", predef::f_or<A>::template create<predef::f_or_r<A>> },
         { "print", predef::f_print<A>::create },
         { "seq", predef::f_seq<A>::create },
+        { "sub", predef::f_sub<A>::create },
         { "type", predef::f_type<A>::create },
         { "var", predef::f_var<A>::create },
         { "while", predef::f_while<A>::create },

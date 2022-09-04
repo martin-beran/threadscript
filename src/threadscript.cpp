@@ -93,6 +93,7 @@ template class f_or_r<allocator_any>;
 template class f_print<allocator_any>;
 template class f_is_same<allocator_any>;
 template class f_seq<allocator_any>;
+template class f_sub<allocator_any>;
 template class f_type<allocator_any>;
 template class f_var<allocator_any>;
 template class f_while<allocator_any>;
