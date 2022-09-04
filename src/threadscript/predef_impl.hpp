@@ -488,8 +488,8 @@ f_sub<A>::eval(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
         auto s2 = v2->cvalue();
         auto u2 = config::value_unsigned_type(s2);
         config::value_int_type result = u1 - u2;
-        if ((s1 > 0 && s2 < 0 && result < s1) ||
-            (s1 < 0 && s2 > 0 && result > s1))
+        if ((s1 >= 0 && s2 < 0 && result < s1) ||
+            (s1 < 0 && s2 >= 0 && result > s1))
         {
             throw exception::op_overflow();
         }

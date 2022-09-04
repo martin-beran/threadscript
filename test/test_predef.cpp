@@ -1319,6 +1319,143 @@ BOOST_DATA_TEST_CASE(f_seq, (std::vector<test::runner_result>{
 //! \endcond
 
 /*! \file
+ * \test \c f_sub -- Test of threadscript::predef::f_sub */
+//! \cond
+BOOST_DATA_TEST_CASE(f_sub, (std::vector<test::runner_result>{
+    {R"(sub())", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(sub(1))", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(sub(null, 2, 3, 4))", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(sub(null, 2))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(sub(null, null, 2))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(sub(1, null))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(sub(null, 1, null))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(sub(false, true))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(sub(1, +2))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(sub(-1, 2))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(sub("a", "a"))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {test::u_op("sub", 0, 0), test::uint_t(0), ""},
+    {test::u_op("sub", 123, 12), test::uint_t(111), ""},
+    {test::u_op("sub", test::u_half, test::u_half),
+        test::uint_t(0), ""},
+    {test::u_op("sub", test::u_half, test::u_half + 1U),
+        test::uint_t(test::u_max), ""},
+    {test::u_op("sub", test::u_half, test::u_half + 2U),
+        test::uint_t(test::u_max - 1U), ""},
+    {test::u_op("sub", test::u_half - 1U, test::u_half + 2U),
+        test::uint_t(test::u_max - 2U), ""},
+    {test::u_op("sub", 0U, 0U), test::uint_t(0U), ""},
+    {test::u_op("sub", 0U, 1U), test::uint_t(test::u_max), ""},
+    {test::u_op("sub", 0U, test::u_half),
+        test::uint_t(test::u_half + 2U), ""},
+    {test::i_op("sub", 0, 0), test::int_t(0), ""},
+    {test::i_op("sub", 12, 34), test::int_t(-22), ""},
+    {test::i_op("sub", -12, 34), test::int_t(-46), ""},
+    {test::i_op("sub", 12, -34), test::int_t(46), ""},
+    {test::i_op("sub", -12, -34), test::int_t(22), ""},
+    {test::i_op("sub", test::i_p_half, test::i_n_half),
+        test::int_t(test::i_max), ""},
+    {test::i_op("sub", test::i_p_half, test::i_n_half - 1), test::exc{
+        typeid(ts::exception::op_overflow),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Overflow"
+    }, ""},
+    {test::i_op("sub", test::i_p_half + 1, test::i_n_half), test::exc{
+        typeid(ts::exception::op_overflow),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Overflow"
+    }, ""},
+    {test::i_op("sub", test::i_n_half, test::i_p_half + 1),
+        test::int_t(test::i_min), ""},
+    {test::i_op("sub", test::i_n_half, test::i_p_half + 2), test::exc{
+        typeid(ts::exception::op_overflow),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Overflow"
+    }, ""},
+    {test::i_op("sub", test::i_n_half - 2, test::i_p_half), test::exc{
+        typeid(ts::exception::op_overflow),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Overflow"
+    }, ""},
+    {test::i_op("sub", test::i_max, 0), test::int_t(test::i_max), ""},
+    {test::i_op("sub", 0, test::i_max), test::int_t(test::i_min + 1), ""},
+    {test::i_op("sub", 0, test::i_min), test::exc{
+        typeid(ts::exception::op_overflow),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Overflow"
+    }, ""},
+    {R"(sub(0, 1, 2))", test::exc{ // target is constant literal
+        typeid(ts::exception::value_read_only),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Read-only value"
+    }, ""},
+    {R"(sub(null, +1, +2))", test::int_t(-1), ""}, // target is null
+    {R"(sub(true, 3, 1))", test::uint_t(2), ""}, // target constant, wrong type
+    // target is modifiable
+    {R"(
+        seq(
+            var("r", clone(0)),
+            print(is_same(sub(var("r"), 3, 2), var("r"))),
+            var("r")
+        )
+    )", test::uint_t(1), "true"},
+    {R"(
+        seq(
+            var("r", clone(+0)),
+            print(is_same(sub(var("r"), -1, +3), var("r"))),
+            var("r")
+        )
+    )", test::int_t(-4), "true"},
+}))
+{
+    test::check_runner(sample);
+}
+//! \endcond
+
+/*! \file
  * \test \c f_type -- Test of threadscript::predef::f_type */
 //! \cond
 BOOST_DATA_TEST_CASE(f_type, (std::vector<test::runner_result>{
