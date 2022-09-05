@@ -1,4 +1,12 @@
-/*! \page To_do_first_release To-do list for the first release
+/*! \page To_do Miscellaneous to-do tasks
+ *
+ * ToDo items should be added at appropriate places in Doxygen documentation
+ * using command <tt>\\todo</tt>. If a ToDo is not related to a particular
+ * place in C++ code, add it here.
+ *
+ * \tableofcontents
+ *
+ * \section To_do_first_release To-do list for the first release
  *
  * \todo Arithmetic functions for \c int and \c unsigned (\c add, \c sub, \c
  * mul, \c div, \c mod)
@@ -25,11 +33,24 @@
  *
  * \todo Command line interface to ThreadScript -- \ref Cmdline_ts.
  *
- * \page To_do_items Miscellaneous to-do tasks
+ * \section To_do_optimization Optimization to-do taskts
  *
- * ToDo items should be added at appropriate places in Doxygen documentation
- * using command <tt>\\todo</tt>. If a ToDo is not related to a particular
- * place in C++ code, add it here.
+ * \todo Measure the overhead of allocating values for results of operations.
+ *
+ * \todo Possible optimization for functions returning \c bool: Instead of
+ * allocating a new value, create global read-only values \c false and \c true
+ * and return them from all Boolean functions.
+ *
+ * \todo Possible optimization for function return values: Manage a pool of
+ * values of scalar types (\c bool, \c int, \c unsigned, maybe also \c string)
+ * and return values from this pool instead of allocating new values.
+ *
+ * \todo Possible optimization for evaluating commands and functions: Manage
+ * a pool of vectors of arguments with some small fixed capacity (e.g., 2--8).
+ * If a command or a function is called with at most this number of arguments,
+ * use a vector from this pool instead of allocating a new one.
+ *
+ * \section To_do_build To-do tasks related to the build process
  *
  * \todo Review \c NOLINT* suppressions related to false positives that are
  * probably caused by incorrect detections by \c clang-tidy.
