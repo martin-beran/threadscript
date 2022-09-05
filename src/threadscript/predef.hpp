@@ -435,6 +435,38 @@ protected:
                                             std::string_view fun_name) override;
 };
 
+//! Function \c mul
+/*! Numeric multiplication and string repetition. Unsigned multiplication is
+ * done using modulo arithmetic, signed overflow causes exception::op_overflow.
+ * If both arguments \a val1 and \a val2 are \c int or \c unsigned, then they
+ * are multiplied. If one them is \c string, the other must be \c unsigned or a
+ * nonnegative \c int and the string argument is repeated as many times as is
+ * the value of the numeric argument.
+ * \param result (optional) if it exists and has the same type as \a val1 and
+ * \a val2, the result is stored into it; otherwise, a new value is allocated
+ * for the result
+ * \param val1 the first operand
+ * \param val2 the second operand
+ * \return \a val1 * \a val2 if they are \c int or \c unsigned; repeated of
+ * the string argument otherwise
+ * \throw exception::op_narg if the number of arguments is not 2 or 3
+ * \throw exception::value_null if \a val1 or \a val2 is \c null
+ * \throw exception::value_type if \a val1 and \a val2 do not have an allowed
+ * combination of types: either both \c int, both \c unsigned, or one \c string
+ * and the other \c int or \c unsigned
+ * \throw exception::op_overflow if \a val1 and \a val2 have type \c int and
+ * overflow occurs; or if one argument is \c string and the other is a negative
+ * \c int */
+template <impl::allocator A>
+class f_mul final: public basic_value_native_fun<f_mul<A>, A> {
+    using basic_value_native_fun<f_mul<A>, A>::basic_value_native_fun;
+protected:
+    typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
+                                            basic_symbol_table<A>& l_vars,
+                                            const basic_code_node<A>& node,
+                                            std::string_view fun_name) override;
+};
+
 //! Function \c ne
 /*! Compares two values for inequality. It is the negation of f_eq. Unlike
  * f_is_same, this function compares the contents of values, not their location

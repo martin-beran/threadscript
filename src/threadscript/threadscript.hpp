@@ -141,6 +141,7 @@ extern template class f_is_null<allocator_any>;
 extern template class f_le<allocator_any>;
 extern template class f_lt<allocator_any>;
 extern template class f_mt_safe<allocator_any>;
+extern template class f_mul<allocator_any>;
 extern template class f_ne<allocator_any>;
 extern template class f_not<allocator_any>;
 extern template class f_or<allocator_any>;

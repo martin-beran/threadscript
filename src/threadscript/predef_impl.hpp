@@ -6,6 +6,7 @@
 
 #include "threadscript/predef.hpp"
 
+#include <limits>
 #include <syncstream>
 
 namespace threadscript {
@@ -45,7 +46,7 @@ f_add<A>::eval(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
         auto v2 = dynamic_cast<basic_value_unsigned<A>*>(a2.get());
         if (!v2)
             throw exception::value_type();
-        auto result = v1->cvalue() + v2->cvalue();
+        config::value_unsigned_type result = v1->cvalue() + v2->cvalue();
         return this->template make_result<basic_value_unsigned<A>>(thread,
                                     l_vars, node, std::move(result), narg == 3);
     } else if (auto v1 = dynamic_cast<basic_value_string<A>*>(a1.get())) {
@@ -370,6 +371,82 @@ f_mt_safe<A>::eval(basic_state<A>& thread, basic_symbol_table<A>&l_vars,
     }
 }
 
+/*** f_mul *******************************************************************/
+
+template <impl::allocator A> typename basic_value<A>::value_ptr
+f_mul<A>::eval(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
+              const basic_code_node<A>& node, std::string_view)
+{
+    size_t narg = this->narg(node);
+    if (narg != 2 && narg != 3)
+        throw exception::op_narg();
+    auto a1 = this->arg(thread, l_vars, node, narg - 2);
+    auto a2 = this->arg(thread, l_vars, node, narg - 1);
+    if (!a1 || !a2)
+        throw exception::value_null();
+    if (dynamic_cast<basic_value_string<A>*>(a2.get())) {
+        using std::swap;
+        swap(a1, a2); // now string is always the first argument
+    }
+    if (auto v1 = dynamic_cast<basic_value_string<A>*>(a1.get())) {
+        config::value_unsigned_type n = 0;
+        if (auto v2 = dynamic_cast<basic_value_int<A>*>(a2.get())) {
+            if (v2->cvalue() < 0)
+                throw exception::op_overflow();
+            n = v2->cvalue();
+        } else if (auto v2 = dynamic_cast<basic_value_unsigned<A>*>(a2.get()))
+            n = v2->cvalue();
+        else
+            throw exception::value_type();
+        a_basic_string<A> result;
+        result.reserve(v1->cvalue().size() * n);
+        for (decltype(n) i = 0; i < n; ++i)
+            result.append(v1->cvalue());
+        return this->template make_result<basic_value_string<A>>(thread, l_vars,
+                                            node, std::move(result), narg == 3);
+    } else if (auto v1 = dynamic_cast<basic_value_int<A>*>(a1.get())) {
+        auto v2 = dynamic_cast<basic_value_int<A>*>(a2.get());
+        if (!v2)
+            throw exception::value_type();
+        auto s1 = v1->cvalue();
+        auto s2 = v2->cvalue();
+        auto min = std::numeric_limits<config::value_int_type>::min();
+        auto max = std::numeric_limits<config::value_int_type>::max();
+        if (s1 != 0 && s2 != 0) {
+            if (s1 > 0) {
+                if (s2 > 0) {
+                    if (s2 > max / s1)
+                        throw exception::op_overflow();
+                } else { // s2 < 0
+                    if (s2 < min / s1)
+                        throw exception::op_overflow();
+                }
+            } else { // s1 < 0
+                if (s2 > 0) {
+                    if (s1 < min / s2)
+                        throw exception::op_overflow();
+                } else { // s2 < 0
+                    // -min is undefined in two's complement representation
+                    // (which is required since C++20)
+                    if (s1 == min || s2 == min || -s2 > max / -s1)
+                        throw exception::op_overflow();
+                }
+            }
+        }
+        config::value_int_type result = s1 * s2;
+        return this->template make_result<basic_value_int<A>>(thread, l_vars,
+                                            node, std::move(result), narg == 3);
+    } else if (auto v1 = dynamic_cast<basic_value_unsigned<A>*>(a1.get())) {
+        auto v2 = dynamic_cast<basic_value_unsigned<A>*>(a2.get());
+        if (!v2)
+            throw exception::value_type();
+        config::value_unsigned_type result = v1->cvalue() * v2->cvalue();
+        return this->template make_result<basic_value_unsigned<A>>(thread,
+                                    l_vars, node, std::move(result), narg == 3);
+    } else
+        throw exception::value_type();
+}
+
 /*** f_ne ********************************************************************/
 
 template <impl::allocator A> typename basic_value<A>::value_ptr
@@ -499,7 +576,7 @@ f_sub<A>::eval(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
         auto v2 = dynamic_cast<basic_value_unsigned<A>*>(a2.get());
         if (!v2)
             throw exception::value_type();
-        auto result = v1->cvalue() - v2->cvalue();
+        config::value_unsigned_type result = v1->cvalue() - v2->cvalue();
         return this->template make_result<basic_value_unsigned<A>>(thread,
                                     l_vars, node, std::move(result), narg == 3);
     } else
@@ -596,6 +673,7 @@ add_predef_symbols(std::shared_ptr<basic_symbol_table<A>> sym, bool replace)
         { "le", predef::f_le<A>::create },
         { "lt", predef::f_lt<A>::create },
         { "mt_safe", predef::f_mt_safe<A>::create },
+        { "mul", predef::f_mul<A>::create },
         { "ne", predef::f_ne<A>::create },
         { "not", predef::f_not<A>::create },
         { "or", predef::f_or<A>::template create<predef::f_or<A>> },

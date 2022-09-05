@@ -1112,6 +1112,17 @@ BOOST_DATA_TEST_CASE(f_mt_safe, (std::vector<test::runner_result>{
 //! \endcond
 
 /*! \file
+ * \test \c f_mul -- Test of threadscript::predef::f_mul */
+//! \cond
+BOOST_DATA_TEST_CASE(f_mul, (std::vector<test::runner_result>{
+    // TODO
+}))
+{
+    test::check_runner(sample);
+}
+//! \endcond
+
+/*! \file
  * \test \c f_ne -- Test of threadscript::predef::f_ne. Almost all
  * implementation of f_ne is shared with f_eq (except testing the number of
  * arguments), therefore we do only a small number of checks here, assuming
