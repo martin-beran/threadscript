@@ -50,6 +50,12 @@
  * If a command or a function is called with at most this number of arguments,
  * use a vector from this pool instead of allocating a new one.
  *
+ * \todo Possible optimization of values: In addition to storing values of all
+ * types as references (internally \c std::shared_ptr), allow storing small
+ * values (with \c sizeof at most \c sizeof(std::shared_ptr) directly. There is
+ * a problem of a suitable internal representation, because using \c
+ * std::variant would add 8 bytes to each value.
+ *
  * \section To_do_build To-do tasks related to the build process
  *
  * \todo Review \c NOLINT* suppressions related to false positives that are
