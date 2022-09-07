@@ -1115,7 +1115,153 @@ BOOST_DATA_TEST_CASE(f_mt_safe, (std::vector<test::runner_result>{
  * \test \c f_mul -- Test of threadscript::predef::f_mul */
 //! \cond
 BOOST_DATA_TEST_CASE(f_mul, (std::vector<test::runner_result>{
-    // TODO
+    {R"(mul())", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(mul(1))", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(mul(null, 2, 3, 4))", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(mul(null, 2))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(mul(null, null, 2))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(mul(1, null))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(mul(null, 1, null))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(mul(false, true))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(mul(1, +2))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(mul(-1, 2))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(mul("a", "bc"))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {test::u_op("mul", 0U, 0U), test::uint_t(0U), ""},
+    {test::u_op("mul", 5U, 12U), test::uint_t(60U), ""},
+    {test::u_op("mul", test::u_half, 2U), test::uint_t(test::u_max - 1U), ""},
+    {test::u_op("mul", test::u_half + 1U, 2U), test::uint_t(0U), ""},
+    {test::u_op("mul", 2U, test::u_half + 2U), test::uint_t(2U), ""},
+    {test::i_op("mul", +5, +12), test::int_t(60), ""},
+    {test::i_op("mul", -5, +12), test::int_t(-60), ""},
+    {test::i_op("mul", +5, -12), test::int_t(-60), ""},
+    {test::i_op("mul", -5, -12), test::int_t(60), ""},
+    {test::i_op("mul", test::i_p_half, 2), test::int_t(test::i_max - 1), ""},
+    {test::i_op("mul", test::i_p_half + 1, 2), test::exc{
+        typeid(ts::exception::op_overflow),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Overflow"
+    }, ""},
+    {test::i_op("mul", test::i_p_half, -2), test::int_t(test::i_min + 2), ""},
+    {test::i_op("mul", test::i_p_half + 1, -2), test::int_t(test::i_min), ""},
+    {test::i_op("mul", test::i_p_half + 2, -2), test::exc{
+        typeid(ts::exception::op_overflow),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Overflow"
+    }, ""},
+    {test::i_op("mul", test::i_n_half, 2), test::int_t(test::i_min), ""},
+    {test::i_op("mul", test::i_n_half - 1, 2), test::exc{
+        typeid(ts::exception::op_overflow),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Overflow"
+    }, ""},
+    {test::i_op("mul", test::i_n_half + 1, -2),
+        test::int_t(test::i_max - 1), ""},
+    {test::i_op("mul", test::i_n_half, -2), test::exc{
+        typeid(ts::exception::op_overflow),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Overflow"
+    }, ""},
+    {test::i_op("mul", -1, test::i_max), test::int_t(test::i_min + 1), ""},
+    {test::i_op("mul", -1, test::i_min), test::exc{
+        typeid(ts::exception::op_overflow),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Overflow"
+    }, ""},
+    {R"(mul("ijk", 0))", "", ""},
+    {R"(mul("ijk", 1))", "ijk", ""},
+    {R"(mul("ijk", 2))", "ijkijk", ""},
+    {R"(mul(0, "ijk"))", "", ""},
+    {R"(mul(1, "ijk"))", "ijk", ""},
+    {R"(mul(5, "ijk "))", "ijk ijk ijk ijk ijk ", ""},
+    {R"(mul("ijk", +0))", "", ""},
+    {R"(mul("ijk", +1))", "ijk", ""},
+    {R"(mul("ijk", +2))", "ijkijk", ""},
+    {R"(mul(-3, "ijk"))", test::exc{
+        typeid(ts::exception::op_overflow),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Overflow"
+    }, ""},
+    {R"(mul(+0, "ijk"))", "", ""},
+    {R"(mul(+1, "ijk"))", "ijk", ""},
+    {R"(mul(+5, "ijk "))", "ijk ijk ijk ijk ijk ", ""},
+    {R"(mul(-1, "ijk"))", test::exc{
+        typeid(ts::exception::op_overflow),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Overflow"
+    }, ""},
+    {R"(mul(0, 1, 2))", test::exc{ // target is constant literal
+        typeid(ts::exception::value_read_only),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Read-only value"
+    }, ""},
+    {R"(mul(null, 1, 2))", test::uint_t(2), ""}, // target is null
+    {R"(mul(true, 2, 3))", test::uint_t(6), ""}, // target constant, wrong type
+    // target is modifiable
+    {R"(
+        seq(
+            var("r", clone(0)),
+            print(is_same(mul(var("r"), 2, 3), var("r"))),
+            var("r")
+        )
+    )", test::uint_t(6), "true"},
+    {R"(
+        seq(
+            var("r", clone(+0)),
+            print(is_same(mul(var("r"), -1, +3), var("r"))),
+            var("r")
+        )
+    )", test::int_t(-3), "true"},
+    {R"(
+        seq(
+            var("r", clone("")),
+            print(is_same(mul(var("r"), "Hello", 2), var("r"))),
+            var("r")
+        )
+    )", "HelloHello", "true"},
 }))
 {
     test::check_runner(sample);
