@@ -8,9 +8,6 @@
  *
  * \section To_do_first_release To-do list for the first release
  *
- * \todo Arithmetic functions for \c int and \c unsigned (\c add, \c sub, \c
- * mul, \c div, \c mod)
- *
  * \todo Conversion functions between \c int and \c unsigned
  *
  * \todo Conversion from \c string to \c int and \c unsigned

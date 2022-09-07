@@ -163,6 +163,56 @@ protected:
                                             std::string_view fun_name) override;
 };
 
+//! Common functionality of classes f_div and f_mod
+/*! \tparam A an allocator type */
+template <impl::allocator A>
+class f_div_base: public basic_value_native_fun<f_div_base<A>, A> {
+    using basic_value_native_fun<f_div_base<A>, A>::basic_value_native_fun;
+protected:
+    //! Computes a result.
+    /*! This is the common part of evaluation used by both f_div::eval() and
+     * f_mod::eval(). Arguments are the same as in eval():
+     * \param[in] thread
+     * \param[in] l_vars
+     * \param[in] node
+     * \param[in] div division if \c true, remainder if \c false
+     * \return the result of evaluation
+     * \throw exception::runtime_error a class derived from this as described
+     * in f_div documentation */
+    typename basic_value<A>::value_ptr eval_impl(basic_state<A>& thread,
+                                                 basic_symbol_table<A>& l_vars,
+                                                 const basic_code_node<A>& node,
+                                                 bool div);
+};
+
+//! Function \c div
+/*! Numeric division. Unsigned division is done using modulo arithmetic, signed
+ * overflow (only when dividing the minimum value by -1) causes
+ * exception::op_overflow.
+ * \param result (optional) if it exists and has the same type as \a val1 and
+ * \a val2, the result is stored into it; otherwise, a new value is allocated
+ * for the result
+ * \param val1 the first operand, it must be \c int or \c unsigned
+ * \param val2 the second operand, it must have the same type as \a val1
+ * \return \a val1 / \a val2
+ * \throw exception::op_narg if the number of arguments is not 2 or 3
+ * \throw exception::value_null if \a val1 or \a val2 is \c null
+ * \throw exception::value_type if \a val1 and \a val2 do not have the same
+ * type or if their type is not \c int or \c unsigned
+ * \throw exception::op_div_zero if \a val2 is zero
+ * \throw exception::op_overflow if \a val1 and \a val2 have type \c int and
+ * overflow occurs, that is, if \a val1 is the minimum (negative) value and \a
+ * val2 is -1 */
+template <impl::allocator A>
+class f_div final: public f_div_base<A> {
+    using f_div_base<A>::f_div_base;
+protected:
+    typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
+                                            basic_symbol_table<A>& l_vars,
+                                            const basic_code_node<A>& node,
+                                            std::string_view fun_name) override;
+};
+
 //! Function \c eq
 /*! Compares two values for equality. Unlike f_is_same, this function compares
  * the contents of values, not their location in memory. If both values are of
@@ -409,6 +459,39 @@ public:
      * class f_eq itself */
     static bool compare(typename basic_value<A>::value_ptr val1,
                         typename basic_value<A>::value_ptr val2);
+protected:
+    typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
+                                            basic_symbol_table<A>& l_vars,
+                                            const basic_code_node<A>& node,
+                                            std::string_view fun_name) override;
+};
+
+//! Function \c mod
+/*! Numeric remainder (modulo) of division. It follows the C++ rules, therefore
+ * it throws exceptions under the same conditions as f_div: Unsigned division
+ * is done using modulo arithmetic, signed overflow (only when dividing the
+ * minimum value by -1) causes exception::op_overflow. Division and remainder
+ * satisfy the identity
+ * \code
+ * (a / b) * b + a % b == a
+ * \endcode
+ * \param result (optional) if it exists and has the same type as \a val1 and
+ * \a val2, the result is stored into it; otherwise, a new value is allocated
+ * for the result
+ * \param val1 the first operand, it must be \c int or \c unsigned
+ * \param val2 the second operand, it must have the same type as \a val1
+ * \return \a val1 % \a val2
+ * \throw exception::op_narg if the number of arguments is not 2 or 3
+ * \throw exception::value_null if \a val1 or \a val2 is \c null
+ * \throw exception::value_type if \a val1 and \a val2 do not have the same
+ * type or if their type is not \c int or \c unsigned
+ * \throw exception::op_div_zero if \a val2 is zero
+ * \throw exception::op_overflow if \a val1 and \a val2 have type \c int and
+ * overflow occurs in division, that is, if \a val1 is the minimum (negative)
+ * value and \a val2 is -1 */
+template <impl::allocator A>
+class f_mod final: public f_div_base<A> {
+    using f_div_base<A>::f_div_base;
 protected:
     typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
                                             basic_symbol_table<A>& l_vars,

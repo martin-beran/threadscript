@@ -139,6 +139,57 @@ f_clone<A>::eval(basic_state<A>& thread, basic_symbol_table<A>&l_vars,
     return val->shallow_copy(thread.get_allocator(), false);
 }
 
+/*** f_div_base **************************************************************/
+
+template <impl::allocator A> typename basic_value<A>::value_ptr
+f_div_base<A>::eval_impl(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
+                         const basic_code_node<A>& node, bool div)
+{
+    size_t narg = this->narg(node);
+    if (narg != 2 && narg != 3)
+        throw exception::op_narg();
+    auto a1 = this->arg(thread, l_vars, node, narg - 2);
+    auto a2 = this->arg(thread, l_vars, node, narg - 1);
+    if (!a1 || !a2)
+        throw exception::value_null();
+    if (auto v1 = dynamic_cast<basic_value_int<A>*>(a1.get())) {
+        auto v2 = dynamic_cast<basic_value_int<A>*>(a2.get());
+        if (!v2)
+            throw exception::value_type();
+        auto s1 = v1->cvalue();
+        auto s2 = v2->cvalue();
+        if (s2 == 0)
+            throw exception::op_div_zero();
+        constexpr auto min = std::numeric_limits<config::value_int_type>::min();
+        if (s1 == min && s2 == -1)
+            throw exception::op_overflow();
+        config::value_int_type result = div ? s1 / s2 : s1 % s2;
+        return this->template make_result<basic_value_int<A>>(thread, l_vars,
+                                            node, std::move(result), narg == 3);
+    } else if (auto v1 = dynamic_cast<basic_value_unsigned<A>*>(a1.get())) {
+        auto v2 = dynamic_cast<basic_value_unsigned<A>*>(a2.get());
+        if (!v2)
+            throw exception::value_type();
+        auto s1 = v1->cvalue();
+        auto s2 = v2->cvalue();
+        if (s2 == 0)
+            throw exception::op_div_zero();
+        config::value_unsigned_type result = div ? s1 / s2 : s1 % s2;
+        return this->template make_result<basic_value_unsigned<A>>(thread,
+                                    l_vars, node, std::move(result), narg == 3);
+    } else
+        throw exception::value_type();
+}
+
+/*** f_div *******************************************************************/
+
+template <impl::allocator A> typename basic_value<A>::value_ptr
+f_div<A>::eval(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
+              const basic_code_node<A>& node, std::string_view)
+{
+    return f_div_base<A>::eval_impl(thread, l_vars, node, true);
+}
+
 /*** f_eq ********************************************************************/
 
 template <impl::allocator A>
@@ -351,6 +402,15 @@ f_lt<A>::eval(basic_state<A>& thread, basic_symbol_table<A>&l_vars,
                                                std::move(result), narg == 3);
 }
 
+/*** f_mod *******************************************************************/
+
+template <impl::allocator A> typename basic_value<A>::value_ptr
+f_mod<A>::eval(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
+              const basic_code_node<A>& node, std::string_view)
+{
+    return f_div_base<A>::eval_impl(thread, l_vars, node, false);
+}
+
 /*** f_mt_safe ***************************************************************/
 
 template <impl::allocator A> typename basic_value<A>::value_ptr
@@ -410,8 +470,8 @@ f_mul<A>::eval(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
             throw exception::value_type();
         auto s1 = v1->cvalue();
         auto s2 = v2->cvalue();
-        auto min = std::numeric_limits<config::value_int_type>::min();
-        auto max = std::numeric_limits<config::value_int_type>::max();
+        constexpr auto min = std::numeric_limits<config::value_int_type>::min();
+        constexpr auto max = std::numeric_limits<config::value_int_type>::max();
         if (s1 != 0 && s2 != 0) {
             if (s1 > 0) {
                 if (s2 > 0) {
@@ -663,6 +723,7 @@ add_predef_symbols(std::shared_ptr<basic_symbol_table<A>> sym, bool replace)
         { "and_r", predef::f_and<A>::template create<predef::f_and_r<A>> },
         { "bool", predef::f_bool<A>::create },
         { "clone", predef::f_clone<A>::create },
+        { "div", predef::f_div<A>::template create<predef::f_div<A>> },
         { "eq", predef::f_eq<A>::create },
         { "ge", predef::f_ge<A>::create },
         { "gt", predef::f_gt<A>::create },
@@ -672,6 +733,7 @@ add_predef_symbols(std::shared_ptr<basic_symbol_table<A>> sym, bool replace)
         { "is_same", predef::f_is_same<A>::create },
         { "le", predef::f_le<A>::create },
         { "lt", predef::f_lt<A>::create },
+        { "mod", predef::f_mod<A>::template create<predef::f_mod<A>> },
         { "mt_safe", predef::f_mt_safe<A>::create },
         { "mul", predef::f_mul<A>::create },
         { "ne", predef::f_ne<A>::create },

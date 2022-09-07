@@ -372,7 +372,9 @@ BOOST_DATA_TEST_CASE(f_and, (std::vector<test::runner_result>{
 //! \endcond
 
 /*! \file
- * \test \c f_and_r -- Test of threadscript::predef::f_and_r */
+ * \test \c f_and_r -- Test of threadscript::predef::f_and_r. Almost all
+ * implementation of f_and_r is shared with f_and, therefore we do only a small
+ * number of checks here, assuming that tests of f_and apply here, too. */
 //! \cond
 BOOST_DATA_TEST_CASE(f_and_r, (std::vector<test::runner_result>{
     {R"(and_r())", test::exc{
@@ -469,6 +471,152 @@ BOOST_DATA_TEST_CASE(f_clone, (std::vector<test::runner_result>{
     {R"(clone(-3))", test::int_t(-3), ""},
     {R"(clone(""))", "", ""},
     {R"(clone("Abc"))", "Abc", ""},
+}))
+{
+    test::check_runner(sample);
+}
+//! \endcond
+
+/*! \file
+ * \test \c f_div -- Test of threadscript::predef::f_div, which also applies to
+ * threadscript::predef::f_div_base (the part of implementation shared with
+ * threadscript::predef::f_mod) */
+//! \cond
+BOOST_DATA_TEST_CASE(f_div, (std::vector<test::runner_result>{
+    {R"(div())", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(div(1))", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(div(null, 2, 3, 4))", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(div(null, 2))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(div(null, null, 2))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(div(1, null))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(div(null, 1, null))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(div(false, true))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(div(1, +2))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(div(-1, 2))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(div("a", "a"))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {test::u_op("div", 0U, 1U), test::uint_t(0U), ""},
+    {test::u_op("div", 0U, 5U), test::uint_t(0U), ""},
+    {test::u_op("div", 1U, 1U), test::uint_t(1U), ""},
+    {test::u_op("div", 1U, 2U), test::uint_t(0U), ""},
+    {test::u_op("div", 6U, 3U), test::uint_t(2U), ""},
+    {test::u_op("div", 7U, 3U), test::uint_t(2U), ""},
+    {test::u_op("div", 8U, 3U), test::uint_t(2U), ""},
+    {test::u_op("div", 9U, 3U), test::uint_t(3U), ""},
+    {test::u_op("div", test::u_max, 1U), test::u_max, ""},
+    {test::u_op("div", test::u_max, 2U), test::uint_t(test::u_half), ""},
+    {test::u_op("div", test::u_max, test::u_max), test::uint_t(1U), ""},
+    {test::u_op("div", 0U, 0U), test::exc{
+        typeid(ts::exception::op_div_zero),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Division by zero"
+    }, ""},
+    {test::u_op("div", 1U, 0U), test::exc{
+        typeid(ts::exception::op_div_zero),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Division by zero"
+    }, ""},
+    {test::u_op("div", test::u_half, 0U), test::exc{
+        typeid(ts::exception::op_div_zero),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Division by zero"
+    }, ""},
+    {test::i_op("div", 0, 1), test::int_t(0), ""},
+    {test::i_op("div", 0, -5), test::int_t(0), ""},
+    {test::i_op("div", 1, 1), test::int_t(1), ""},
+    {test::i_op("div", 1, -1), test::int_t(-1), ""},
+    {test::i_op("div", -1, 1), test::int_t(-1), ""},
+    {test::i_op("div", -1, -1), test::int_t(1), ""},
+    {test::i_op("div", 1, 2), test::int_t(0), ""},
+    {test::i_op("div", 6, 3), test::int_t(2), ""},
+    {test::i_op("div", 7, -3), test::int_t(-2), ""},
+    {test::i_op("div", -8, 3), test::int_t(-2), ""},
+    {test::i_op("div", -9, -3), test::int_t(3), ""},
+    {test::i_op("div", 0, 0), test::exc{
+        typeid(ts::exception::op_div_zero),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Division by zero"
+    }, ""},
+    {test::i_op("div", 1, 0), test::exc{
+        typeid(ts::exception::op_div_zero),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Division by zero"
+    }, ""},
+    {test::i_op("div", -2, 0), test::exc{
+        typeid(ts::exception::op_div_zero),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Division by zero"
+    }, ""},
+    {test::i_op("div", test::i_min, -1), test::exc{
+        typeid(ts::exception::op_overflow),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Overflow"
+    }, ""},
+    {R"(div(0, 1, 2))", test::exc{ // target is constant literal
+        typeid(ts::exception::value_read_only),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Read-only value"
+    }, ""},
+    {R"(div(null, +10, +2))", test::int_t(5), ""}, // target is null
+    {R"(div(true, 6, 2))", test::uint_t(3), ""}, // target constant, wrong type
+    // target is modifiable
+    {R"(
+        seq(
+            var("r", clone(0)),
+            print(is_same(div(var("r"), 3, 2), var("r"))),
+            var("r")
+        )
+    )", test::uint_t(1), "true"},
+    {R"(
+        seq(
+            var("r", clone(+0)),
+            print(is_same(div(var("r"), -15, +3), var("r"))),
+            var("r")
+        )
+    )", test::int_t(-5), "true"},
 }))
 {
     test::check_runner(sample);
@@ -1075,6 +1223,72 @@ BOOST_DATA_TEST_CASE(f_lt, (std::vector<test::runner_result>{
 //! \endcond
 
 /*! \file
+ * \test \c f_mod -- Test of threadscript::predef::f_mod. Almost all
+ * implementation of f_mod is shared with f_div, therefore we do only a small
+ * number of checks here, assuming that tests of f_div apply here, too. */
+//! \cond
+BOOST_DATA_TEST_CASE(f_mod, (std::vector<test::runner_result>{
+    {test::u_op("mod", 0U, 1U), test::uint_t(0U), ""},
+    {test::u_op("mod", 0U, 5U), test::uint_t(0U), ""},
+    {test::u_op("mod", 1U, 1U), test::uint_t(0U), ""},
+    {test::u_op("mod", 1U, 2U), test::uint_t(1U), ""},
+    {test::u_op("mod", 6U, 3U), test::uint_t(0U), ""},
+    {test::u_op("mod", 7U, 3U), test::uint_t(1U), ""},
+    {test::u_op("mod", 8U, 3U), test::uint_t(2U), ""},
+    {test::u_op("mod", 9U, 3U), test::uint_t(0U), ""},
+    {test::u_op("mod", 0U, 0U), test::exc{
+        typeid(ts::exception::op_div_zero),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Division by zero"
+    }, ""},
+    {test::u_op("mod", 1U, 0U), test::exc{
+        typeid(ts::exception::op_div_zero),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Division by zero"
+    }, ""},
+    {test::u_op("mod", test::u_half, 0U), test::exc{
+        typeid(ts::exception::op_div_zero),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Division by zero"
+    }, ""},
+    {test::i_op("mod", 0, 1), test::int_t(0), ""},
+    {test::i_op("mod", 0, -5), test::int_t(0), ""},
+    {test::i_op("mod", 1, 1), test::int_t(0), ""},
+    {test::i_op("mod", 1, -1), test::int_t(0), ""},
+    {test::i_op("mod", -1, 1), test::int_t(0), ""},
+    {test::i_op("mod", -1, -1), test::int_t(0), ""},
+    {test::i_op("mod", 1, 2), test::int_t(1), ""},
+    {test::i_op("mod", 8, 4), test::int_t(0), ""},
+    {test::i_op("mod", 9, -4), test::int_t(1), ""},
+    {test::i_op("mod", -10, 4), test::int_t(-2), ""},
+    {test::i_op("mod", -11, -4), test::int_t(-3), ""},
+    {test::i_op("mod", 0, 0), test::exc{
+        typeid(ts::exception::op_div_zero),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Division by zero"
+    }, ""},
+    {test::i_op("mod", 1, 0), test::exc{
+        typeid(ts::exception::op_div_zero),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Division by zero"
+    }, ""},
+    {test::i_op("mod", -2, 0), test::exc{
+        typeid(ts::exception::op_div_zero),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Division by zero"
+    }, ""},
+    {test::i_op("mod", test::i_min, -1), test::exc{
+        typeid(ts::exception::op_overflow),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Overflow"
+    }, ""},
+}))
+{
+    test::check_runner(sample);
+}
+//! \endcond
+
+/*! \file
  * \test \c f_mt_safe -- Test of threadscript::predef::f_mt_safe
  * \todo \c f_mt_safe: test throwing threadscript::exception::value_mt_unsafe */
 //! \cond
@@ -1412,7 +1626,9 @@ BOOST_DATA_TEST_CASE(f_or, (std::vector<test::runner_result>{
 //! \endcond
 
 /*! \file
- * \test \c f_or_r -- Test of threadscript::predef::f_or_r */
+ * \test \c f_or_r -- Test of threadscript::predef::f_or_r. Almost all
+ * implementation of f_or_r is shared with f_or, therefore we do only a small
+ * number of checks here, assuming that tests of f_or apply here, too. */
 //! \cond
 BOOST_DATA_TEST_CASE(f_or_r, (std::vector<test::runner_result>{
     {R"(or_r())", test::exc{
