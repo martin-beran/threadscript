@@ -137,6 +137,7 @@ extern template class f_eq<allocator_any>;
 extern template class f_ge<allocator_any>;
 extern template class f_gt<allocator_any>;
 extern template class f_if<allocator_any>;
+extern template class f_int<allocator_any>;
 extern template class f_is_mt_safe<allocator_any>;
 extern template class f_is_null<allocator_any>;
 extern template class f_le<allocator_any>;
@@ -153,6 +154,7 @@ extern template class f_is_same<allocator_any>;
 extern template class f_seq<allocator_any>;
 extern template class f_sub<allocator_any>;
 extern template class f_type<allocator_any>;
+extern template class f_unsigned<allocator_any>;
 extern template class f_var<allocator_any>;
 extern template class f_while<allocator_any>;
 

@@ -82,6 +82,7 @@ template class f_eq<allocator_any>;
 template class f_ge<allocator_any>;
 template class f_gt<allocator_any>;
 template class f_if<allocator_any>;
+template class f_int<allocator_any>;
 template class f_is_mt_safe<allocator_any>;
 template class f_is_null<allocator_any>;
 template class f_le<allocator_any>;
@@ -98,6 +99,7 @@ template class f_is_same<allocator_any>;
 template class f_seq<allocator_any>;
 template class f_sub<allocator_any>;
 template class f_type<allocator_any>;
+template class f_unsigned<allocator_any>;
 template class f_var<allocator_any>;
 template class f_while<allocator_any>;
 

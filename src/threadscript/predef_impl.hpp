@@ -30,11 +30,12 @@ f_add<A>::eval(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
         auto v2 = dynamic_cast<basic_value_int<A>*>(a2.get());
         if (!v2)
             throw exception::value_type();
+        // Here, and in other arithmetic operations, we must make sure that if
+        // config::value_unsigned_type is smaller than int, we do not perform
+        // signed instead of unsigned computation due to integral promotion
         auto s1 = v1->cvalue();
-        auto u1 = config::value_unsigned_type(s1);
         auto s2 = v2->cvalue();
-        auto u2 = config::value_unsigned_type(s2);
-        config::value_int_type result = u1 + u2;
+        config::value_int_type result = uintmax_t(s1) + uintmax_t(s2);
         if ((s1 > 0 && s2 > 0 && (result < s1 || result < s2)) ||
             (s1 < 0 && s2 < 0 && (result > s1 || result > s2)))
         {
@@ -46,7 +47,8 @@ f_add<A>::eval(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
         auto v2 = dynamic_cast<basic_value_unsigned<A>*>(a2.get());
         if (!v2)
             throw exception::value_type();
-        config::value_unsigned_type result = v1->cvalue() + v2->cvalue();
+        config::value_unsigned_type result =
+            uintmax_t(v1->cvalue()) + uintmax_t(v2->cvalue());
         return this->template make_result<basic_value_unsigned<A>>(thread,
                                     l_vars, node, std::move(result), narg == 3);
     } else if (auto v1 = dynamic_cast<basic_value_string<A>*>(a1.get())) {
@@ -170,11 +172,11 @@ f_div_base<A>::eval_impl(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
         auto v2 = dynamic_cast<basic_value_unsigned<A>*>(a2.get());
         if (!v2)
             throw exception::value_type();
-        auto s1 = v1->cvalue();
-        auto s2 = v2->cvalue();
-        if (s2 == 0)
+        uintmax_t u1 = v1->cvalue();
+        uintmax_t u2 = v2->cvalue();
+        if (u2 == 0)
             throw exception::op_div_zero();
-        config::value_unsigned_type result = div ? s1 / s2 : s1 % s2;
+        config::value_unsigned_type result = div ? u1 / u2 : u1 % u2;
         return this->template make_result<basic_value_unsigned<A>>(thread,
                                     l_vars, node, std::move(result), narg == 3);
     } else
@@ -286,6 +288,88 @@ f_if<A>::eval(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
             return this->arg(thread, l_vars, node, 2);
         else
             return nullptr;
+}
+
+/*** f_int *******************************************************************/
+
+template <impl::allocator A> typename basic_value<A>::value_ptr
+f_int<A>::eval(basic_state<A>& thread, basic_symbol_table<A>&l_vars,
+               const basic_code_node<A>& node, std::string_view)
+{
+    size_t narg = this->narg(node);
+    if (narg != 1 && narg != 2)
+        throw exception::op_narg();
+    auto val = this->arg(thread, l_vars, node, narg - 1);
+    if (!val)
+        throw exception::value_null();
+    config::value_int_type result = 0;
+    if (auto v = dynamic_cast<basic_value_int<A>*>(val.get()))
+        result = v->cvalue();
+    else if (auto v = dynamic_cast<basic_value_unsigned<A>*>(val.get()))
+        result = config::value_int_type(v->cvalue());
+    else if (auto v = dynamic_cast<basic_value_string<A>*>(val.get()))
+        result =
+            std::get<config::value_int_type>(from_string(v->cvalue(), true));
+    else
+        throw exception::value_type();
+    return this->template make_result<basic_value_int<A>>(thread, l_vars, node,
+                                               std::move(result), narg == 2);
+}
+
+template <impl::allocator A>
+std::variant<config::value_int_type, config::value_unsigned_type>
+f_int<A>::from_string(const a_basic_string<A>& str, bool sign)
+{
+    bool negative = false;
+    auto p = str.cbegin();
+    auto e = str.cend();
+    if (p == e)
+        throw exception::value_bad();
+    switch (*p) {
+    case '-':
+        if (!sign)
+            throw exception::value_bad();
+        negative = true;
+        [[fallthrough]];
+    case '+':
+        ++p;
+        break;
+    default:
+        break;
+    }
+    if (p == e)
+        throw exception::value_bad();
+    uintmax_t res = 0;
+    bool overflow = false;
+    for (; p != e; ++p)
+        if (*p >= '0' && *p <= '9') {
+            if (auto res2 = res * 10U + uintmax_t(*p - '0'); res2 >= res)
+                res = res2;
+            else // overflow, wraparound
+                overflow = true; // do not throw immediately, check characters
+                                 // after overflow
+        } else
+            throw exception::value_bad();
+    if (overflow)
+        throw exception::value_out_of_range();
+    if (sign) {
+        constexpr uintmax_t max =
+            std::numeric_limits<config::value_int_type>::max();
+        if (negative) {
+            if (res <= max + 1U)
+                return config::value_int_type(-res);
+            else
+                throw exception::value_out_of_range();
+        } else
+            if (res <= max)
+                return config::value_int_type(res);
+            else
+                throw exception::value_out_of_range();
+    } else
+        if (res <= std::numeric_limits<config::value_unsigned_type>::max())
+            return config::value_unsigned_type(res);
+        else // handle config::value_unsigned_type smaller than uintmax_t
+            throw exception::value_out_of_range();
 }
 
 /*** f_is_mt_safe ************************************************************/
@@ -500,7 +584,8 @@ f_mul<A>::eval(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
         auto v2 = dynamic_cast<basic_value_unsigned<A>*>(a2.get());
         if (!v2)
             throw exception::value_type();
-        config::value_unsigned_type result = v1->cvalue() * v2->cvalue();
+        config::value_unsigned_type result =
+            uintmax_t(v1->cvalue()) * uintmax_t(v2->cvalue());
         return this->template make_result<basic_value_unsigned<A>>(thread,
                                     l_vars, node, std::move(result), narg == 3);
     } else
@@ -621,10 +706,8 @@ f_sub<A>::eval(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
         if (!v2)
             throw exception::value_type();
         auto s1 = v1->cvalue();
-        auto u1 = config::value_unsigned_type(s1);
         auto s2 = v2->cvalue();
-        auto u2 = config::value_unsigned_type(s2);
-        config::value_int_type result = u1 - u2;
+        config::value_int_type result = uintmax_t(s1) - uintmax_t(s2);
         if ((s1 >= 0 && s2 < 0 && result < s1) ||
             (s1 < 0 && s2 >= 0 && result > s1))
         {
@@ -636,7 +719,8 @@ f_sub<A>::eval(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
         auto v2 = dynamic_cast<basic_value_unsigned<A>*>(a2.get());
         if (!v2)
             throw exception::value_type();
-        config::value_unsigned_type result = v1->cvalue() - v2->cvalue();
+        config::value_unsigned_type result =
+            uintmax_t(v1->cvalue()) - uintmax_t(v2->cvalue());
         return this->template make_result<basic_value_unsigned<A>>(thread,
                                     l_vars, node, std::move(result), narg == 3);
     } else
@@ -658,6 +742,32 @@ f_type<A>::eval(basic_state<A>& thread, basic_symbol_table<A>&l_vars,
     a_basic_string<A> result{val->type_name(), thread.get_allocator()};
     return this->template make_result<basic_value_string<A>>(thread, l_vars,
                                          node, std::move(result), narg == 2);
+}
+
+/*** f_unsigned **************************************************************/
+
+template <impl::allocator A> typename basic_value<A>::value_ptr
+f_unsigned<A>::eval(basic_state<A>& thread, basic_symbol_table<A>&l_vars,
+                    const basic_code_node<A>& node, std::string_view)
+{
+    size_t narg = this->narg(node);
+    if (narg != 1 && narg != 2)
+        throw exception::op_narg();
+    auto val = this->arg(thread, l_vars, node, narg - 1);
+    if (!val)
+        throw exception::value_null();
+    config::value_unsigned_type result = 0U;
+    if (auto v = dynamic_cast<basic_value_unsigned<A>*>(val.get()))
+        result = v->cvalue();
+    else if (auto v = dynamic_cast<basic_value_int<A>*>(val.get()))
+        result = config::value_unsigned_type(v->cvalue());
+    else if (auto v = dynamic_cast<basic_value_string<A>*>(val.get()))
+        result = std::get<config::value_unsigned_type>(
+                                    f_int<A>::from_string(v->cvalue(), false));
+    else
+        throw exception::value_type();
+    return this->template make_result<basic_value_unsigned<A>>(thread, l_vars,
+                                           node, std::move(result), narg == 2);
 }
 
 /*** f_var *******************************************************************/
@@ -728,6 +838,7 @@ add_predef_symbols(std::shared_ptr<basic_symbol_table<A>> sym, bool replace)
         { "ge", predef::f_ge<A>::create },
         { "gt", predef::f_gt<A>::create },
         { "if", predef::f_if<A>::create },
+        { "int", predef::f_int<A>::create },
         { "is_mt_safe", predef::f_is_mt_safe<A>::create },
         { "is_null", predef::f_is_null<A>::create },
         { "is_same", predef::f_is_same<A>::create },
@@ -744,6 +855,7 @@ add_predef_symbols(std::shared_ptr<basic_symbol_table<A>> sym, bool replace)
         { "seq", predef::f_seq<A>::create },
         { "sub", predef::f_sub<A>::create },
         { "type", predef::f_type<A>::create },
+        { "unsigned", predef::f_unsigned<A>::create },
         { "var", predef::f_var<A>::create },
         { "while", predef::f_while<A>::create },
     }));

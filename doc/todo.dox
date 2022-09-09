@@ -8,10 +8,6 @@
  *
  * \section To_do_first_release To-do list for the first release
  *
- * \todo Conversion functions between \c int and \c unsigned
- *
- * \todo Conversion from \c string to \c int and \c unsigned
- *
  * \todo A function returning a substring of a \c string
  *
  * \todo A function returning the size of a value: the length of a \c string,

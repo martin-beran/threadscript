@@ -150,10 +150,20 @@ std::string u_op(const std::string op, uint_t a, uint_t b)
     return op + "(" + std::to_string(a) + ", " + std::to_string(b) + ")";
 }
 
+std::string u_op(const std::string op, uint_t a)
+{
+    return op + "(" + std::to_string(a) + ")";
+}
+
 std::string i_op(const std::string op, int_t a, int_t b)
 {
     return op + "(" + (a >= 0 ? "+" : "") +  std::to_string(a) + ", " +
         (b >= 0 ? "+" : "") + std::to_string(b) + ")";
+}
+
+std::string i_op(const std::string op, int_t a)
+{
+    return op + "(" + (a >= 0 ? "+" : "") +  std::to_string(a) + ")";
 }
 
 } // namespace test
@@ -905,6 +915,134 @@ BOOST_DATA_TEST_CASE(f_if, (std::vector<test::runner_result>{
     {R"(if(false, seq(print("then"), 1)))", nullptr, ""},
     {R"(if(false, print("then"), seq(print("else"), 2)))",
         test::uint_t(2), "else"},
+}))
+{
+    test::check_runner(sample);
+}
+//! \endcond
+
+/*! \file
+ * \test \c f_int -- Test of threadscript::predef::f_int */
+//! \cond
+BOOST_DATA_TEST_CASE(f_int, (std::vector<test::runner_result>{
+    {R"(int())", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(int(null, 0, null))", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(int(null))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(int(null, null))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(int(true))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {test::i_op("int", 0), test::int_t(0), ""},
+    {test::i_op("int", 123), test::int_t(123), ""},
+    {test::i_op("int", -45), test::int_t(-45), ""},
+    {test::i_op("int", test::i_min), test::int_t(test::i_min), ""},
+    {test::i_op("int", test::i_n_half), test::int_t(test::i_n_half), ""},
+    {test::i_op("int", test::i_p_half), test::int_t(test::i_p_half), ""},
+    {test::i_op("int", test::i_max), test::int_t(test::i_max), ""},
+    {test::u_op("int", 0U), test::int_t(0), ""},
+    {test::u_op("int", 123U), test::int_t(123), ""},
+    {test::u_op("int", test::u_half), test::int_t(test::i_max), ""},
+    {test::u_op("int", test::u_half + 1U), test::int_t(test::i_min), ""},
+    {test::u_op("int", test::u_max - 1U), test::int_t(-2), ""},
+    {test::u_op("int", test::u_max), test::int_t(-1), ""},
+    {R"(int(""))", test::exc{
+        typeid(ts::exception::value_bad),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value"
+    }, ""},
+    {R"(int("+"))", test::exc{
+        typeid(ts::exception::value_bad),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value"
+    }, ""},
+    {R"(int("-"))", test::exc{
+        typeid(ts::exception::value_bad),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value"
+    }, ""},
+    {R"(int(" 123"))", test::exc{
+        typeid(ts::exception::value_bad),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value"
+    }, ""},
+    {R"(int("123 "))", test::exc{
+        typeid(ts::exception::value_bad),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value"
+    }, ""},
+    {R"(int("*123"))", test::exc{
+        typeid(ts::exception::value_bad),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value"
+    }, ""},
+    {R"(int("123a"))", test::exc{
+        typeid(ts::exception::value_bad),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value"
+    }, ""},
+    {R"(int("0"))", test::int_t(0), ""},
+    {R"(int("1234"))", test::int_t(1234), ""},
+    {R"(int("+234"))", test::int_t(234), ""},
+    {R"(int("-456"))", test::int_t(-456), ""},
+    {R"(int("9223372036854775808"))", test::exc{ // 2^63
+        typeid(ts::exception::value_out_of_range),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Value out of range"
+    }, ""},
+    {R"(int("18446744073709551616"))", test::exc{ // 2^64
+        typeid(ts::exception::value_out_of_range),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Value out of range"
+    }, ""},
+    {R"(int("18446744073709551616 "))", test::exc{ // 2^64, invalid last char
+        typeid(ts::exception::value_bad),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value"
+    }, ""},
+    // overflow and invalid last char
+    {R"(int("184467440737095516161234+"))", test::exc{
+        typeid(ts::exception::value_bad),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value"
+    }, ""},
+    {R"(int("-9223372036854775809"))", test::exc{ // -(2^63) - 1
+        typeid(ts::exception::value_out_of_range),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Value out of range"
+    }, ""},
+    {R"(int(+0, +1))", test::exc{ // target is constant literal
+        typeid(ts::exception::value_read_only),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Read-only value"
+    }, ""},
+    {R"(int(null, 1))", test::int_t(1), ""}, // target is null
+    {R"(int(true, 1))", test::int_t(1), ""}, // target constant, wrong type
+    // target is modifiable
+    {R"(
+        seq(
+            var("r", clone(+0)),
+            print(is_same(int(var("r"), 2), var("r"))),
+            var("r")
+        )
+    )", test::int_t(2), "true"},
 }))
 {
     test::check_runner(sample);
@@ -1864,6 +2002,131 @@ BOOST_DATA_TEST_CASE(f_type, (std::vector<test::runner_result>{
     {R"(type(null, -1))", "int", ""}, // target is null
     {R"(type(1, -1))", "int", ""}, // target is constant, but wrong type
     {R"(type(type(false), 123))", "unsigned", ""}, // target is modifiable
+}))
+{
+    test::check_runner(sample);
+}
+//! \endcond
+
+/*! \file
+ * \test \c f_unsigned -- Test of threadscript::predef::f_unsigned */
+//! \cond
+BOOST_DATA_TEST_CASE(f_unsigned, (std::vector<test::runner_result>{
+    {R"(unsigned())", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(unsigned(null, 0, null))", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(unsigned(null))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(unsigned(null, null))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(unsigned(true))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {test::i_op("unsigned", 0), test::uint_t(0), ""},
+    {test::i_op("unsigned", 123), test::uint_t(123), ""},
+    {test::i_op("unsigned", -45), test::uint_t(test::u_max - 44U), ""},
+    {test::i_op("unsigned", test::i_min), test::uint_t(test::u_half + 1U), ""},
+    {test::i_op("unsigned", test::i_n_half),
+        test::uint_t(test::u_max - test::i_p_half), ""},
+    {test::i_op("unsigned", test::i_p_half), test::uint_t(test::i_p_half), ""},
+    {test::i_op("unsigned", test::i_max), test::uint_t(test::i_max), ""},
+    {test::u_op("unsigned", 0U), test::uint_t(0), ""},
+    {test::u_op("unsigned", 123U), test::uint_t(123), ""},
+    {test::u_op("unsigned", test::u_half), test::u_half, ""},
+    {test::u_op("unsigned", test::u_half + 1U),
+        test::uint_t(test::u_half + 1U), ""},
+    {test::u_op("unsigned", test::u_max - 1U),
+        test::uint_t(test::u_max - 1U), ""},
+    {test::u_op("unsigned", test::u_max), test::u_max, ""},
+    {R"(unsigned(""))", test::exc{
+        typeid(ts::exception::value_bad),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value"
+    }, ""},
+    {R"(unsigned("+"))", test::exc{
+        typeid(ts::exception::value_bad),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value"
+    }, ""},
+    {R"(unsigned("-"))", test::exc{
+        typeid(ts::exception::value_bad),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value"
+    }, ""},
+    {R"(unsigned(" 123"))", test::exc{
+        typeid(ts::exception::value_bad),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value"
+    }, ""},
+    {R"(unsigned("123 "))", test::exc{
+        typeid(ts::exception::value_bad),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value"
+    }, ""},
+    {R"(unsigned("*123"))", test::exc{
+        typeid(ts::exception::value_bad),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value"
+    }, ""},
+    {R"(unsigned("123a"))", test::exc{
+        typeid(ts::exception::value_bad),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value"
+    }, ""},
+    {R"(unsigned("0"))", test::uint_t(0), ""},
+    {R"(unsigned("1234"))", test::uint_t(1234), ""},
+    {R"(unsigned("+234"))", test::uint_t(234), ""},
+    {R"(unsigned("-456"))", test::exc{
+        typeid(ts::exception::value_bad),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value"
+    }, ""},
+    {R"(unsigned("18446744073709551616"))", test::exc{ // 2^64
+        typeid(ts::exception::value_out_of_range),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Value out of range"
+    }, ""},
+    {R"(unsigned("18446744073709551616 "))", test::exc{ // 2^64, bad last char
+        typeid(ts::exception::value_bad),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value"
+    }, ""},
+    // overflow and invalid last char
+    {R"(unsigned("184467440737095516161234+"))", test::exc{
+        typeid(ts::exception::value_bad),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value"
+    }, ""},
+    {R"(unsigned(0, 1))", test::exc{ // target is constant literal
+        typeid(ts::exception::value_read_only),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Read-only value"
+    }, ""},
+    {R"(unsigned(null, 1))", test::uint_t(1), ""}, // target is null
+    {R"(unsigned(true, 1))", test::uint_t(1), ""}, // target constant, bad type
+    // target is modifiable
+    {R"(
+        seq(
+            var("r", clone(0)),
+            print(is_same(unsigned(var("r"), 2), var("r"))),
+            var("r")
+        )
+    )", test::uint_t(2), "true"},
 }))
 {
     test::check_runner(sample);

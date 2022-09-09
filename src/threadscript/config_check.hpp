@@ -23,7 +23,15 @@ namespace threadscript::config {
 static_assert(std::is_unsigned_v<counter_type>);
 static_assert(std::is_unsigned_v<value_unsigned_type>);
 static_assert(std::is_signed_v<value_int_type>);
+// Same number of bits needed for correct artithmetic and conversions
 static_assert(std::numeric_limits<value_unsigned_type>::digits ==
               std::numeric_limits<value_int_type>::digits + 1);
+static_assert(sizeof(config::value_unsigned_type) ==
+              sizeof(config::value_int_type));
+// This always holds by definition of uintmax_t
+static_assert(sizeof(config::value_unsigned_type) <= sizeof(uintmax_t));
+// This can be relaxed if no computation with integers uses long long or
+// unsigned long long instead of uintmax_t or intmax_t
+static_assert(sizeof(config::value_unsigned_type) <= sizeof(unsigned long long));
 
 } // namespace threadscript::config

@@ -7,6 +7,8 @@
 #include "threadscript/symbol_table.hpp"
 #include "threadscript/vm_data.hpp"
 
+#include <variant>
+
 namespace threadscript {
 
 //! Namespace for implementation of predefined built-in (C++ native) symbols
@@ -229,7 +231,7 @@ protected:
  * \param val2 the second value to be compared
  * \return \c true if \a val1 and \a val2 are equal; \c false otherwise
  * \throw exception::op_narg if the number of arguments is not 2 or 3
- * \throw exception::op_value_null if \a val1 or \a val2 is \c null
+ * \throw exception::value_null if \a val1 or \a val2 is \c null
  * \throw exception::value_type if \a val1 or \a val2 has a type other than \c
  * bool, \c int, \c unsigned, or \c string; also if \a val1 or \a val2 have
  * a different type combination than allowed by the rules above */
@@ -243,7 +245,7 @@ public:
      * \param[in] val1 the first value to be compared
      * \param[in] val2 the second value to be compared
      * \return \c true if \a val1 and \a val2 are equal; \c false otherwise
-     * \throw exception::op_value_null if \a val1 or \a val2 is \c null
+     * \throw exception::value_null if \a val1 or \a val2 is \c null
      * \throw exception::value_type under the same conditions as specified for
      * class f_eq itself */
     static bool compare(typename basic_value<A>::value_ptr val1,
@@ -272,7 +274,7 @@ protected:
  * \param val2 the second value to be compared
  * \return \c true if \a val1 is greater or equal to \a val2; \c false otherwise
  * \throw exception::op_narg if the number of arguments is not 2 or 3
- * \throw exception::op_value_null if \a val1 or \a val2 is \c null
+ * \throw exception::value_null if \a val1 or \a val2 is \c null
  * \throw exception::value_type if \a val1 or \a val2 has a type other than \c
  * bool, \c int, \c unsigned, or \c string; also if \a val1 or \a val2 have
  * a different type combination than allowed by the rules above */
@@ -303,7 +305,7 @@ protected:
  * \param val2 the second value to be compared
  * \return \c true if \a val1 is greater thant \a val2; \c false otherwise
  * \throw exception::op_narg if the number of arguments is not 2 or 3
- * \throw exception::op_value_null if \a val1 or \a val2 is \c null
+ * \throw exception::value_null if \a val1 or \a val2 is \c null
  * \throw exception::value_type if \a val1 or \a val2 has a type other than \c
  * bool, \c int, \c unsigned, or \c string; also if \a val1 or \a val2 have
  * a different type combination than allowed by the rules above */
@@ -328,6 +330,44 @@ protected:
 template <impl::allocator A>
 class f_if final: public basic_value_native_fun<f_if<A>, A> {
     using basic_value_native_fun<f_if<A>, A>::basic_value_native_fun;
+protected:
+    typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
+                                            basic_symbol_table<A>& l_vars,
+                                            const basic_code_node<A>& node,
+                                            std::string_view fun_name) override;
+};
+
+//! Function \c int
+/*! Converts a value to \c int. An \c int value is returned unchanged. An \c
+ * uint value is converted using integral conversion rules of C++, that is,
+ * using modulo arithmetic. A \c string value is interpreted as a decimal
+ * number with optional leading sign.
+ * \param result (optional) if exists and has type \c int, the result is
+ * stored into it; otherwise, a new value is allocated for the result
+ * \param val convert this value
+ * \return \a val converted to type \c int
+ * \throw exception::op_narg if the number of arguments is not 1 or 2
+ * \throw exception::value_null if \a val is \c null
+ * \throw exception::value_type if \a val is not of type \c int, \c unsigned,
+ * or \c string
+ * \throw exception::value_bad if string \a val does not contain a decimal
+ * number
+ * \throw exception::value_out_of_range if a string \a val contains a
+ * correctly formated value out of range of type \c int */
+template <impl::allocator A>
+class f_int final: public basic_value_native_fun<f_int<A>, A> {
+    using basic_value_native_fun<f_int<A>, A>::basic_value_native_fun;
+public:
+    //! Converts a string value to an integer.
+    /*! \param[in] str a string to be converted
+     * \param[in] sign whether a signed result is expected
+     * \return \a str converted to the appropriate type according to \a sign
+     * \throw exception::value_bad if \a str does not contain a decimal
+     * number
+     * \throw exception::value_out_of_range if \a str contains a correctly
+     * formated value out of range of the target type */
+    static std::variant<config::value_int_type, config::value_unsigned_type>
+    from_string(const a_basic_string<A>& str, bool sign);
 protected:
     typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
                                             basic_symbol_table<A>& l_vars,
@@ -408,7 +448,7 @@ protected:
  * \param val2 the second value to be compared
  * \return \c true if \a val1 is less or equal to \a val2; \c false otherwise
  * \throw exception::op_narg if the number of arguments is not 2 or 3
- * \throw exception::op_value_null if \a val1 or \a val2 is \c null
+ * \throw exception::value_null if \a val1 or \a val2 is \c null
  * \throw exception::value_type if \a val1 or \a val2 has a type other than \c
  * bool, \c int, \c unsigned, or \c string; also if \a val1 or \a val2 have
  * a different type combination than allowed by the rules above */
@@ -439,7 +479,7 @@ protected:
  * \param val2 the second value to be compared
  * \return \c true if \a val1 is less than \a val2; \c false otherwise
  * \throw exception::op_narg if the number of arguments is not 2 or 3
- * \throw exception::op_value_null if \a val1 or \a val2 is \c null
+ * \throw exception::value_null if \a val1 or \a val2 is \c null
  * \throw exception::value_type if \a val1 or \a val2 has a type other than \c
  * bool, \c int, \c unsigned, or \c string; also if \a val1 or \a val2 have
  * a different type combination than allowed by the rules above */
@@ -454,7 +494,7 @@ public:
      * \param[in] val1 the first value to be compared
      * \param[in] val2 the second value to be compared
      * \return \c true if \a val1 is less than \a val2; \c false otherwise
-     * \throw exception::op_value_null if \a val1 or \a val2 is \c null
+     * \throw exception::value_null if \a val1 or \a val2 is \c null
      * \throw exception::value_type under the same conditions as specified for
      * class f_eq itself */
     static bool compare(typename basic_value<A>::value_ptr val1,
@@ -567,7 +607,7 @@ protected:
  * \param val2 the second value to be compared
  * \return \c true if \a val1 and \a val2 are not equal; \c false otherwise
  * \throw exception::op_narg if the number of arguments is not 2 or 3
- * \throw exception::op_value_null if \a val1 or \a val2 is \c null
+ * \throw exception::value_null if \a val1 or \a val2 is \c null
  * \throw exception::value_type if \a val1 or \a val2 has a type other than \c
  * bool, \c int, \c unsigned, or \c string; also if \a val1 or \a val2 have
  * a different type combination than allowed by the rules above */
@@ -730,7 +770,34 @@ protected:
 template <impl::allocator A>
 class f_type final: public basic_value_native_fun<f_type<A>, A> {
     using basic_value_native_fun<f_type<A>, A>::basic_value_native_fun;
-public:
+protected:
+    typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
+                                            basic_symbol_table<A>& l_vars,
+                                            const basic_code_node<A>& node,
+                                            std::string_view fun_name) override;
+};
+
+//! Function \c unsigned
+/*! Converts a value to \c unsigned. An \c unsigned value is returned unchanged.
+ * An \c int value is converted using integral conversion rules of C++, that
+ * is, using modulo arithmetic. A \c string value is interpreted as a decimal
+ * number with optional leading plus sign.
+ * \param result (optional) if exists and has type \c int, the result is
+ * stored into it; otherwise, a new value is allocated for the result
+ * \param val convert this value
+ * \return \a val converted to type \c unsigned
+ * \throw exception::op_narg if the number of arguments is not 1 or 2
+ * \throw exception::value_null if \a val is \c null
+ * \throw exception::value_type if \a val is not of type \c int, \c unsigned,
+ * or \c string
+ * \throw exception::value_bad if string \a val does not contain a decimal
+ * number
+ * \throw exception::value_out_of_range if a string \a val contains a
+ * correctly formated value out of range of type \c unsigned */
+template <impl::allocator A>
+class f_unsigned final: public basic_value_native_fun<f_unsigned<A>, A> {
+    using basic_value_native_fun<f_unsigned<A>, A>::basic_value_native_fun;
+protected:
     typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
                                             basic_symbol_table<A>& l_vars,
                                             const basic_code_node<A>& node,
