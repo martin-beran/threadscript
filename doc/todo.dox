@@ -12,6 +12,8 @@
  *
  * \todo Conversion from \c string to \c int and \c unsigned
  *
+ * \todo A function returning a substring of a \c string
+ *
  * \todo Operations with threadscript::value_array
  *
  * \todo Operations with threadscript::value_hash
@@ -28,7 +30,8 @@
  *
  * \todo Resolving names in a parsed script before running the script
  *
- * \todo Command line interface to ThreadScript -- \ref Cmdline_ts.
+ * \todo Command line interface to ThreadScript -- \ref Cmdline_ts. It should
+ * provide command line options for memory and stack limits.
  *
  * \section To_do_optimization Optimization to-do taskts
  *
