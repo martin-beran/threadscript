@@ -15,6 +15,7 @@
 // declarations for an editor.
 #include "threadscript/configure.hpp"
 
+#include <limits>
 #include <type_traits>
 
 namespace threadscript::config {
@@ -22,5 +23,7 @@ namespace threadscript::config {
 static_assert(std::is_unsigned_v<counter_type>);
 static_assert(std::is_unsigned_v<value_unsigned_type>);
 static_assert(std::is_signed_v<value_int_type>);
+static_assert(std::numeric_limits<value_unsigned_type>::digits ==
+              std::numeric_limits<value_int_type>::digits + 1);
 
 } // namespace threadscript::config
