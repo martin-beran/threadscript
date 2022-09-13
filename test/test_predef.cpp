@@ -862,6 +862,22 @@ BOOST_DATA_TEST_CASE(f_gt, (std::vector<test::runner_result>{
 //! \endcond
 
 /*! \file
+ * \test \c f_hash -- Test of threadscript::predef::f_hash */
+//! \cond
+BOOST_DATA_TEST_CASE(f_hash, (std::vector<test::runner_result>{
+    {R"(hash(null))", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(type(hash()))", "hash", {}},
+}))
+{
+    test::check_runner(sample);
+}
+//! \endcond
+
+/*! \file
  * \test \c f_if -- Test of threadscript::predef::f_if */
 //! \cond
 BOOST_DATA_TEST_CASE(f_if, (std::vector<test::runner_result>{
@@ -2171,6 +2187,22 @@ BOOST_DATA_TEST_CASE(f_var, (std::vector<test::runner_result>{
     {R"(seq(var("v", 123), var("v")))", test::uint_t(123), ""},
     {R"(var("str", "\0\t\n\r\"\\"))", "\0\t\n\r\"\\"sv, ""},
     {R"(var("str", "\x41\x4a\x5A\X6c\X6B"))", "AJZlk", ""},
+}))
+{
+    test::check_runner(sample);
+}
+//! \endcond
+
+/*! \file
+ * \test \c f_vector -- Test of threadscript::predef::f_vector */
+//! \cond
+BOOST_DATA_TEST_CASE(f_vector, (std::vector<test::runner_result>{
+    {R"(vector(null))", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(type(vector()))", "vector", {}},
 }))
 {
     test::check_runner(sample);

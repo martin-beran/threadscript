@@ -75,12 +75,14 @@ namespace predef {
 template class f_add<allocator_any>;
 template class f_and<allocator_any>;
 template class f_and_r<allocator_any>;
+template class f_at<allocator_any>;
 template class f_bool<allocator_any>;
 template class f_clone<allocator_any>;
 template class f_div<allocator_any>;
 template class f_eq<allocator_any>;
 template class f_ge<allocator_any>;
 template class f_gt<allocator_any>;
+template class f_hash<allocator_any>;
 template class f_if<allocator_any>;
 template class f_int<allocator_any>;
 template class f_is_mt_safe<allocator_any>;
@@ -101,6 +103,7 @@ template class f_sub<allocator_any>;
 template class f_type<allocator_any>;
 template class f_unsigned<allocator_any>;
 template class f_var<allocator_any>;
+template class f_vector<allocator_any>;
 template class f_while<allocator_any>;
 
 } // namespace predef

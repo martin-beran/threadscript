@@ -99,6 +99,18 @@ f_and_r<A>::eval(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
                                                        std::move(result), true);
 }
 
+/*** f_at ********************************************************************/
+
+template <impl::allocator A> typename basic_value<A>::value_ptr
+f_at<A>::eval(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
+              const basic_code_node<A>& node, std::string_view)
+{
+    size_t narg = this->narg(node);
+    if (narg != 2 && narg != 3)
+        throw exception::op_narg();
+    // TODO
+}
+
 /*** f_bool ******************************************************************/
 
 template <impl::allocator A>
@@ -270,6 +282,19 @@ f_gt<A>::eval(basic_state<A>& thread, basic_symbol_table<A>&l_vars,
                                    this->arg(thread, l_vars, node, narg - 2));
     return this->template make_result<basic_value_bool<A>>(thread, l_vars, node,
                                                std::move(result), narg == 3);
+}
+
+/*** f_hash ******************************************************************/
+
+template <impl::allocator A> typename basic_value<A>::value_ptr
+f_hash<A>::eval(basic_state<A>& thread, basic_symbol_table<A>&,
+                const basic_code_node<A>& node, std::string_view)
+{
+    size_t narg = this->narg(node);
+    if (narg != 0)
+        throw exception::op_narg();
+    auto pr = basic_value_hash<A>::create(thread.get_allocator());
+    return pr;
 }
 
 /*** f_if ********************************************************************/
@@ -797,6 +822,19 @@ f_var<A>::eval(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
     }
 }
 
+/*** f_vector ****************************************************************/
+
+template <impl::allocator A> typename basic_value<A>::value_ptr
+f_vector<A>::eval(basic_state<A>& thread, basic_symbol_table<A>&,
+                  const basic_code_node<A>& node, std::string_view)
+{
+    size_t narg = this->narg(node);
+    if (narg != 0)
+        throw exception::op_narg();
+    auto pr = basic_value_vector<A>::create(thread.get_allocator());
+    return pr;
+}
+
 /*** f_while *****************************************************************/
 
 template <impl::allocator A> typename basic_value<A>::value_ptr
@@ -831,12 +869,14 @@ add_predef_symbols(std::shared_ptr<basic_symbol_table<A>> sym, bool replace)
         { "add", predef::f_add<A>::create },
         { "and", predef::f_and<A>::template create<predef::f_and<A>> },
         { "and_r", predef::f_and<A>::template create<predef::f_and_r<A>> },
+        { "at", predef::f_at<A>::create },
         { "bool", predef::f_bool<A>::create },
         { "clone", predef::f_clone<A>::create },
         { "div", predef::f_div<A>::template create<predef::f_div<A>> },
         { "eq", predef::f_eq<A>::create },
         { "ge", predef::f_ge<A>::create },
         { "gt", predef::f_gt<A>::create },
+        { "hash", predef::f_hash<A>::create },
         { "if", predef::f_if<A>::create },
         { "int", predef::f_int<A>::create },
         { "is_mt_safe", predef::f_is_mt_safe<A>::create },
@@ -857,6 +897,7 @@ add_predef_symbols(std::shared_ptr<basic_symbol_table<A>> sym, bool replace)
         { "type", predef::f_type<A>::create },
         { "unsigned", predef::f_unsigned<A>::create },
         { "var", predef::f_var<A>::create },
+        { "vector", predef::f_vector<A>::create },
         { "while", predef::f_while<A>::create },
     }));
     if (sym) {

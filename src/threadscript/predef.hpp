@@ -121,6 +121,38 @@ protected:
                                             std::string_view fun_name) override;
 };
 
+//! Function \c at
+/*! It gets or sets an element of a \c vector or a \c hash. Vector indices
+ * start at 0. If an index greater than the greatest existing element is
+ * specified when setting a vector element (calling with 3 arguments), the
+ * vector is extended to <tt>idx+1</tt> arguments and elements between the
+ * previous last element and \a idx are set to \c null.
+ * \param container a value of type \c vector or \c hash
+ * \param idx an index (of type \c int or \c unsigned for a \c vector), or a
+ * key (of type \c string for a \c hash)
+ * \param value (optional) if used, it is set as the element at \a idx; if
+ * missing, the element at \a idx is get; it may be be \c null
+ * \return the existing (for get) or the new (for set) element at \a idx
+ * \throw exception::op_narg if the number f arguments is not 2 or 3
+ * \throw exception::value_null if the first or the second argument is \c null
+ * \throw exception::value_type if \a container is not of type \c vector
+ * or \c hash, or if \a idx is not of type \c int or \c unsigned (for \a
+ * container of type \c vector) or \c string (for \a container of type \c hash)
+ * \throw exception::value_out_of_range if a \c vector \a idx is negative or
+ * (only when \a value is not used) greater than the greatest existing index;
+ * or if called without \a value for a \c hash and key \a idx does not exist
+ * \throw exception::value_read_only if trying to set an element in an
+ * read-only \c vector or \c hash */
+template <impl::allocator A>
+class f_at final: public basic_value_native_fun<f_at<A>, A> {
+    using basic_value_native_fun<f_at<A>, A>::basic_value_native_fun;
+protected:
+    typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
+                                            basic_symbol_table<A>& l_vars,
+                                            const basic_code_node<A>& node,
+                                            std::string_view fun_name) override;
+};
+
 //! Function \c bool
 /*! Converts a value to \c bool. A \c bool value \c false yields \c false. Any
  * other non-null value yields \c true.
@@ -312,6 +344,20 @@ protected:
 template <impl::allocator A>
 class f_gt final: public basic_value_native_fun<f_gt<A>, A> {
     using basic_value_native_fun<f_gt<A>, A>::basic_value_native_fun;
+protected:
+    typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
+                                            basic_symbol_table<A>& l_vars,
+                                            const basic_code_node<A>& node,
+                                            std::string_view fun_name) override;
+};
+
+//! Function \c hash
+/*! It creates a new empty value of type \c hash.
+ * \return the newly created empty \c hash
+ * \throw exception::op_narg if the number of arguments is not 0 */
+template <impl::allocator A>
+class f_hash final: public basic_value_native_fun<f_hash<A>, A> {
+    using basic_value_native_fun<f_hash<A>, A>::basic_value_native_fun;
 protected:
     typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
                                             basic_symbol_table<A>& l_vars,
@@ -820,6 +866,20 @@ protected:
 template <impl::allocator A>
 class f_var final: public basic_value_native_fun<f_var<A>, A> {
     using basic_value_native_fun<f_var<A>, A>::basic_value_native_fun;
+protected:
+    typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
+                                            basic_symbol_table<A>& l_vars,
+                                            const basic_code_node<A>& node,
+                                            std::string_view fun_name) override;
+};
+
+//! Function \c vector
+/*! It creates a new empty value of type \c vector.
+ * \return the newly created empty \c vector
+ * \throw exception::op_narg if the number of arguments is not 0 */
+template <impl::allocator A>
+class f_vector final: public basic_value_native_fun<f_vector<A>, A> {
+    using basic_value_native_fun<f_vector<A>, A>::basic_value_native_fun;
 protected:
     typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
                                             basic_symbol_table<A>& l_vars,
