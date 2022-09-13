@@ -128,7 +128,7 @@ struct canon::rules {
     RULE(script,
          *space >> node >> *space >> rf::eof()
          ["Whitespace or comment expected"sv]);
-
+    //! [Grammar]
     //! \endcond
     //! The handler for rule \c val_null
     /*! \param[in] ctx the parsing context
@@ -197,7 +197,6 @@ struct canon::rules {
         string_data[hnd_string];
         fun_name[hnd_fun];
     }
-    //! [Grammar]
 };
 
 void canon::rules::hnd_bool(parser::context&, tmp_ctx& self, tmp_ctx*,

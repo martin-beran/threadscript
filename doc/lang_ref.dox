@@ -38,6 +38,45 @@
  *
  * \snippet syntax_canon.cpp Grammar
  *
+ * \section Script_values Values
+ *
+ * All values are accessed via \a references. A reference can point to a value
+ * of any type, or contain a special value \c null (not pointing to any value).
+ * Copying a reference, e.g., assigning to a variable or setting an element of
+ * a \c vector or a \c hash does not copy the value. That is, the original and
+ * the new reference point to the same value, which can be read or modified via
+ * any of them.
+ *
+ * ThreadScript core languange provides the following scalar data types:
+ * \arg \c bool -- It contains a Boolean value \c false or \c true. It is
+ * represented by C++ type \c bool.
+ * \arg \c int -- A signed integer of implementation-defined size, using two's
+ * complement representation. Overflow in an arithmetic operation throws an
+ * exception. It is represented by C++ type
+ * threadscript::config::value_int_type.
+ * \arg \c unsigned -- An unsigned integer of implementation-defined size. It
+ * uses modulo arithmetic, therefore it never overflows. It is represented by
+ * C++ type threadscript::config::value_unsigned.
+ * \arg \c string -- A string of characters of C++ type \c char. It is
+ * represented by C++ type std::string. Unlike the C++ type, its storage not
+ * only grows, but also shrinks according to its content.
+ *
+ * ThreadScript core languange provides the following container data types:
+ * \arg \c vector -- A vector of arbitrary variable size. Each element can
+ * contain a value of any type, including \c null. It is represented by C++
+ * type std::vector. Unlike the C++ type, its storage not only grows, but also
+ * shrinks according to its content.
+ * \arg \c hash -- An unordered has map of string keys to values of arbitrary
+ * types, including \c null. It is represented by C++ type std::unordered_map.
+ * Unlike the C++ type, its storage not only grows, but also shrinks according
+ * to its content.
+ * 
+ * Any modifiable value of a type from the core language is thread-local, that
+ * is, it is owned by a single thread and cannot be accessed by other threads.
+ * In order to make a value shareable among threads, it must be marked as
+ * \a thread-safe (sometimes denoted as \a mt-safe), which also makes the value
+ * read-only.
+ *
  * \section Script_execution Script execution
  *
  * A script in the ThreadScript language is executed according to the internal
