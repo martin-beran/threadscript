@@ -221,7 +221,7 @@ basic_value_function<A>::eval(basic_state<A>& thread,
                               std::string_view fun_name)
 {
     auto alloc = thread.get_allocator();
-    auto args = basic_value_array<A>::create(alloc);
+    auto args = basic_value_vector<A>::create(alloc);
     auto& a = args->value();
     a.reserve(node._children.size());
     for (const auto& c: node._children)

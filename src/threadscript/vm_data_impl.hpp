@@ -102,14 +102,14 @@ void basic_value_string<A>::write(std::ostream& os) const
     os << this->cvalue();
 }
 
-/*** basic_value_array *******************************************************/
+/*** basic_value_vector ******************************************************/
 
-template <impl::allocator A> void basic_value_array<A>::set_mt_safe()
+template <impl::allocator A> void basic_value_vector<A>::set_mt_safe()
 {
     for (auto&& v: this->cvalue())
         if (v && !v->mt_safe())
             throw exception::value_mt_unsafe();
-    return impl::basic_value_array_base<A>::set_mt_safe(); }
+    return impl::basic_value_vector_base<A>::set_mt_safe(); }
 
 /*** basic_value_hash ********************************************************/
 

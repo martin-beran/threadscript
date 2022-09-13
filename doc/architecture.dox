@@ -113,14 +113,14 @@
  * Classes derived from threadscript::basic_typed_value ensure thread-safety by
  * restricting access to read-only operations for values marked mt-safe. Access
  * to a mt-unsafe value via a mt-safe value is prevented by requiring members
- * of mt-safe containers (threadscript::value_array, threadscript::value_hash)
+ * of mt-safe containers (threadscript::value_vector, threadscript::value_hash)
  * to be also mt-safe. If modification of a data structure shared by multiple
  * threads is required, a class derived from threadscript::value must be
  * implemented that handles any necessary synchronization.
  *
  * There are some built-in scalar types (threadscript::value_bool,
  * threadscript::value_int, threadscript::value_unsigned,
- * threadscript::value_string), arrays (threadscript::value array), and hashes
+ * threadscript::value_string), vectors (threadscript::value vector), and hashes
  * (threadscript::value_hash). New types can be added as extensions implemeted
  * as additional native C++ classes derived from threadscript::value.
  *

@@ -208,13 +208,13 @@ extern template class basic_typed_value<value_string,
     allocator_any>;
 extern template class basic_value_string<allocator_any>;
 
-//! The \ref basic_value_array using the configured allocator
-using value_array = basic_value_array<allocator_any>;
-extern template class basic_typed_value<value_array,
+//! The \ref basic_value_vector using the configured allocator
+using value_vector = basic_value_vector<allocator_any>;
+extern template class basic_typed_value<value_vector,
     a_basic_vector<typename basic_value<allocator_any>::value_ptr,
         allocator_any>,
-    threadscript::impl::name_value_array, allocator_any>;
-extern template class basic_value_array<allocator_any>;
+    threadscript::impl::name_value_vector, allocator_any>;
+extern template class basic_value_vector<allocator_any>;
 
 //! The \ref basic_value_hash using the configured allocator
 using value_hash = basic_value_hash<allocator_any>;

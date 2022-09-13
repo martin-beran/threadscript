@@ -461,7 +461,7 @@ public:
 
 //! Accessing an element out of range
 /*! It is similar to \c std::out_of_range. It is used for errors like an index
- * out of range of an array or a key not existing in a map. */
+ * out of range of a vector or a key not existing in a hash. */
 class value_out_of_range: public value {
 public:
     //! Stores an error message.

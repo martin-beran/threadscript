@@ -37,7 +37,7 @@ template <impl::allocator A> class basic_code_node;
  * depend on it.
  *
  * To be able to mark a value as mt-safe, all other values referenced by it
- * (e.g., by a basic_value_array or basic_value_hash) must be already mt-safe.
+ * (e.g., by a basic_value_vector or basic_value_hash) must be already mt-safe.
  * The reason is that after marked mt-safe, the value may be shared among
  * threads. If a thread accesses a referenced value through the shared value,
  * it must be sure that the referenced value cannot be modified concurrently by
@@ -353,30 +353,30 @@ public:
     void write(std::ostream& os) const override;
 };
 
-template <impl::allocator A> class basic_value_array;
+template <impl::allocator A> class basic_value_vector;
 
 namespace impl {
-//! The name of value_array
-inline constexpr char name_value_array[] = "array";
-//! The base class of basic_value_array
+//! The name of value_vector
+inline constexpr char name_value_vector[] = "vector";
+//! The base class of basic_value_vector
 /*!\tparam A an allocator type */
-template <allocator A> using basic_value_array_base =
-    basic_typed_value<basic_value_array<A>,
+template <allocator A> using basic_value_vector_base =
+    basic_typed_value<basic_value_vector<A>,
         a_basic_vector<typename basic_value<A>::value_ptr, A>,
-        name_value_array, A>;
+        name_value_vector, A>;
 } // namespace impl
 
-//! The value class holding an array of values
-/*! \tparam A an allocator type; used internally by the stored array
+//! The value class holding a vector of values
+/*! \tparam A an allocator type; used internally by the stored vector
  * \test in file test_vm_data.cpp */
-template <impl::allocator A> class basic_value_array final:
-    public impl::basic_value_array_base<A>
+template <impl::allocator A> class basic_value_vector final:
+    public impl::basic_value_vector_base<A>
 {
     static_assert(
-            impl::uses_allocator<typename basic_value_array::value_type, A>);
-    using impl::basic_value_array_base<A>::basic_value_array_base;
+            impl::uses_allocator<typename basic_value_vector::value_type, A>);
+    using impl::basic_value_vector_base<A>::basic_value_vector_base;
 public:
-    using impl::basic_value_array_base<A>::value;
+    using impl::basic_value_vector_base<A>::value;
     //! Gets writable access to the contained \ref data.
     /*! It handles automatic resizing of storage. Enlarging the capacity is
      * handled by the underlying \c std::vector. This function shrinks the
@@ -387,15 +387,15 @@ public:
      * \return \ref data
      * \throw exception::value_read_only if the value is read-only (that is,
      * marked thread-safe) */
-    typename basic_value_array::value_type& value() {
-        typename basic_value_array::value_type& v =
-            impl::basic_value_array_base<A>::value();
+    typename basic_value_vector::value_type& value() {
+        typename basic_value_vector::value_type& v =
+            impl::basic_value_vector_base<A>::value();
         if (v.size() <= v.capacity() / 3)
             v.shrink_to_fit();
         return v;
     }
-    //! \copybrief impl::basic_value_array_base<A>::set_mt_safe()
-    /*! \throw exception::value_mt_unsafe if the array contains at least one
+    //! \copybrief impl::basic_value_vector_base<A>::set_mt_safe()
+    /*! \throw exception::value_mt_unsafe if the vector contains at least one
      * value that is not mt-safe. */
     void set_mt_safe() override;
 };
@@ -443,7 +443,7 @@ public:
         return v;
     }
     //! \copybrief impl::basic_value_hash_base<A>::set_mt_safe()
-    /*! \throw exception::value_mt_unsafe if the array contains at least one
+    /*! \throw exception::value_mt_unsafe if the vector contains at least one
      * value that is not mt-safe. */
     void set_mt_safe() override;
 };
