@@ -154,6 +154,7 @@ extern template class f_or_r<allocator_any>;
 extern template class f_print<allocator_any>;
 extern template class f_is_same<allocator_any>;
 extern template class f_seq<allocator_any>;
+extern template class f_size<allocator_any>;
 extern template class f_sub<allocator_any>;
 extern template class f_type<allocator_any>;
 extern template class f_unsigned<allocator_any>;

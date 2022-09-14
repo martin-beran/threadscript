@@ -781,6 +781,26 @@ protected:
                                             std::string_view fun_name) override;
 };
 
+//! Function size
+/*! It gets the number of elements of a value.
+ * \param result (optional) if it exists and has type \c unsigned, the result
+ * is stored into it; otherwise, a new value is allocated for the result
+ * \param val a value
+ * \return an \c unsigned value: the number of elements of a \c vector or \c
+ * hash, the number of characters in a \c string, 1 otherwise (for scalar
+ * types)
+ * \throw exception::op_narg if the number of arguments is not 1 or 2
+ * \throw exception::value_null if \a val is \c null */
+template <impl::allocator A>
+class f_size final: public basic_value_native_fun<f_size<A>, A> {
+    using basic_value_native_fun<f_size<A>, A>::basic_value_native_fun;
+protected:
+    typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
+                                            basic_symbol_table<A>& l_vars,
+                                            const basic_code_node<A>& node,
+                                            std::string_view fun_name) override;
+};
+
 //! Function \c sub
 /*! Numeric subtraction. Unsigned subtraction is done using modulo arithmetic,
  * signed overflow causes exception::op_overflow.

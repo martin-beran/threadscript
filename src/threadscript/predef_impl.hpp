@@ -756,6 +756,29 @@ f_seq<A>::eval(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
     return result;
 }
 
+/*** f_size ******************************************************************/
+
+template <impl::allocator A> typename basic_value<A>::value_ptr
+f_size<A>::eval(basic_state<A>& thread, basic_symbol_table<A>&l_vars,
+                const basic_code_node<A>& node, std::string_view)
+{
+    size_t narg = this->narg(node);
+    if (narg != 1 && narg != 2)
+        throw exception::op_narg();
+    auto val = this->arg(thread, l_vars, node, narg - 1);
+    if (!val)
+        throw exception::value_null();
+    config::value_unsigned_type result = 1;
+    if (auto v = dynamic_cast<basic_value_string<A>*>(val.get()))
+        result = v->cvalue().size();
+    else if (auto v = dynamic_cast<basic_value_vector<A>*>(val.get()))
+        result = v->cvalue().size();
+    else if (auto v = dynamic_cast<basic_value_hash<A>*>(val.get()))
+        result = v->cvalue().size();
+    return this->template make_result<basic_value_unsigned<A>>(thread, l_vars,
+                                            node, std::move(result), narg == 2);
+}
+
 /*** f_sub *******************************************************************/
 
 template <impl::allocator A> typename basic_value<A>::value_ptr
@@ -936,6 +959,7 @@ add_predef_symbols(std::shared_ptr<basic_symbol_table<A>> sym, bool replace)
         { "or_r", predef::f_or<A>::template create<predef::f_or_r<A>> },
         { "print", predef::f_print<A>::create },
         { "seq", predef::f_seq<A>::create },
+        { "size", predef::f_size<A>::create },
         { "sub", predef::f_sub<A>::create },
         { "type", predef::f_type<A>::create },
         { "unsigned", predef::f_unsigned<A>::create },

@@ -2051,6 +2051,67 @@ BOOST_DATA_TEST_CASE(f_seq, (std::vector<test::runner_result>{
 //! \endcond
 
 /*! \file
+ * \test \c f_size -- Test of threadscript::predef::f_size */
+//! \cond
+BOOST_DATA_TEST_CASE(f_size, (std::vector<test::runner_result>{
+    {R"(size())", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(size(null, 1, 2))", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(size(null))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(size(null, null))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(size(false))", test::uint_t(1U), ""},
+    {R"(size(true))", test::uint_t(1U), ""},
+    {R"(size(0))", test::uint_t(1U), ""},
+    {R"(size(12))", test::uint_t(1U), ""},
+    {R"(size(+34))", test::uint_t(1U), ""},
+    {R"(size(-56))", test::uint_t(1U), ""},
+    {R"(size(""))", test::uint_t(0U), ""},
+    {R"(size("X"))", test::uint_t(1U), ""},
+    {R"(size("ABCDEF"))", test::uint_t(6U), ""},
+    {R"(size(vector()))", test::uint_t(0U), ""},
+    {R"(seq(var("v", vector()), at(v(), 3, "str"), size(v())))",
+        test::uint_t(4U), ""},
+    {R"(size(hash()))", test::uint_t(0U), ""},
+    {R"(seq(var("h", hash()), at(h(), "a", -1), at(h(), "b", -2), size(h())))",
+        test::uint_t(2U), ""},
+    {R"(size(0, 1))", test::exc{ // target is constant literal
+        typeid(ts::exception::value_read_only),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Read-only value"
+    }, ""},
+    {R"(size(null, 1))", test::uint_t(1), ""}, // target is null
+    {R"(size(true, 1))", test::uint_t(1), ""}, // target constant, bad type
+    // target is modifiable
+    {R"(
+        seq(
+            var("r", clone(0)),
+            print(is_same(size(r(), "abc"), r())),
+            r()
+        )
+    )", test::uint_t(3), "true"},
+}))
+{
+    test::check_runner(sample);
+}
+//! \endcond
+
+
+/*! \file
  * \test \c f_sub -- Test of threadscript::predef::f_sub */
 //! \cond
 BOOST_DATA_TEST_CASE(f_sub, (std::vector<test::runner_result>{
