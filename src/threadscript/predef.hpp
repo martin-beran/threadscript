@@ -478,6 +478,25 @@ protected:
                                             std::string_view fun_name) override;
 };
 
+//! Function \c keys
+/*! Gets a vector of keys from a hash. The elements of the returned vectors,
+ * but not the vector itself, are thread-safe (read-only, function f_is_mt_safe
+ * returns \c true for them)
+ * \param hash a hash
+ * \return a vector containing lexicographically sorted keys from \a hash
+ * \throw exception::op_narg if the number of arguments is not 1
+ * \throw exception::value_null if \a hash is \c null
+ * \throw exception::value_type if \a hash is not of type \c hash */
+template <impl::allocator A>
+class f_keys final: public basic_value_native_fun<f_keys<A>, A> {
+    using basic_value_native_fun<f_keys<A>, A>::basic_value_native_fun;
+protected:
+    typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
+                                            basic_symbol_table<A>& l_vars,
+                                            const basic_code_node<A>& node,
+                                            std::string_view fun_name) override;
+};
+
 //! Function \c le
 /*! Compares two values for less-or-equal relation. Unlike f_is_same, this
  * function compares the contents of values, not their location in memory. If

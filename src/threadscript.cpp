@@ -87,6 +87,7 @@ template class f_if<allocator_any>;
 template class f_int<allocator_any>;
 template class f_is_mt_safe<allocator_any>;
 template class f_is_null<allocator_any>;
+template class f_keys<allocator_any>;
 template class f_le<allocator_any>;
 template class f_lt<allocator_any>;
 template class f_mod<allocator_any>;

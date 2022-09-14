@@ -489,6 +489,36 @@ f_is_same<A>::eval(basic_state<A>& thread, basic_symbol_table<A>&l_vars,
                                                std::move(result), narg == 3);
 }
 
+/*** f_keys ******************************************************************/
+
+template <impl::allocator A> typename basic_value<A>::value_ptr
+f_keys<A>::eval(basic_state<A>& thread, basic_symbol_table<A>&l_vars,
+                const basic_code_node<A>& node, std::string_view)
+{
+    size_t narg = this->narg(node);
+    if (narg != 1)
+        throw exception::op_narg();
+    auto val = this->arg(thread, l_vars, node, 0);
+    if (!val)
+        throw exception::value_null();
+    if (auto h = dynamic_cast<basic_value_hash<A>*>(val.get())) {
+        auto result = basic_value_vector<A>::create(thread.get_allocator());
+        for (auto&& [k, v]: h->cvalue()) {
+            auto pk = basic_value_string<A>::create(thread.get_allocator());
+            pk->value() = k;
+            pk->set_mt_safe();
+            result->value().push_back(std::move(pk));
+        }
+        std::sort(result->value().begin(), result->value().end(),
+            [](auto&& a, auto&& b) {
+                return static_cast<basic_value_string<A>*>(a.get())->cvalue() <
+                static_cast<basic_value_string<A>*>(b.get())->cvalue();
+            });
+        return result;
+    } else
+        throw exception::value_type();
+}
+
 /*** f_le ********************************************************************/
 
 template <impl::allocator A> typename basic_value<A>::value_ptr
@@ -948,6 +978,7 @@ add_predef_symbols(std::shared_ptr<basic_symbol_table<A>> sym, bool replace)
         { "is_mt_safe", predef::f_is_mt_safe<A>::create },
         { "is_null", predef::f_is_null<A>::create },
         { "is_same", predef::f_is_same<A>::create },
+        { "keys", predef::f_keys<A>::create },
         { "le", predef::f_le<A>::create },
         { "lt", predef::f_lt<A>::create },
         { "mod", predef::f_mod<A>::template create<predef::f_mod<A>> },

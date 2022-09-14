@@ -1406,6 +1406,69 @@ BOOST_DATA_TEST_CASE(f_is_same, (std::vector<test::runner_result>{
 //! \endcond
 
 /*! \file
+ * \test \c f_keys -- Test of threadscript::predef::f_keys */
+//! \cond
+BOOST_DATA_TEST_CASE(f_keys, (std::vector<test::runner_result>{
+    {R"(keys())", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(keys(hash(), 1))", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(keys(null))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(keys(false))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(keys(0))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(keys(+0))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(keys("0"))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(keys(vector()))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(seq(var("k", keys(hash())), print(type(k())), size(k())))",
+        test::uint_t(0U), "vector"},
+    {R"(
+        seq(
+            var("h", hash()),
+            at(h(), "Xy", 0), at(h(), "xyz", 1), at(h(), "", 2),
+            at(h(), "a", 3), at(h(), "bc", 4),
+            var("k", keys(h())),
+            print(at(k(), 0), ",", at(k(), 1), ",", at(k(), 2), ",",
+                at(k(), 3), ",", at(k(), 4)),
+            size(k())
+        )
+    )", test::uint_t(5U), ",Xy,a,bc,xyz"},
+}))
+{
+    test::check_runner(sample);
+}
+//! \endcond
+
+/*! \file
  * \test \c f_le -- Test of threadscript::predef::f_le. Almost all
  * implementation of f_le is shared with f_lt (except testing the number of
  * arguments), therefore we do only a small number of checks here, assuming
