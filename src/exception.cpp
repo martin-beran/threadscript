@@ -84,7 +84,7 @@ void base::set_trace(stack_trace trace)
     std::string saved_msg{msg()};
     // intentional object slicing used to set what()
     static_cast<std::runtime_error&>(*this) =
-        std::runtime_error(make_msg(saved_msg, trace));
+        std::runtime_error(make_msg(saved_msg, _trace));
     set_msg(saved_msg.size());
 }
 
