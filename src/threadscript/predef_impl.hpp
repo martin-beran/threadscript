@@ -108,7 +108,50 @@ f_at<A>::eval(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
     size_t narg = this->narg(node);
     if (narg != 2 && narg != 3)
         throw exception::op_narg();
-    // TODO
+    auto container = this->arg(thread, l_vars, node, 0);
+    auto idx = this->arg(thread, l_vars, node, 1);
+    if (!container || !idx)
+        throw exception::value_null();
+    if (auto pv = dynamic_cast<basic_value_vector<A>*>(container.get())) {
+        size_t i = 0;
+        if (auto pi = dynamic_cast<basic_value_int<A>*>(idx.get())) {
+            i = size_t(pi->cvalue());
+            if (pi->cvalue() < 0)
+                throw exception::value_out_of_range();
+        } else if (auto pi = dynamic_cast<basic_value_unsigned<A>*>(idx.get()))
+            i = size_t(pi->cvalue());
+        else
+            throw exception::value_type();
+        if (narg == 2 && i >= pv->cvalue().size())
+            throw exception::value_out_of_range();
+        if (narg == 2)
+            return pv->cvalue()[i];
+        else {
+            assert(narg == 3);
+            if (i >= pv->cvalue().max_size())
+                throw exception::value_out_of_range();
+            if (i >= pv->cvalue().size())
+                pv->value().resize(i + 1);
+            return pv->value()[i] = this->arg(thread, l_vars, node, 2);
+        }
+    } else if (auto ph = dynamic_cast<basic_value_hash<A>*>(container.get())) {
+        if (auto pk = dynamic_cast<basic_value_string<A>*>(idx.get())) {
+            if (narg == 2) {
+                if (auto it = ph->cvalue().find(pk->cvalue());
+                    it != ph->cvalue().end())
+                {
+                    return it->second;
+                } else
+                    throw exception::value_out_of_range();
+            } else {
+                assert(narg == 3);
+                return ph->value()[pk->cvalue()] =
+                    this->arg(thread, l_vars, node, 2);
+            }
+        } else
+            throw exception::value_type();
+    } else
+        throw exception::value_type();
 }
 
 /*** f_bool ******************************************************************/

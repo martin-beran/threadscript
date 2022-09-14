@@ -139,6 +139,7 @@ protected:
  * or \c hash, or if \a idx is not of type \c int or \c unsigned (for \a
  * container of type \c vector) or \c string (for \a container of type \c hash)
  * \throw exception::value_out_of_range if a \c vector \a idx is negative or
+ * greater than \link a_basic_vector a_basic_vector::max_size()\endlink or
  * (only when \a value is not used) greater than the greatest existing index;
  * or if called without \a value for a \c hash and key \a idx does not exist
  * \throw exception::value_read_only if trying to set an element in an
