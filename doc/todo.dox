@@ -10,9 +10,6 @@
  *
  * \todo A function returning a substring of a \c string
  *
- * \todo A function returning the size of a value: the length of a \c string,
- * or the number of elements of an \c vector or \c hash
- *
  * \todo Operations with threadscript::value_vector
  *
  * \todo Operations with threadscript::value_hash
