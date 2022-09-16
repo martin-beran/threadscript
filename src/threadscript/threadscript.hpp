@@ -133,6 +133,7 @@ extern template class f_and_r<allocator_any>;
 extern template class f_at<allocator_any>;
 extern template class f_bool<allocator_any>;
 extern template class f_clone<allocator_any>;
+extern template class f_contains<allocator_any>;
 extern template class f_div<allocator_any>;
 extern template class f_eq<allocator_any>;
 extern template class f_ge<allocator_any>;

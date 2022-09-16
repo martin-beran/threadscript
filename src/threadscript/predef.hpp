@@ -198,6 +198,29 @@ protected:
                                             std::string_view fun_name) override;
 };
 
+//! Function \c contains
+/*! Tests if \a hash contains an element with \a key.
+ * \param result (optional) if exists and has type \c bool, the result is
+ * stored into it; otherwise, a new value is allocated for the result
+ * \param hash the hash searched for \a key
+ * \param key the searched key in \a hash
+ * \return \c true if \a hash contains an element with \a key; \c false
+ * otherwise
+ * \throw exception::op_narg if the number of arguments is not 2 or 3
+ * \throw exception::value_null if \a hash or \a key is \c null
+ * \throw exception::value_type if \a hash does not have type \c hash or
+ * \a key does not have type \c string */
+template <impl::allocator A>
+class f_contains final: public basic_value_native_fun<f_contains<A>, A> {
+    using basic_value_native_fun<f_contains<A>, A>::basic_value_native_fun;
+public:
+protected:
+    typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
+                                            basic_symbol_table<A>& l_vars,
+                                            const basic_code_node<A>& node,
+                                            std::string_view fun_name) override;
+};
+
 //! Common functionality of classes f_div and f_mod
 /*! \tparam A an allocator type */
 template <impl::allocator A>

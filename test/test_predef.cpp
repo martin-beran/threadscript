@@ -693,6 +693,118 @@ BOOST_DATA_TEST_CASE(f_clone, (std::vector<test::runner_result>{
 //! \endcond
 
 /*! \file
+ * \test \c f_contains -- Test of threadscript::predef::f_contains */
+//! \cond
+BOOST_DATA_TEST_CASE(f_contains, (std::vector<test::runner_result>{
+    {R"(contains())", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(contains(null))", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(contains(null, hash(), "key", 4))", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(contains(hash(), null))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(contains(null, "key"))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(contains(false, "key"))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(contains(1, "key"))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(contains(+1, "key"))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(contains("str", "key"))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(contains(vector(), "key"))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(contains(hash(), true))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(contains(hash(), 2))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(contains(hash(), +2))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(contains(hash(), vector()))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(contains(hash(), hash()))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(contains(hash(), "key"))", false, ""},
+    {R"(
+        seq(
+            var("h", hash()),
+            at(h(), "A", 1),
+            at(h(), "B", 1),
+            print(contains(h(), "A"), ",", contains(h(), "B"), ",",
+                contains(h(), "C"))
+        )
+    )", nullptr, "true,true,false"},
+    {R"(contains(true, hash(), "k"))", test::exc{ // target is constant literal
+        typeid(ts::exception::value_read_only),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Read-only value"
+    }, ""},
+    {R"(contains(null, hash(), "k"))", false, ""}, // target is null
+    {R"(contains(1, hash(), "k"))", false, ""}, // target constant, wrong type
+    {R"(contains(clone(true), hash(), "k"))", false, ""}, // target modifiable
+    {R"(
+        seq(
+            var("r", clone(false)),
+            var("h", hash()),
+            at(h(), "key", "VALUE"),
+            print(is_same(contains(r(), h(), "key"), var("r"))),
+            r()
+        )
+    )", true, "true"},
+}))
+{
+    test::check_runner(sample);
+}
+//! \endcond
+
+/*! \file
  * \test \c f_div -- Test of threadscript::predef::f_div, which also applies to
  * threadscript::predef::f_div_base (the part of implementation shared with
  * threadscript::predef::f_mod) */

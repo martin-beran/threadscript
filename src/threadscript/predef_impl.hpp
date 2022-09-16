@@ -196,6 +196,28 @@ f_clone<A>::eval(basic_state<A>& thread, basic_symbol_table<A>&l_vars,
     return val->shallow_copy(thread.get_allocator(), false);
 }
 
+/*** f_contains **************************************************************/
+
+template <impl::allocator A> typename basic_value<A>::value_ptr
+f_contains<A>::eval(basic_state<A>& thread, basic_symbol_table<A>&l_vars,
+                    const basic_code_node<A>& node, std::string_view)
+{
+    size_t narg = this->narg(node);
+    if (narg != 2 && narg != 3)
+        throw exception::op_narg();
+    auto a1 = this->arg(thread, l_vars, node, narg - 2);
+    auto a2 = this->arg(thread, l_vars, node, narg - 1);
+    if (!a1 || !a2)
+        throw exception::value_null();
+    auto hash = dynamic_cast<basic_value_hash<A>*>(a1.get());
+    auto key = dynamic_cast<basic_value_string<A>*>(a2.get());
+    if (!hash || !key)
+        throw exception::value_type();
+    auto result = hash->cvalue().contains(key->cvalue());
+    return this->template make_result<basic_value_bool<A>>(thread, l_vars, node,
+                                               std::move(result), narg == 3);
+}
+
 /*** f_div_base **************************************************************/
 
 template <impl::allocator A> typename basic_value<A>::value_ptr
@@ -968,6 +990,7 @@ add_predef_symbols(std::shared_ptr<basic_symbol_table<A>> sym, bool replace)
         { "at", predef::f_at<A>::create },
         { "bool", predef::f_bool<A>::create },
         { "clone", predef::f_clone<A>::create },
+        { "contains", predef::f_contains<A>::create },
         { "div", predef::f_div<A>::template create<predef::f_div<A>> },
         { "eq", predef::f_eq<A>::create },
         { "ge", predef::f_ge<A>::create },
