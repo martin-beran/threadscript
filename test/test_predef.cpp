@@ -1069,6 +1069,253 @@ BOOST_DATA_TEST_CASE(f_eq, (std::vector<test::runner_result>{
 //! \endcond
 
 /*! \file
+ * \test \c f_erase -- Test of threadscript::predef::f_erase */
+//! \cond
+BOOST_DATA_TEST_CASE(f_erase, (std::vector<test::runner_result>{
+    {R"(erase())", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(erase(hash(), "key", 3))", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(erase(vector(), null))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(erase(null))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(erase(null, 0))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(erase(false))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(erase(1))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(erase(-1))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(erase("str"))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(erase(false, 1))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(erase(1, 1))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(erase(-1, 1))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(erase("str", 1))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(erase(vector(), false))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(erase(vector(), "str"))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(erase(vector(), vector()))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(erase(vector(), hash()))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(erase(hash(), false))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(erase(hash(), 2))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(erase(hash(), -2))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(erase(hash(), vector()))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(erase(hash(), hash()))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(erase(vector()))", nullptr, ""},
+    {R"(erase(vector(), 0))", nullptr, ""},
+    {R"(erase(vector(), 1))", nullptr, ""},
+    {R"(erase(hash()))", nullptr, ""},
+    {R"(erase(hash(), ""))", nullptr, ""},
+    {R"(erase(hash(), "KEY"))", nullptr, ""},
+    {R"(
+        seq(
+            var("v", vector()),
+            at(v(), 0, "a"), at(v(), 1, "b"), at(v(), 2, "c"),
+            erase(v(), +0),
+            print(size(v()))
+        )
+    )", nullptr, "0"},
+    {R"(
+        seq(
+            var("v", vector()),
+            at(v(), 0, "a"), at(v(), 1, "b"), at(v(), 2, "c"),
+            erase(v(), -1),
+            print(size(v()))
+        )
+    )", test::exc{
+        typeid(ts::exception::value_out_of_range),
+        ts::frame_location("", "", 5, 13),
+        "Runtime error: Value out of range"
+    }, ""},
+    {R"(
+        seq(
+            var("v", vector()),
+            at(v(), 0, "a"), at(v(), 1, "b"), at(v(), 2, "c"),
+            mt_safe(v()),
+            erase(v(), 1),
+            print(size(v()))
+        )
+    )", test::exc{
+        typeid(ts::exception::value_read_only),
+        ts::frame_location("", "", 6, 13),
+        "Runtime error: Read-only value"
+    }, ""},
+    {R"(
+        seq(
+            var("v", vector()),
+            at(v(), 0, "a"), at(v(), 1, "b"), at(v(), 2, "c"),
+            erase(v()),
+            print(size(v()))
+        )
+    )", nullptr, "0"},
+    {R"(
+        seq(
+            var("v", vector()),
+            at(v(), 0, "a"), at(v(), 1, "b"), at(v(), 2, "c"),
+            erase(v(), 0),
+            print(size(v()))
+        )
+    )", nullptr, "0"},
+    {R"(
+        seq(
+            var("v", vector()),
+            at(v(), 0, "a"), at(v(), 1, "b"), at(v(), 2, "c"),
+            erase(v(), 1),
+            print(size(v()), at(v(), 0))
+        )
+    )", nullptr, "1a"},
+    {R"(
+        seq(
+            var("v", vector()),
+            at(v(), 0, "a"), at(v(), 1, "b"), at(v(), 2, "c"),
+            erase(v(), 2),
+            print(size(v()), at(v(), 0), at(v(), 1))
+        )
+    )", nullptr, "2ab"},
+    {R"(
+        seq(
+            var("v", vector()),
+            at(v(), 0, "a"), at(v(), 1, "b"), at(v(), 2, "c"),
+            erase(v(), 3),
+            print(size(v()), at(v(), 0), at(v(), 1), at(v(), 2))
+        )
+    )", nullptr, "3abc"},
+    {R"(
+        seq(
+            var("v", vector()),
+            at(v(), 0, "a"), at(v(), 1, "b"), at(v(), 2, "c"),
+            erase(v(), 4),
+            print(size(v()), at(v(), 0), at(v(), 1), at(v(), 2))
+        )
+    )", nullptr, "3abc"},
+    {R"(
+        seq(
+            var("v", vector()),
+            at(v(), 0, "a"), at(v(), 1, "b"), at(v(), 2, "c"),
+            erase(v(), 10),
+            print(size(v()), at(v(), 0), at(v(), 1), at(v(), 2))
+        )
+    )", nullptr, "3abc"},
+    {R"(
+        seq(
+            var("h", hash()),
+            at(h(), "a", "A"), at(h(), "b", "B"),
+            erase(h()),
+            print(size(h()))
+        )
+    )", nullptr, "0"},
+    {R"(
+        seq(
+            var("h", hash()),
+            at(h(), "a", "A"), at(h(), "b", "B"),
+            erase(h(), "x"),
+            print(size(h()), at(h(), "a"), at(h(), "b"))
+        )
+    )", nullptr, "2AB"},
+    {R"(
+        seq(
+            var("h", hash()),
+            at(h(), "a", "A"), at(h(), "b", "B"),
+            erase(h(), "a"),
+            print(size(h()), at(h(), "b"))
+        )
+    )", nullptr, "1B"},
+    {R"(
+        seq(
+            var("h", hash()),
+            at(h(), "a", "A"), at(h(), "b", "B"),
+            erase(h(), "a"), erase(h(), "b"),
+            print(size(h()))
+        )
+    )", nullptr, "0"},
+}))
+{
+    test::check_runner(sample);
+}
+//! \endcond
+
+/*! \file
  * \test \c f_ge -- Test of threadscript::predef::f_ge. Almost all
  * implementation of f_ge is shared with f_lt (except testing the number of
  * arguments), therefore we do only a small number of checks here, assuming
@@ -2734,6 +2981,25 @@ BOOST_DATA_TEST_CASE(variable, (std::vector<test::runner_result>{
         "Runtime error: Symbol not found: nonexistent"
     }, ""},
     {R"(seq(var("v", -123), v()))", test::int_t(-123), ""},
+}))
+{
+    test::check_runner(sample);
+}
+//! \endcond
+
+/*! \file
+ * \test \c loop -- Tests using various function to create a for-style loop */
+//! \cond
+BOOST_DATA_TEST_CASE(loop, (std::vector<test::runner_result>{
+    {R"(
+        seq(
+            var("i", 0),
+            while(lt(i(), 10), seq(
+                print(i()),
+                var("i", add(i(), 1))
+            ))
+        )
+        )", test::uint_t(10U), "0123456789"},
 }))
 {
     test::check_runner(sample);

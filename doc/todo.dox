@@ -10,10 +10,6 @@
  *
  * \todo A function returning a substring of a \c string
  *
- * \todo Operations with threadscript::value_vector
- *
- * \todo Operations with threadscript::value_hash
- *
  * \todo Defining and calling user-defined functions
  *
  * \todo Throwing and catching exceptions

@@ -319,6 +319,54 @@ f_eq<A>::eval(basic_state<A>& thread, basic_symbol_table<A>&l_vars,
                                                std::move(result), narg == 3);
 }
 
+/*** f_erase *****************************************************************/
+
+template <impl::allocator A> typename basic_value<A>::value_ptr
+f_erase<A>::eval(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
+                 const basic_code_node<A>& node, std::string_view)
+{
+    size_t narg = this->narg(node);
+    if (narg != 1 && narg != 2)
+        throw exception::op_narg();
+    auto container = this->arg(thread, l_vars, node, 0);
+    if (!container)
+        throw exception::value_null();
+    if (narg == 1) {
+        if (auto pv = dynamic_cast<basic_value_vector<A>*>(container.get()))
+            pv->value().clear();
+        else if (auto ph = dynamic_cast<basic_value_hash<A>*>(container.get()))
+            ph->value().clear();
+        else
+            throw exception::value_type();
+    } else {
+        auto idx = this->arg(thread, l_vars, node, 1);
+        if (!idx)
+            throw exception::value_null();
+        if (auto pv = dynamic_cast<basic_value_vector<A>*>(container.get())) {
+            size_t i = 0;
+            if (auto pi = dynamic_cast<basic_value_int<A>*>(idx.get())) {
+                i = size_t(pi->cvalue());
+                if (pi->cvalue() < 0)
+                    throw exception::value_out_of_range();
+            } else
+                if (auto pi = dynamic_cast<basic_value_unsigned<A>*>(idx.get()))
+                    i = size_t(pi->cvalue());
+                else
+                    throw exception::value_type();
+            if (i < pv->cvalue().size())
+                pv->value().resize(i);
+        } else
+            if (auto ph = dynamic_cast<basic_value_hash<A>*>(container.get())) {
+                if (auto pk = dynamic_cast<basic_value_string<A>*>(idx.get()))
+                    ph->value().erase(pk->cvalue());
+                else
+                    throw exception::value_type();
+            } else
+                throw exception::value_type();
+    }
+    return nullptr;
+}
+
 /*** f_ge ********************************************************************/
 
 template <impl::allocator A> typename basic_value<A>::value_ptr
@@ -993,6 +1041,7 @@ add_predef_symbols(std::shared_ptr<basic_symbol_table<A>> sym, bool replace)
         { "contains", predef::f_contains<A>::create },
         { "div", predef::f_div<A>::template create<predef::f_div<A>> },
         { "eq", predef::f_eq<A>::create },
+        { "erase", predef::f_erase<A>::create },
         { "ge", predef::f_ge<A>::create },
         { "gt", predef::f_gt<A>::create },
         { "hash", predef::f_hash<A>::create },

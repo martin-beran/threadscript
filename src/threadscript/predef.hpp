@@ -133,7 +133,7 @@ protected:
  * \param value (optional) if used, it is set as the element at \a idx; if
  * missing, the element at \a idx is get; it may be be \c null
  * \return the existing (for get) or the new (for set) element at \a idx
- * \throw exception::op_narg if the number f arguments is not 2 or 3
+ * \throw exception::op_narg if the number of arguments is not 2 or 3
  * \throw exception::value_null if the first or the second argument is \c null
  * \throw exception::value_type if \a container is not of type \c vector
  * or \c hash, or if \a idx is not of type \c int or \c unsigned (for \a
@@ -306,6 +306,40 @@ public:
      * class f_eq itself */
     static bool compare(typename basic_value<A>::value_ptr val1,
                         typename basic_value<A>::value_ptr val2);
+protected:
+    typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
+                                            basic_symbol_table<A>& l_vars,
+                                            const basic_code_node<A>& node,
+                                            std::string_view fun_name) override;
+};
+
+//! Function \c erase
+/*! Removes elements from a value of type \c vector or \c hash. If called
+ * without argument \a idx, all elements are removed.
+ *
+ * If \a container has type \c vector then elements from index \a idx to the
+ * end of the vector are deleted and the vector is shrinked to the first \a idx
+ * elements. If \a idx is greater or equal to the size of the vector then
+ * nothing is deleted and the vector size remains unchanged.
+ *
+ * If \a container has type \c hash then the element with key \a idx is
+ * deleted. If \c hash does not contain an element with key \a idx then nothing
+ * is deleted and the hash remains unchanged.
+ * \param container a value of type \c vector or \c hash
+ * \param idx (optional) an index (of type \c int or \c unsigned for a \c
+ * vector), or a key (of type \c string for a \c hash)
+ * \return \c null
+ * \throw exception::op_narg if the number of arguments is not 1 or 2
+ * \throw exception::value_null if \a container or \a idx is \c null
+ * \throw exception::value_type if \a container does not have type \c vector
+ * or \c hash, or if \a idx does not have type \c int or \c unsigned for a \c
+ * vector, or if \a idx does not have type \c string for a \c hash
+ * \throw exception::value_out_of_range if \a idx is negative
+ * \throw exception::value_read_only if trying to remove an element from a
+ * read-only \a container */
+template <impl::allocator A>
+class f_erase final: public basic_value_native_fun<f_erase<A>, A> {
+    using basic_value_native_fun<f_erase<A>, A>::basic_value_native_fun;
 protected:
     typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
                                             basic_symbol_table<A>& l_vars,
@@ -956,7 +990,7 @@ protected:
  * \a body is no more executed and the loop terminates.
  * \param cond converted to \c bool by f_bool::convert()
  * \param body evaluated while \a cond is \c true
- * \return the result of the last evaluation of \a cond, or \c null if \a cond
+ * \return the result of the last evaluation of \a body, or \c null if \a body
  * is not evaluated at least once
  * \throw exception::op_narg if the number of arguments is not 2 */
 template <impl::allocator A>

@@ -81,6 +81,7 @@ template class f_clone<allocator_any>;
 template class f_contains<allocator_any>;
 template class f_div<allocator_any>;
 template class f_eq<allocator_any>;
+template class f_erase<allocator_any>;
 template class f_ge<allocator_any>;
 template class f_gt<allocator_any>;
 template class f_hash<allocator_any>;
