@@ -105,9 +105,104 @@
  * 
  * \section Builtin_commands Built-in commands and functions
  *
- * Built-in commands and functions are defined as classes in namespace
+ * Built-in commands and functions are implemented as classes in namespace
  * threadscript::predef. A name \c FUN used in ThreadScript source code
- * corresponds to a declaration \c f_FUN in the namespace.
+ * corresponds to a declaration \c f_FUN in the namespace. Detailed
+ * documentation of each command or function is contained in the detailed
+ * description of its implementation class (linked from the list of built-ins
+ * below).
+ *
+ * \subsection Builtin_Values Values, functions, and variables
+ *
+ * \arg \link threadscript::predef::f_bool bool\endlink -- Conversion to \c bool
+ * \arg \link threadscript::predef::f_clone clone\endlink -- Copy a value
+ * \arg \link threadscript::predef::f_fun fun\endlink -- Defines a function
+ * \arg \link threadscript::predef::f_hash hash\endlink -- Creates an empty hash
+ * \arg \link threadscript::predef::f_int int\endlink -- Conversion to a signed
+ * integer
+ * \arg \link threadscript::predef::f_is_null is_null\endlink -- Check for
+ * a null reference
+ * \arg \link threadscript::predef::f_is_same is_same\endlink -- Check of
+ * reference equality
+ * \arg \link threadscript::predef::f_type type\endlink -- Gets value type
+ * \arg \link threadscript::predef::f_unsigned unsigned\endlink -- Conversion
+ * to an unsigned integer
+ * \arg \link threadscript::predef::f_var var\endlink -- Creating, reading, and
+ * writing variables
+ * \arg \link threadscript::predef::f_vector vector\endlink -- Creates an empty
+ * vector
+ *
+ * \subsection Builtin_Control_flow Control flow commands
+ *
+ * \arg \link threadscript::predef::f_if if\endlink -- Conditional command
+ * \arg \link threadscript::predef::f_seq seq\endlink -- Sequence of commands
+ * \arg \link threadscript::predef::f_while while\endlink -- While-loop
+ *
+ * \subsection Builtin_Comparison_functions Comparison functions
+ *
+ * \arg \link threadscript::predef::f_eq eq\endlink -- Value equality
+ * \arg \link threadscript::predef::f_ge ge\endlink -- Greater or equal
+ * \arg \link threadscript::predef::f_gt gt\endlink -- Greater than
+ * \arg \link threadscript::predef::f_le le\endlink -- Less or equal
+ * \arg \link threadscript::predef::f_lt lt\endlink -- Less than
+ * \arg \link threadscript::predef::f_ne ne\endlink -- Value inequality
+ *
+ * \subsection Builtin_Logical_functions Logical (Boolean) functions
+ *
+ * \arg \link threadscript::predef::f_and and\endlink -- Boolean AND
+ * \arg \link threadscript::predef::f_and_r and_r\endlink -- Boolean AND
+ * \arg \link threadscript::predef::f_not not\endlink -- Boolean NOT
+ * \arg \link threadscript::predef::f_or or\endlink -- Boolean OR
+ * \arg \link threadscript::predef::f_or_r or_r\endlink -- Boolean OR
+ *
+ * \subsection  Builtin_Arithmetic_functions Arithmetic functions
+ *
+ * \arg \link threadscript::predef::f_add add\endlink -- Addition
+ * \arg \link threadscript::predef::f_div div\endlink -- Division
+ * \arg \link threadscript::predef::f_mod mod\endlink -- Remainder
+ * \arg \link threadscript::predef::f_mul mul\endlink -- Multiplication
+ * \arg \link threadscript::predef::f_sub sub\endlink -- Subtraction
+ *
+ * \subsection  Builtin_string_functions String functions
+ *
+ * \arg \link threadscript::predef::f_size size\endlink -- Number of characters
+ * \arg \link threadscript::predef::f_substr substr\endlink -- Substring
+ *
+ * \subsection  Builtin_vector_functions Vector functions
+ *
+ * \arg \link threadscript::predef::f_at at\endlink -- Indexing
+ * \arg \link threadscript::predef::f_erase erase\endlink -- Shrink a vector
+ * \arg \link threadscript::predef::f_size size\endlink -- Number of elements
+ *
+ * \subsection  Builtin_hash_functions Hash functions
+ *
+ * \arg \link threadscript::predef::f_at at\endlink -- Searching a value by
+ * a key
+ * \arg \link threadscript::predef::f_contains contains\endlink -- Key
+ * membership test
+ * \arg \link threadscript::predef::f_hash hash\endlink -- Creates an empty hash
+ * \arg \link threadscript::predef::f_keys keys\endlink -- Gets all keys of
+ * a hash
+ * \arg \link threadscript::predef::f_size size\endlink -- Number of elements
+ *
+ * \subsection Builtin_Multithreading Multithreading
+ *
+ * \arg \link threadscript::predef::f_is_mt_safe is_mt_safe\endlink -- Testing
+ * of thread-safety of a value
+ * \arg \link threadscript::predef::f_mt_safe mt_safe\endlink -- Makes a value
+ * thread-safe
+ *
+ * \subsection Builtin_io Input/output functions
+ *
+ * \arg \link threadscript::predef::f_print print\endlink -- Output of values
+ *
+ * \section User_functions User-defined functions
+ *
+ * New functions can be defined in a script by command \c fun
+ * (threadscript::predef::f_fun). When a user-defined function is called, its
+ * arguments are available as local variable \c _args (the name defined by
+ * threadscript::basic_value_function::symbol_params) of type \c vector. The
+ * called function returns the return value of its body.
  *
  * \section Integer_arithmetic Integer arithmetic
  *
