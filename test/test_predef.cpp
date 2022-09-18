@@ -2671,6 +2671,175 @@ BOOST_DATA_TEST_CASE(f_sub, (std::vector<test::runner_result>{
 //! \endcond
 
 /*! \file
+ * \test \c f_substr -- Test of threadscript::predef::f_substr */
+//! \cond
+BOOST_DATA_TEST_CASE(f_substr, (std::vector<test::runner_result>{
+    {R"(substr())", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(substr("abc"))", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(substr("abc", 1, 2, 3))", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(substr(null, 1))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(substr(null, 1, 2))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(substr("abc", null))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(substr("abc", null, 1))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(substr("abc", 1, null))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(substr(false, 1, 2))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(substr(0, 1, 2))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(substr(+0, 1, 2))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(substr(vector(), 1, 2))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(substr(hash(), 1, 2))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(substr("abcd", true))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(substr("abcd", "1"))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(substr("abcd", vector()))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(substr("abcd", hash()))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(substr("abcd", 1, true))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(substr("abcd", 1, "1"))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(substr("abcd", 1, vector()))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(substr("abcd", 1, hash()))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(substr("XYZxyz", -1, 2))", test::exc{
+        typeid(ts::exception::value_out_of_range),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Value out of range"
+    }, ""},
+    {R"(substr("XYZxyz", 1, -2))", test::exc{
+        typeid(ts::exception::value_out_of_range),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Value out of range"
+    }, ""},
+    {R"(substr("", 0))", "", ""},
+    {R"(substr("", 1))", "", ""},
+    {R"(substr("", 10))", "", ""},
+    {R"(substr("", 0, 0))", "", ""},
+    {R"(substr("", 0, 1))", "", ""},
+    {R"(substr("", 0, 5))", "", ""},
+    {R"(substr("X", 0))", "X", ""},
+    {R"(substr("X", 1))", "", ""},
+    {R"(substr("X", 2))", "", ""},
+    {R"(substr("X", 0, 0))", "", ""},
+    {R"(substr("X", 0, 1))", "X", ""},
+    {R"(substr("X", 0, 2))", "X", ""},
+    {R"(substr("X", 1, 0))", "", ""},
+    {R"(substr("X", 1, 1))", "", ""},
+    {R"(substr("abc", 0))", "abc", ""},
+    {R"(substr("abc", 1))", "bc", ""},
+    {R"(substr("abc", +1))", "bc", ""},
+    {R"(substr("abc", 2))", "c", ""},
+    {R"(substr("abc", 3))", "", ""},
+    {R"(substr("abc", 4))", "", ""},
+    {R"(substr("abc", 0, 0))", "", ""},
+    {R"(substr("abc", 0, 1))", "a", ""},
+    {R"(substr("abc", 0, +1))", "a", ""},
+    {R"(substr("abc", 0, 2))", "ab", ""},
+    {R"(substr("abc", 0, 3))", "abc", ""},
+    {R"(substr("abc", 0, 4))", "abc", ""},
+    {R"(substr("abc", 0, 5))", "abc", ""},
+    {R"(substr("abc", 1, 0))", "", ""},
+    {R"(substr("abc", 1, 1))", "b", ""},
+    {R"(substr("abc", 1, 2))", "bc", ""},
+    {R"(substr("abc", 1, +2))", "bc", ""},
+    {R"(substr("abc", 1, 3))", "bc", ""},
+    {R"(substr("abc", +1, +3))", "bc", ""},
+    {R"(substr("abc", 1, 4))", "bc", ""},
+    {R"(substr("abc", 2, 0))", "", ""},
+    {R"(substr("abc", 2, 1))", "c", ""},
+    {R"(substr("abc", 2, 2))", "c", ""},
+    {R"(substr("abc", 2, 3))", "c", ""},
+    {R"(substr("abc", 3, 0))", "", ""},
+    {R"(substr("abc", 3, 1))", "", ""},
+    {R"(substr("abc", 3, 3))", "", ""},
+    {R"(substr("abc", 4, 0))", "", ""},
+    {R"(substr("abc", 4, 1))", "", ""},
+    {R"(substr("abc", 4, 2))", "", ""},
+}))
+{
+    test::check_runner(sample);
+}
+//! \endcond
+
+/*! \file
  * \test \c f_type -- Test of threadscript::predef::f_type */
 //! \cond
 BOOST_DATA_TEST_CASE(f_type, (std::vector<test::runner_result>{

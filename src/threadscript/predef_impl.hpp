@@ -115,9 +115,9 @@ f_at<A>::eval(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
     if (auto pv = dynamic_cast<basic_value_vector<A>*>(container.get())) {
         size_t i = 0;
         if (auto pi = dynamic_cast<basic_value_int<A>*>(idx.get())) {
-            i = size_t(pi->cvalue());
             if (pi->cvalue() < 0)
                 throw exception::value_out_of_range();
+            i = size_t(pi->cvalue());
         } else if (auto pi = dynamic_cast<basic_value_unsigned<A>*>(idx.get()))
             i = size_t(pi->cvalue());
         else
@@ -345,9 +345,9 @@ f_erase<A>::eval(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
         if (auto pv = dynamic_cast<basic_value_vector<A>*>(container.get())) {
             size_t i = 0;
             if (auto pi = dynamic_cast<basic_value_int<A>*>(idx.get())) {
-                i = size_t(pi->cvalue());
                 if (pi->cvalue() < 0)
                     throw exception::value_out_of_range();
+                i = size_t(pi->cvalue());
             } else
                 if (auto pi = dynamic_cast<basic_value_unsigned<A>*>(idx.get()))
                     i = size_t(pi->cvalue());
@@ -918,6 +918,49 @@ f_sub<A>::eval(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
         throw exception::value_type();
 }
 
+/*** f_substr ****************************************************************/
+
+template <impl::allocator A> typename basic_value<A>::value_ptr
+f_substr<A>::eval(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
+                  const basic_code_node<A>& node, std::string_view)
+{
+    size_t narg = this->narg(node);
+    if (narg != 2 && narg != 3)
+        throw exception::op_narg();
+    auto a0 = this->arg(thread, l_vars, node, 0);
+    auto a1 = this->arg(thread, l_vars, node, 1);
+    auto a2 = this->arg(thread, l_vars, node, 2);
+    if (!a0 || !a1 || (narg == 3 && !a2))
+        throw exception::value_null();
+    auto str = dynamic_cast<basic_value_string<A>*>(a0.get());
+    if (!str)
+        throw exception::value_type();
+    size_t idx = 0;
+    if (auto pi = dynamic_cast<basic_value_int<A>*>(a1.get())) {
+        if (pi->cvalue() < 0)
+            throw exception::value_out_of_range();
+        idx = size_t(pi->cvalue());
+    } else if (auto pi = dynamic_cast<basic_value_unsigned<A>*>(a1.get()))
+        idx = size_t(pi->cvalue());
+    else
+        throw exception::value_type();
+    size_t len = std::string::npos;
+    if (a2) {
+        if (auto pl = dynamic_cast<basic_value_int<A>*>(a2.get())) {
+            if (pl->cvalue() < 0)
+                throw exception::value_out_of_range();
+            len = size_t(pl->cvalue());
+        } else if (auto pl = dynamic_cast<basic_value_unsigned<A>*>(a2.get()))
+            len = size_t(pl->cvalue());
+        else
+            throw exception::value_type();
+    }
+    auto pr = basic_value_string<A>::create(thread.get_allocator());
+    if (idx < str->cvalue().size())
+        pr->value() = str->cvalue().substr(idx, len);
+    return pr;
+}
+
 /*** f_type ******************************************************************/
 
 template <impl::allocator A> typename basic_value<A>::value_ptr
@@ -1064,6 +1107,7 @@ add_predef_symbols(std::shared_ptr<basic_symbol_table<A>> sym, bool replace)
         { "seq", predef::f_seq<A>::create },
         { "size", predef::f_size<A>::create },
         { "sub", predef::f_sub<A>::create },
+        { "substr", predef::f_substr<A>::create },
         { "type", predef::f_type<A>::create },
         { "unsigned", predef::f_unsigned<A>::create },
         { "var", predef::f_var<A>::create },

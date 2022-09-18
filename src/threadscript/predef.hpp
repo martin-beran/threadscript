@@ -902,6 +902,30 @@ protected:
                                             std::string_view fun_name) override;
 };
 
+//! Function \c substr
+/*! Gets a substring of a string.
+ * \param str a substring will be extracted from this string
+ * \param idx the index into \a str where the substring begins; if greater or
+ * equal to the size of \a str, the returned substring is empty
+ * \param (optional) len the length of the substring; if missing or greater
+ * than the number of characters from \a idx to the end of \a str, the
+ * substring ends at the end of \a str
+ * \return the substring
+ * \throw exception::op_narg if the number of arguments is not 2 or 3
+ * \throw exception::value_null if any argument is \c null
+ * \throw exception::value_type if \a str does not have type \a string, or \a
+ * idx or \a len is not of type \a int or \a unsigned
+ * \throw exception::value_out_of_range if \a idx or \a len is negative */
+template <impl::allocator A>
+class f_substr final: public basic_value_native_fun<f_substr<A>, A> {
+    using basic_value_native_fun<f_substr<A>, A>::basic_value_native_fun;
+protected:
+    typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
+                                            basic_symbol_table<A>& l_vars,
+                                            const basic_code_node<A>& node,
+                                            std::string_view fun_name) override;
+};
+
 //! Function \c type
 /*! Gets a type name of a value.
  * \param result (optional) if exists and has type \c string, the result is
