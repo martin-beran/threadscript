@@ -22,7 +22,8 @@ namespace threadscript {
  * exception::value_read_only is thrown.
  *
  * Classes in this namespace must be registered in variable \c factory in
- * function add_predef_symbols().
+ * function add_predef_symbols(). A link to documentation of each class should
+ * be added to the appropriate group in \ref Builtin_commands.
  *
  * Classes in this namespace should be \c final.
  *
@@ -340,6 +341,26 @@ protected:
 template <impl::allocator A>
 class f_erase final: public basic_value_native_fun<f_erase<A>, A> {
     using basic_value_native_fun<f_erase<A>, A>::basic_value_native_fun;
+protected:
+    typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
+                                            basic_symbol_table<A>& l_vars,
+                                            const basic_code_node<A>& node,
+                                            std::string_view fun_name) override;
+};
+
+//! Command \c fun
+/*! Defines a function.
+ * \param name the name of the function
+ * \param body the body of the function, evaluated every time the function is
+ * called
+ * \return \c null (this is the return value of function definition command,
+ * not of a function call)
+ * \throw exception::op_narg if the number of arguments is not 2
+ * \throw exception::value_null if \a name is \c null
+ * \throw exception::value_type if \a name does not have type \c string */
+template <impl::allocator A>
+class f_fun final: public basic_value_native_fun<f_fun<A>, A> {
+    using basic_value_native_fun<f_fun<A>, A>::basic_value_native_fun;
 protected:
     typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
                                             basic_symbol_table<A>& l_vars,

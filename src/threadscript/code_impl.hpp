@@ -14,11 +14,11 @@ namespace threadscript {
 
 template <impl::allocator A>
 basic_code_node<A>::basic_code_node(tag, const A& alloc,
-                                    const a_basic_string<A>& file,
+                                    const basic_script<A>& script,
                                     const file_location& location,
                                     std::string_view name,
                                     value_t value):
-    _file(file), location(location), name(name, alloc), _children(alloc),
+    _script(script), location(location), name(name, alloc), _children(alloc),
     value(std::move(value))
 {
 }
@@ -101,6 +101,24 @@ bool basic_code_node<A>::operator==(const basic_code_node& o) const noexcept
 }
 
 template <impl::allocator A>
+auto basic_code_node<A>::shared_from_child(size_t idx) const -> node_ptr
+{
+    if (idx >= _children.size())
+        return nullptr;
+    else
+        if (auto p = _children[idx])
+            return node_ptr(_script.shared_from_this(), p);
+        else
+            return nullptr;
+}
+
+template <impl::allocator A>
+auto basic_code_node<A>::shared_from_this() const -> node_ptr
+{
+    return node_ptr(_script.shared_from_this(), this);
+}
+
+template <impl::allocator A>
 void basic_code_node<A>::write(std::ostream& os, size_t indent) const
 {
     std::string i_string(indent, ' ');
@@ -156,7 +174,7 @@ auto basic_script<A>::add_node(const node_ptr& parent,
     using traits = std::allocator_traits<decltype(a)>;
     try {
         p = a.allocate(1);
-        traits::construct(a, p, typename node_type::tag{}, alloc, _file,
+        traits::construct(a, p, typename node_type::tag{}, alloc, *this,
                           location, name, value);
         constructed = true;
         if (parent) {
@@ -235,7 +253,7 @@ basic_value_function<A>::eval(basic_state<A>& thread,
         finally pop{[&thread]() noexcept { thread.pop_frame(); }};
         frame.l_vars.insert(a_basic_string<A>{symbol_params, alloc},
                             std::move(args));
-        frame.location.file = node._file;
+        frame.location.file = node._script.file();
         frame.location.function = fun_name;
         return f->eval(thread, frame.l_vars);
     } else

@@ -1316,6 +1316,103 @@ BOOST_DATA_TEST_CASE(f_erase, (std::vector<test::runner_result>{
 //! \endcond
 
 /*! \file
+ * \test \c f_fun -- Test of threadscript::predef::f_fun */
+//! \cond
+BOOST_DATA_TEST_CASE(f_fun, (std::vector<test::runner_result>{
+    {R"(fun())", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(fun("zero", 0, 1))", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(fun(null, 0))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(fun(false, 0))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(fun(1, 0))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(fun(-2, 0))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(fun(vector(), 0))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(fun(hash(), 0))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(
+        seq(
+            fun("zero", 0),
+            fun("one", 1),
+            print(zero(), ",", zero(1), ",", zero("a", "b")),
+            print(" ", one(), ",", one(1), ",", one("a", "b"))
+        )
+    )", nullptr, "0,0,0 1,1,1"},
+    {R"(
+        seq(
+            fun("sqr", mul(at(_args(), 0), at(_args(), 0))),
+            print(sqr(0), sqr(1), sqr(2), sqr(3))
+        )
+    )", nullptr, "0149"},
+    {R"(
+        seq(
+            fun("narg", size(_args())),
+            print(narg(), ","),
+            print(narg("a"), ","),
+            print(narg("a", "b"), ","),
+            print(narg("a", "b", "c"))
+        )
+    )", nullptr, "0,1,2,3"},
+    {R"(
+        seq(
+            fun("select", at(_args(), at(_args(), 0))),
+            print(select(1, "a", "bc", "def"), ","),
+            print(select(2, "a", "bc", "def"), ","),
+            print(select(3, "a", "bc", "def"))
+        )
+    )", nullptr, "a,bc,def"},
+    {R"(
+        seq(
+            fun("local_var", seq(
+                var("v", "function"),
+                print("after var: ", v(), "\n")
+            )),
+            var("v", "script"),
+            print("before call: ", v(), "\n"),
+            local_var(),
+            print("after call: ", v(), "\n")
+        )
+    )", nullptr,
+        "before call: script\n"
+        "after var: function\n"
+        "after call: script\n"
+    },
+}))
+{
+    test::check_runner(sample);
+}
+//! \endcond
+
+/*! \file
  * \test \c f_ge -- Test of threadscript::predef::f_ge. Almost all
  * implementation of f_ge is shared with f_lt (except testing the number of
  * arguments), therefore we do only a small number of checks here, assuming

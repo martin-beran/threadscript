@@ -367,6 +367,27 @@ f_erase<A>::eval(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
     return nullptr;
 }
 
+/*** f_fun *******************************************************************/
+
+template <impl::allocator A> typename basic_value<A>::value_ptr
+f_fun<A>::eval(basic_state<A>& thread, basic_symbol_table<A>&l_vars,
+               const basic_code_node<A>& node, std::string_view)
+{
+    size_t narg = this->narg(node);
+    if (narg != 2)
+        throw exception::op_narg();
+    auto a0 = this->arg(thread, l_vars, node, 0);
+    if (!a0)
+        throw exception::value_null();
+    auto name = dynamic_cast<basic_value_string<A>*>(a0.get());
+    if (!name)
+        throw exception::value_type();
+    auto f = basic_value_function<A>::create(thread.get_allocator());
+    f->value() = node.shared_from_child(1);
+    l_vars.insert(name->cvalue(), f);
+    return nullptr;
+}
+
 /*** f_ge ********************************************************************/
 
 template <impl::allocator A> typename basic_value<A>::value_ptr
@@ -1085,6 +1106,7 @@ add_predef_symbols(std::shared_ptr<basic_symbol_table<A>> sym, bool replace)
         { "div", predef::f_div<A>::template create<predef::f_div<A>> },
         { "eq", predef::f_eq<A>::create },
         { "erase", predef::f_erase<A>::create },
+        { "fun", predef::f_fun<A>::create },
         { "ge", predef::f_ge<A>::create },
         { "gt", predef::f_gt<A>::create },
         { "hash", predef::f_hash<A>::create },

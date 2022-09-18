@@ -32,18 +32,22 @@ public:
      * source code. If it is \c std::nullopt, then \ref name will be resolved
      * to a value using a symbol_table. */
     using value_t = std::optional<typename basic_value<A>::value_ptr>;
+    //! A publicly available pointer to a code node
+    /*! It points to a basic_code_node, but manages its owner basic_script.
+     * This reduces the memory overhead of each basic_code_node object. */
+    using node_ptr = std::shared_ptr<const basic_code_node>;
     //! Number of spaces added on each indentation level of write().
     static constexpr size_t indent_step = 4;
     //! Constructor, used by basic_script
     /*! \param[in] t an ignored parameter used to prevent using this
      * constructor directly
      * \param[in] alloc the allocator used by members
-     * \param[in] file the file name of the owner script
+     * \param[in] script the owner script
      * \param[in] location the location in the current script file,
      * represented by the owher basic_script
      * \param[in] name the name of this node
      * \param[in] value the value of this node */
-    basic_code_node(tag t, const A& alloc, const a_basic_string<A>& file,
+    basic_code_node(tag t, const A& alloc, const basic_script<A>& script,
                     const file_location& location, std::string_view name,
                     value_t value);
     //! No copying
@@ -58,6 +62,14 @@ public:
     /*! It reuses the allocator of _children for deleting child nodes,
      * therefore another allocator need not be stored. */
     ~basic_code_node();
+    //! Creates a shared pointer to this node.
+    /*! \return a shared pointer to this node, but managing the owner script */
+    node_ptr shared_from_this() const;
+    //! Creates a shared pointer to a child node.
+    /*! \param[in] idx a (zero-based) index of a child node
+     * \return a shared oiubter to child \a idx, managing the owner script; \c
+     * nullptr if \a idx is greater than the index of the last child */
+    node_ptr shared_from_child(size_t idx) const;
     //! Test of equality.
     /*! It is intended mainly for testing that a parser produces the expected
      * representation of a script. It compares the node trees recursively.
@@ -91,8 +103,8 @@ private:
     typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
                                         basic_symbol_table<A>& l_vars) const;
     //! The script file name
-    /*! It always references basic_script::_file of the owner script. */
-    const a_basic_string<A>& _file;
+    /*! The owner script. */
+    const basic_script<A>& _script;
     file_location location; //!< Location in the script source file
     a_basic_string<A> name; //!< Node name
     //! Child nodes
@@ -144,7 +156,7 @@ public:
     //! A publicly available pointer to a code node
     /*! It points to a basic_code_node, but manages its owner basic_script.
      * This reduces the memory overhead of each basic_code_node object. */
-    using node_ptr = std::shared_ptr<const node_type>;
+    using node_ptr = node_type::node_ptr;
     //! Creates an empty script representation, with null root().
     /*! \param[in] t an ignored parameter used to prevent using this
      * constructor directly
