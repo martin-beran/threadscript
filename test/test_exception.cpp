@@ -612,3 +612,17 @@ BOOST_AUTO_TEST_CASE(op_library)
                "script:10:1:main(): Runtime error: Library failure");
 }
 //! \endcond
+
+/*! \file
+ * \test \c script_throw -- Class threadscript::exception::script_throw */
+//! \cond
+BOOST_AUTO_TEST_CASE(script_throw)
+{
+    ex::script_throw exc("thrown_from_script",
+                         {ts::frame_location{"main", "script", 10, 1}});
+    BOOST_TEST(exc.msg() == "thrown_from_script");
+    BOOST_TEST(exc.trace().size() == 1);
+    BOOST_TEST(exc.to_string(false) ==
+               "script:10:1:main(): Runtime error: Library failure");
+}
+//! \endcond

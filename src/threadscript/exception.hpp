@@ -181,7 +181,7 @@ public:
     //! Records an error description and a stack trace
     /*! \param[in] msg the error message (after the location)
      * \param[in] trace an optional stack trace */
-    explicit base(const std::string& msg, stack_trace trace = {}):
+    explicit base(std::string_view msg, stack_trace trace = {}):
         runtime_error(make_msg(msg, trace)),
         _trace(std::move(trace))
     {
@@ -234,7 +234,7 @@ public:
     /*! \param[in] msg the error message (after the location)
      * \param[in] trace a stack trace
      * \return the message */
-    std::string make_msg(const std::string& msg, const stack_trace& trace);
+    std::string make_msg(std::string_view msg, const stack_trace& trace);
     //! Replaces the stored stack trace
     /*! \param[in] trace a stack trace */
     void set_trace(stack_trace trace);
@@ -541,6 +541,18 @@ public:
     /*! \param[in] trace a stack trace */
     explicit op_library(stack_trace trace = {}):
         operation("Library failure", std::move(trace)) {}
+};
+
+//! An exception thrown by command \c throw from a script
+/*! It is used to represent exceptions explicitly thrown by a script command \c
+ * throw (implemented by class predef::f_throw). */
+class script_throw: public base {
+public:
+    //! Stores an error message.
+    /*! \param[in] msg the message passed to predef::f_throw
+     * \param[in] trace a stack trace */
+    explicit script_throw(std::string_view msg, stack_trace trace = {}):
+        base(msg, std::move(trace)) {}
 };
 
 } // namespace exception
