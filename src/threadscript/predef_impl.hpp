@@ -982,6 +982,63 @@ f_substr<A>::eval(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
     return pr;
 }
 
+/*** f_throw *****************************************************************/
+
+template <impl::allocator A> typename basic_value<A>::value_ptr
+f_throw<A>::eval(basic_state<A>& thread, basic_symbol_table<A>&l_vars,
+                 const basic_code_node<A>& node, std::string_view)
+{
+    size_t narg = this->narg(node);
+    if (narg != 0 && narg != 1)
+        throw exception::op_narg();
+    if (narg == 0) {
+        if (std::current_exception())
+            throw;
+        else
+            throw exception::op_bad();
+    } else {
+        auto a0 = this->arg(thread, l_vars, node, 0);
+        if (!a0)
+            throw exception::value_null();
+        if (auto msg = dynamic_cast<basic_value_string<A>*>(a0.get()))
+            throw exception::script_throw(msg->cvalue());
+        else
+            throw exception::value_type();
+    }
+}
+
+/*** f_try *******************************************************************/
+
+template <impl::allocator A> typename basic_value<A>::value_ptr
+f_try<A>::eval(basic_state<A>& thread, basic_symbol_table<A>&l_vars,
+               const basic_code_node<A>& node, std::string_view)
+{
+    size_t narg = this->narg(node);
+    if (narg % 2 == 0)
+        throw exception::op_narg();
+    try {
+        return this->arg(thread, l_vars, node, 0);
+    } catch (exception::base& e) {
+        for (size_t i = 1; i < narg; i += 2) {
+            auto ai = this->arg(thread, l_vars, node, i);
+            if (!ai)
+                throw exception::value_null();
+            auto exc = dynamic_cast<basic_value_string<A>*>(ai.get());
+            if (!exc)
+                throw exception::value_type();
+            if (exc->cvalue().empty() ||
+                (exc->cvalue().front() == '!' &&
+                 typeid(e) == typeid(exception::script_throw) &&
+                 std::string_view(exc->cvalue()).substr(1) == e.msg()) ||
+                (exc->cvalue() == e.type()))
+            {
+                return this->arg(thread, l_vars, node, i + 1);
+            }
+        }
+        throw;
+    }
+}
+
 /*** f_type ******************************************************************/
 
 template <impl::allocator A> typename basic_value<A>::value_ptr
@@ -1130,6 +1187,8 @@ add_predef_symbols(std::shared_ptr<basic_symbol_table<A>> sym, bool replace)
         { "size", predef::f_size<A>::create },
         { "sub", predef::f_sub<A>::create },
         { "substr", predef::f_substr<A>::create },
+        { "throw", predef::f_throw<A>::create },
+        { "try", predef::f_try<A>::create },
         { "type", predef::f_type<A>::create },
         { "unsigned", predef::f_unsigned<A>::create },
         { "var", predef::f_var<A>::create },

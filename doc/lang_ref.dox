@@ -136,6 +136,8 @@
  *
  * \arg \link threadscript::predef::f_if if\endlink -- Conditional command
  * \arg \link threadscript::predef::f_seq seq\endlink -- Sequence of commands
+ * \arg \link threadscript::predef::f_throw throw\endlink -- Throwing exceptions
+ * \arg \link threadscript::predef::f_try try\endlink -- Catching exceptions
  * \arg \link threadscript::predef::f_while while\endlink -- While-loop
  *
  * \subsection Builtin_Comparison_functions Comparison functions

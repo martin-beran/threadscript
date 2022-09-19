@@ -300,6 +300,7 @@ BOOST_AUTO_TEST_CASE(base)
         ts::frame_location{"fun1", "lib1", 20, 2},
         ts::frame_location{"f2", "script2", 30, 3},
     }};
+    BOOST_TEST(exc.type() == "base");
     BOOST_TEST(exc.what() == "script:10:1:main(): Test error message");
     BOOST_TEST(exc.msg() == "Test error message");
     BOOST_TEST(exc.trace().size() == 3);
@@ -344,6 +345,7 @@ BOOST_AUTO_TEST_CASE(wrapped)
             }
         } catch (ex::wrapped& e) {
             wrapped_msg = e.msg();
+            BOOST_TEST(e.type() == "wrapped");
             e.rethrow();
         }
     } catch (std::runtime_error& e) {
@@ -422,6 +424,7 @@ BOOST_AUTO_TEST_CASE(not_implemented)
 {
     ex::not_implemented exc("Some feature",
                             {ts::frame_location{"main", "script", 10, 1}});
+    BOOST_TEST(exc.type() == "not_implemented");
     BOOST_TEST(exc.trace().size() == 1);
     BOOST_TEST(exc.to_string(false) ==
                "script:10:1:main(): Some feature not implemented");
@@ -435,6 +438,7 @@ BOOST_AUTO_TEST_CASE(parse_error)
 {
     ex::parse_error exc("Invalid operator",
                         {ts::frame_location{"main", "script", 10, 1}});
+    BOOST_TEST(exc.type() == "parse_error");
     BOOST_TEST(exc.trace().size() == 1);
     BOOST_TEST(exc.to_string(false) ==
                "script:10:1:main(): Parse error: Invalid operator");
@@ -447,6 +451,7 @@ BOOST_AUTO_TEST_CASE(parse_error)
 BOOST_AUTO_TEST_CASE(alloc_bad)
 {
     ex::alloc_bad exc({ts::frame_location{"main", "script", 10, 1}});
+    BOOST_TEST(exc.type() == "alloc_bad");
     BOOST_TEST(exc.trace().size() == 1);
     BOOST_TEST(exc.to_string(false) ==
                "script:10:1:main(): Runtime error: Allocation failed");
@@ -459,6 +464,7 @@ BOOST_AUTO_TEST_CASE(alloc_bad)
 BOOST_AUTO_TEST_CASE(alloc_limit)
 {
     ex::alloc_limit exc({ts::frame_location{"main", "script", 10, 1}});
+    BOOST_TEST(exc.type() == "alloc_limit");
     BOOST_TEST(exc.trace().size() == 1);
     BOOST_TEST(exc.to_string(false) ==
                "script:10:1:main(): Runtime error: Allocation denied by limit");
@@ -472,6 +478,7 @@ BOOST_AUTO_TEST_CASE(unknown_symbol)
 {
     ex::unknown_symbol exc("var1",
                            {ts::frame_location{"main", "script", 10, 1}});
+    BOOST_TEST(exc.type() == "unknown_symbol");
     BOOST_TEST(exc.trace().size() == 1);
     BOOST_TEST(exc.to_string(false) ==
                "script:10:1:main(): Runtime error: Symbol not found: var1");
@@ -484,6 +491,7 @@ BOOST_AUTO_TEST_CASE(unknown_symbol)
 BOOST_AUTO_TEST_CASE(value_bad)
 {
     ex::value_bad exc({ts::frame_location{"main", "script", 10, 1}});
+    BOOST_TEST(exc.type() == "value_bad");
     BOOST_TEST(exc.trace().size() == 1);
     BOOST_TEST(exc.to_string(false) ==
                "script:10:1:main(): Runtime error: Bad value");
@@ -496,6 +504,7 @@ BOOST_AUTO_TEST_CASE(value_bad)
 BOOST_AUTO_TEST_CASE(value_null)
 {
     ex::value_null exc({ts::frame_location{"main", "script", 10, 1}});
+    BOOST_TEST(exc.type() == "value_null");
     BOOST_TEST(exc.trace().size() == 1);
     BOOST_TEST(exc.to_string(false) ==
                "script:10:1:main(): Runtime error: Null value");
@@ -509,6 +518,7 @@ BOOST_AUTO_TEST_CASE(value_null)
 BOOST_AUTO_TEST_CASE(value_read_only)
 {
     ex::value_read_only exc({ts::frame_location{"main", "script", 10, 1}});
+    BOOST_TEST(exc.type() == "value_read_only");
     BOOST_TEST(exc.trace().size() == 1);
     BOOST_TEST(exc.to_string(false) ==
                "script:10:1:main(): Runtime error: Read-only value");
@@ -522,6 +532,7 @@ BOOST_AUTO_TEST_CASE(value_read_only)
 BOOST_AUTO_TEST_CASE(value_mt_unsafe)
 {
     ex::value_mt_unsafe exc({ts::frame_location{"main", "script", 10, 1}});
+    BOOST_TEST(exc.type() == "value_mt_unsafe");
     BOOST_TEST(exc.trace().size() == 1);
     BOOST_TEST(exc.to_string(false) ==
                "script:10:1:main(): Runtime error: Thread-unsafe value");
@@ -534,6 +545,7 @@ BOOST_AUTO_TEST_CASE(value_mt_unsafe)
 BOOST_AUTO_TEST_CASE(value_type)
 {
     ex::value_type exc({ts::frame_location{"main", "script", 10, 1}});
+    BOOST_TEST(exc.type() == "value_type");
     BOOST_TEST(exc.trace().size() == 1);
     BOOST_TEST(exc.to_string(false) ==
                "script:10:1:main(): Runtime error: Bad value type");
@@ -547,6 +559,7 @@ BOOST_AUTO_TEST_CASE(value_type)
 BOOST_AUTO_TEST_CASE(value_out_of_range)
 {
     ex::value_out_of_range exc({ts::frame_location{"main", "script", 10, 1}});
+    BOOST_TEST(exc.type() == "value_out_of_range");
     BOOST_TEST(exc.trace().size() == 1);
     BOOST_TEST(exc.to_string(false) ==
                "script:10:1:main(): Runtime error: Value out of range");
@@ -559,6 +572,7 @@ BOOST_AUTO_TEST_CASE(value_out_of_range)
 BOOST_AUTO_TEST_CASE(op_bad)
 {
     ex::op_bad exc({ts::frame_location{"main", "script", 10, 1}});
+    BOOST_TEST(exc.type() == "op_bad");
     BOOST_TEST(exc.trace().size() == 1);
     BOOST_TEST(exc.to_string(false) ==
                "script:10:1:main(): Runtime error: Bad operation");
@@ -571,6 +585,7 @@ BOOST_AUTO_TEST_CASE(op_bad)
 BOOST_AUTO_TEST_CASE(op_recursion)
 {
     ex::op_recursion exc({ts::frame_location{"main", "script", 10, 1}});
+    BOOST_TEST(exc.type() == "op_recursion");
     BOOST_TEST(exc.trace().size() == 1);
     BOOST_TEST(exc.to_string(false) ==
                "script:10:1:main(): Runtime error: Recursion too deep");
@@ -583,6 +598,7 @@ BOOST_AUTO_TEST_CASE(op_recursion)
 BOOST_AUTO_TEST_CASE(op_overflow)
 {
     ex::op_overflow exc({ts::frame_location{"main", "script", 10, 1}});
+    BOOST_TEST(exc.type() == "op_overflow");
     BOOST_TEST(exc.trace().size() == 1);
     BOOST_TEST(exc.to_string(false) ==
                "script:10:1:main(): Runtime error: Overflow");
@@ -595,6 +611,7 @@ BOOST_AUTO_TEST_CASE(op_overflow)
 BOOST_AUTO_TEST_CASE(op_div_zero)
 {
     ex::op_div_zero exc({ts::frame_location{"main", "script", 10, 1}});
+    BOOST_TEST(exc.type() == "op_div_zero");
     BOOST_TEST(exc.trace().size() == 1);
     BOOST_TEST(exc.to_string(false) ==
                "script:10:1:main(): Runtime error: Division by zero");
@@ -607,6 +624,7 @@ BOOST_AUTO_TEST_CASE(op_div_zero)
 BOOST_AUTO_TEST_CASE(op_library)
 {
     ex::op_library exc({ts::frame_location{"main", "script", 10, 1}});
+    BOOST_TEST(exc.type() == "op_library");
     BOOST_TEST(exc.trace().size() == 1);
     BOOST_TEST(exc.to_string(false) ==
                "script:10:1:main(): Runtime error: Library failure");
@@ -620,9 +638,10 @@ BOOST_AUTO_TEST_CASE(script_throw)
 {
     ex::script_throw exc("thrown_from_script",
                          {ts::frame_location{"main", "script", 10, 1}});
+    BOOST_TEST(exc.type() == "script_throw");
     BOOST_TEST(exc.msg() == "thrown_from_script");
     BOOST_TEST(exc.trace().size() == 1);
     BOOST_TEST(exc.to_string(false) ==
-               "script:10:1:main(): Runtime error: Library failure");
+               "script:10:1:main(): thrown_from_script");
 }
 //! \endcond

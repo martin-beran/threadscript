@@ -161,6 +161,8 @@ extern template class f_seq<allocator_any>;
 extern template class f_size<allocator_any>;
 extern template class f_sub<allocator_any>;
 extern template class f_substr<allocator_any>;
+extern template class f_throw<allocator_any>;
+extern template class f_try<allocator_any>;
 extern template class f_type<allocator_any>;
 extern template class f_unsigned<allocator_any>;
 extern template class f_var<allocator_any>;

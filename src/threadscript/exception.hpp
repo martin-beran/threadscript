@@ -230,6 +230,12 @@ public:
         }
         return *this;
     }
+    //! Gets the exception type name.
+    /*! This member function must be overriden in each derived class.
+     * \return the class name without namespace */
+    virtual std::string_view type() const noexcept {
+        return "base";
+    }
     //! Creates the message to be stored in the exception.
     /*! \param[in] msg the error message (after the location)
      * \param[in] trace a stack trace
@@ -319,6 +325,9 @@ public:
     /*! \param[in] msg a message
      * \param[in] trace a stack trace */
     explicit wrapped(std::string_view msg, stack_trace trace);
+    std::string_view type() const noexcept override {
+        return "wrapped";
+    }
     //! Throws the wrapped exception.
     [[noreturn]] void rethrow() { std::rethrow_exception(_wrapped); }
 private:
@@ -337,6 +346,9 @@ public:
                              stack_trace trace = {}):
         base(std::string(feature).append(" not implemented"), std::move(trace))
     {}
+    std::string_view type() const noexcept override {
+        return "not_implemented";
+    }
 };
 
 //! An error detected when parsing a script source
@@ -347,6 +359,9 @@ public:
      * \param[in] trace a stack trace */
     explicit parse_error(std::string_view msg, stack_trace trace = {}):
         base(std::string("Parse error: ").append(msg), std::move(trace)) {}
+    std::string_view type() const noexcept override {
+        return "parse_error";
+    }
 };
 
 //! An error detected when running a script
@@ -357,6 +372,9 @@ protected:
      * \param[in] trace a stack trace */
     explicit runtime_error(std::string_view msg, stack_trace trace = {}):
         base(std::string("Runtime error: ").append(msg), std::move(trace)) {}
+    std::string_view type() const noexcept override {
+        return "runtime_error";
+    }
 };
 
 //! A memory allocation error
@@ -368,6 +386,9 @@ protected:
      * \param[in] trace a stack trace */
     explicit alloc(std::string_view msg, stack_trace trace = {}):
         runtime_error(msg, std::move(trace)) {}
+    std::string_view type() const noexcept override {
+        return "alloc";
+    }
 };
 
 //! A failed underlying memory allocation
@@ -379,6 +400,9 @@ public:
     /*! \param[in] trace a stack trace */
     explicit alloc_bad(stack_trace trace = {}):
         alloc("Allocation failed", std::move(trace)) {}
+    std::string_view type() const noexcept override {
+        return "alloc_bad";
+    }
 };
 
 //! A memory allocation denied by a limit
@@ -388,6 +412,9 @@ public:
     /*! \param[in] trace a stack trace */
     explicit alloc_limit(stack_trace trace = {}):
         alloc("Allocation denied by limit", std::move(trace)) {}
+    std::string_view type() const noexcept override {
+        return "alloc_limit";
+    }
 };
 
 //! A symbol name does not exist.
@@ -399,6 +426,9 @@ public:
     explicit unknown_symbol(std::string_view name, stack_trace trace = {}):
         runtime_error(std::string("Symbol not found: ").append(name),
                       std::move(trace)) {}
+    std::string_view type() const noexcept override {
+        return "unknown_symbol";
+    }
 };
 
 //! A bad value passed as an argument to an operation.
@@ -410,6 +440,9 @@ protected:
      * \param[in] trace a stack trace */
     explicit value(std::string_view msg, stack_trace trace = {}):
         runtime_error(msg, std::move(trace)) {}
+    std::string_view type() const noexcept override {
+        return "value";
+    }
 };
 
 //! A bad content of a value
@@ -421,6 +454,9 @@ public:
     /*! \param[in] trace a stack trace */
     explicit value_bad(stack_trace trace = {}):
         value("Bad value", std::move(trace)) {}
+    std::string_view type() const noexcept override {
+        return "value_bad";
+    }
 };
 
 //! An unexpected \c null value
@@ -430,6 +466,9 @@ public:
     /*! \param[in] trace a stack trace */
     explicit value_null(stack_trace trace = {}):
         value("Null value", std::move(trace)) {}
+    std::string_view type() const noexcept override {
+        return "value_null";
+    }
 };
 
 //! Trying to modify a read-only value
@@ -439,6 +478,9 @@ public:
     /*! \param[in] trace a stack trace */
     explicit value_read_only(stack_trace trace = {}):
         value("Read-only value", std::move(trace)) {}
+    std::string_view type() const noexcept override {
+        return "value_read_only";
+    }
 };
 
 //! Trying to mark as mt-safe a value that does not satisfy conditions
@@ -448,6 +490,9 @@ public:
     /*! \param[in] trace a stack trace */
     explicit value_mt_unsafe(stack_trace trace = {}):
         value("Thread-unsafe value", std::move(trace)) {}
+    std::string_view type() const noexcept override {
+        return "value_mt_unsafe";
+    }
 };
 
 //! A bad type of a value
@@ -457,6 +502,9 @@ public:
     /*! \param[in] trace a stack trace */
     explicit value_type(stack_trace trace = {}):
         value("Bad value type", std::move(trace)) {}
+    std::string_view type() const noexcept override {
+        return "value_type";
+    }
 };
 
 //! Accessing an element out of range
@@ -468,6 +516,9 @@ public:
     /*! \param[in] trace a stack trace */
     explicit value_out_of_range(stack_trace trace = {}):
         value("Value out of range", std::move(trace)) {}
+    std::string_view type() const noexcept override {
+        return "value_out_of_range";
+    }
 };
 
 //! An error detected during an operation
@@ -479,6 +530,9 @@ protected:
      * \param[in] trace a stack trace */
     explicit operation(std::string_view msg, stack_trace trace = {}):
         runtime_error(msg, std::move(trace)) {}
+    std::string_view type() const noexcept override {
+        return "operation";
+    }
 };
 
 //! A bad operation.
@@ -490,6 +544,9 @@ public:
     /*! \param[in] trace a stack trace */
     explicit op_bad(stack_trace trace = {}):
         operation("Bad operation", std::move(trace)) {}
+    std::string_view type() const noexcept override {
+        return "op_bad";
+    }
 };
 
 //! Too deep recursion of function calls.
@@ -500,6 +557,9 @@ public:
     /*! \param[in] trace a stack trace */
     explicit op_recursion(stack_trace trace = {}):
         operation("Recursion too deep", std::move(trace)) {}
+    std::string_view type() const noexcept override {
+        return "op_recursion";
+    }
 };
 
 //! Invalid number of arguments of an operation
@@ -511,6 +571,9 @@ public:
     /*! \param[in] trace a stack trace */
     explicit op_narg(stack_trace trace = {}):
         operation("Bad number of arguments", std::move(trace)) {}
+    std::string_view type() const noexcept override {
+        return "op_narg";
+    }
 };
 
 //! The result of an operation is out of range of the destination value_type.
@@ -522,6 +585,9 @@ public:
     /*! \param[in] trace a stack trace */
     explicit op_overflow(stack_trace trace = {}):
         operation("Overflow", std::move(trace)) {}
+    std::string_view type() const noexcept override {
+        return "op_overflow";
+    }
 };
 
 //! Division by zero.
@@ -531,6 +597,9 @@ public:
     /*! \param[in] trace a stack trace */
     explicit op_div_zero(stack_trace trace = {}):
         operation("Division by zero", std::move(trace)) {}
+    std::string_view type() const noexcept override {
+        return "op_div_zero";
+    }
 };
 
 //! A failed call to an OS or library function.
@@ -541,6 +610,9 @@ public:
     /*! \param[in] trace a stack trace */
     explicit op_library(stack_trace trace = {}):
         operation("Library failure", std::move(trace)) {}
+    std::string_view type() const noexcept override {
+        return "op_library";
+    }
 };
 
 //! An exception thrown by command \c throw from a script
@@ -553,6 +625,9 @@ public:
      * \param[in] trace a stack trace */
     explicit script_throw(std::string_view msg, stack_trace trace = {}):
         base(msg, std::move(trace)) {}
+    std::string_view type() const noexcept override {
+        return "script_throw";
+    }
 };
 
 } // namespace exception

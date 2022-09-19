@@ -947,6 +947,71 @@ protected:
                                             std::string_view fun_name) override;
 };
 
+//! Command \c throw
+/*! Throws an exception of type exception::script_throw. This command never
+ * returns.
+ * \param msg (optional) if used, it must have type \c string, which will be
+ * stored in the exception; if missing then the current exception will be
+ * thrown
+ * \throw - the current exception if called without an argument
+ * \throw exception::script_throw containing \a msg if called with an argument
+ * \throw exception::op_narg if the number of arguments is not 0 or 1
+ * \throw exception::value_null if \a msg is \c null
+ * \throw exception::value_type if \a msg does not have type \c string
+ * \throw exception::op_bad if called without an argument and there is no
+ * current exception */
+template <impl::allocator A>
+class f_throw final: public basic_value_native_fun<f_throw<A>, A> {
+    using basic_value_native_fun<f_throw<A>, A>::basic_value_native_fun;
+protected:
+    typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
+                                            basic_symbol_table<A>& l_vars,
+                                            const basic_code_node<A>& node,
+                                            std::string_view fun_name) override;
+};
+
+//! Command \c try
+/*! It evaluates an arbitrary command or function and catches exceptions
+ * derived from exception::base thrown during evaluation. Other types of C++
+ * exceptions are not caught.
+ *
+ * After argument \a cmd, there are zero or more pairs of arguments \a exc and
+ * \a handler. First, \a cmd is evaluated. If it does not throw an exception,
+ * its return value is returned. If \a cmd throws an exception, arguments \a
+ * exc are compared to the exception sequentially starting from the first one:
+ * \arg If \a exc does not begin with character \c '!', it is compared to the
+ * exception type name, as returned by exception::base::type().
+ * \arg If \a exc begins with \c '!' and the exception type is
+ * exception::script_throw, the rest of \a exc value after \c '!' is compared
+ * to the exception message, as returned by exception::base::msg().
+ * \arg If \a exc is the empty string, it matches any exception.
+ * 
+ * If a matching \a exc is found, the immediately following argument \a handler
+ * is evaluated and its value is returned. If no \a exc matches, the exception
+ * is rethrown. An exception thrown from \a handler is propagated and is not
+ * caught by the same \c try command.
+ * \param cmd a command (or a function) to be evaluated
+ * \param exc (repeated 0 or more times) used to match an exception, it must be
+ * a \c string
+ * \param handle (repeated 0 or more times, once after each \a exc) an
+ * exception handler, it may have any type or be \c null
+ * \return the return value of \a cmd or of the evaluated \a handler
+ * \throw exception::op_narg if called without arguments or with an even number
+ * of arguments
+ * \throw exception::value_null if matching with argument \a exc having value
+ * \c null is done
+ * \throw exception::value_type if matching with argument \a exc having other
+ * type than \c string is done */
+template <impl::allocator A>
+class f_try final: public basic_value_native_fun<f_try<A>, A> {
+    using basic_value_native_fun<f_try<A>, A>::basic_value_native_fun;
+protected:
+    typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
+                                            basic_symbol_table<A>& l_vars,
+                                            const basic_code_node<A>& node,
+                                            std::string_view fun_name) override;
+};
+
 //! Function \c type
 /*! Gets a type name of a value.
  * \param result (optional) if exists and has type \c string, the result is

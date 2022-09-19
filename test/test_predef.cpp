@@ -2937,6 +2937,265 @@ BOOST_DATA_TEST_CASE(f_substr, (std::vector<test::runner_result>{
 //! \endcond
 
 /*! \file
+ * \test \c f_throw -- Test of threadscript::predef::f_throw */
+//! \cond
+BOOST_DATA_TEST_CASE(f_throw, (std::vector<test::runner_result>{
+    {R"(throw("a", "b"))", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(throw(null))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(throw(true))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(throw(1))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(throw(-2))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(throw(vector()))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(throw(hash()))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(throw())", test::exc{
+        typeid(ts::exception::op_bad),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad operation"
+    }, ""},
+    {R"(
+        try(
+            throw("Error message"),
+            "", seq(
+                print("handler"),
+                throw()
+            )
+        )
+    )", test::exc{
+        typeid(ts::exception::script_throw),
+        ts::frame_location("", "", 3, 13),
+        "Error message"
+    }, "handler"},
+    {R"(throw("Error message"))", test::exc{
+        typeid(ts::exception::script_throw),
+        ts::frame_location("", "", 1, 1),
+        "Error message"
+    }, ""},
+}))
+{
+    test::check_runner(sample);
+}
+//! \endcond
+
+/*! \file
+ * \test \c f_try -- Test of threadscript::predef::f_try */
+//! \cond
+BOOST_DATA_TEST_CASE(f_try, (std::vector<test::runner_result>{
+    {R"(try())", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(try(null, ""))", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(try(null, "", null, "!"))", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(try(null))", nullptr, ""},
+    {R"(try(false))", false, ""},
+    {R"(try(123))", test::uint_t(123), ""},
+    {R"(try(-345))", test::int_t(-345), ""},
+    {R"(try("ok"))", "ok", ""},
+    {R"(try(add(1, 2)))", test::uint_t(3), ""},
+    {R"(try(throw(""), "", null))", nullptr, ""},
+    {R"(try(throw(""), null, null))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(try(throw(""), "NOMATCH", null, "", null))", nullptr, ""},
+    {R"(try(throw(""), "NOMATCH", null, null, null))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(try(throw(""), false, null))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(try(throw(""), "NOMATCH", null, false, null))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(try(throw(""), 0, null))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(try(throw(""), "NOMATCH", null, 0, null))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(try(throw(""), -10, null))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(try(throw(""), "NOMATCH", null, -10, null))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(try(throw(""), vector(), null))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(try(throw(""), "NOMATCH", null, vector(), null))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(try(throw(""), hash(), null))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(try(throw(""), "NOMATCH", null, hash(), null))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(
+        try(
+            div(1, 0),
+            "", "Exception"
+        )
+    )", "Exception", ""},
+    {R"(
+        try(
+            div(1, 0),
+            "op_div_zero", "Exception"
+        )
+    )", "Exception", ""},
+    {R"(
+        try(
+            div(1, 0),
+            "base", "Exception" # Base classes not matching
+        )
+    )", test::exc{
+        typeid(ts::exception::op_div_zero),
+        ts::frame_location("", "", 3, 13),
+        "Runtime error: Division by zero"
+    }, ""},
+    {R"(
+        try(
+            div(1, 0),
+            "operation", "Exception" # Base classes not matching
+        )
+    )", test::exc{
+        typeid(ts::exception::op_div_zero),
+        ts::frame_location("", "", 3, 13),
+        "Runtime error: Division by zero"
+    }, ""},
+    {R"(
+        try(
+            div(1, 0),
+            "!op_div_zero", "Exception" # This is matching of msg, not type
+        )
+    )", test::exc{
+        typeid(ts::exception::op_div_zero),
+        ts::frame_location("", "", 3, 13),
+        "Runtime error: Division by zero"
+    }, ""},
+    {R"(
+        try(
+            throw("Exception"),
+            "script_throw", "Handled"
+        )
+    )", "Handled", ""},
+    {R"(
+        try(
+            throw("Exception"),
+            "!Exception", "Handled"
+        )
+    )", "Handled", ""},
+    {R"(
+        try(
+            throw("Exception"),
+            "!script_throw", "Handled" # This is matching of msg, not type
+        )
+    )", test::exc{
+        typeid(ts::exception::script_throw),
+        ts::frame_location("", "", 3, 13),
+        "Exception"
+    }, ""},
+    {R"(
+        try(
+            throw("Exception"),
+            "Exception", "Handled" # This is matching of type, not msg
+        )
+    )", test::exc{
+        typeid(ts::exception::script_throw),
+        ts::frame_location("", "", 3, 13),
+        "Exception"
+    }, ""},
+    {R"(
+        try(
+            throw("Exception"),
+            "!Exception", "Matched msg",
+            "op_div_zero", "Matched type",
+            "", "Default"
+        )
+    )", "Matched msg", ""},
+    {R"(
+        try(
+            div(1, 0),
+            "!Exception", "Matched msg",
+            "op_div_zero", "Matched type",
+            "", "Default"
+        )
+    )", "Matched type", ""},
+    {R"(
+        try(
+            clone(),
+            "!Exception", "Matched msg",
+            "op_div_zero", "Matched type",
+            "", "Default"
+        )
+    )", "Default", ""},
+}))
+{
+    test::check_runner(sample);
+}
+//! \endcond
+
+/*! \file
  * \test \c f_type -- Test of threadscript::predef::f_type */
 //! \cond
 BOOST_DATA_TEST_CASE(f_type, (std::vector<test::runner_result>{
