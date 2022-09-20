@@ -1393,9 +1393,11 @@ BOOST_DATA_TEST_CASE(f_fun, (std::vector<test::runner_result>{
     {R"(
         seq(
             fun("local_var", seq(
+                print("before var: ", v(), "\n"),
                 var("v", "function"),
                 print("after var: ", v(), "\n")
             )),
+            gvar("v", "global"),
             var("v", "script"),
             print("before call: ", v(), "\n"),
             local_var(),
@@ -1403,6 +1405,7 @@ BOOST_DATA_TEST_CASE(f_fun, (std::vector<test::runner_result>{
         )
     )", nullptr,
         "before call: script\n"
+        "before var: global\n"
         "after var: function\n"
         "after call: script\n"
     },
@@ -1516,6 +1519,107 @@ BOOST_DATA_TEST_CASE(f_gt, (std::vector<test::runner_result>{
     {R"(gt("", "xy"))", false, ""},
     {R"(gt("xy", "xy"))", false, ""},
     {R"(gt("z", "xy"))", true, ""},
+}))
+{
+    test::check_runner(sample);
+}
+//! \endcond
+
+/*! \file
+ * \test \c f_gvar -- Test of threadscript::predef::f_gvar */
+//! \cond
+BOOST_DATA_TEST_CASE(f_gvar, (std::vector<test::runner_result>{
+    {R"(gvar())", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(gvar("v"))", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(gvar("v", 1, 2))", test::exc{
+        typeid(ts::exception::op_narg),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad number of arguments"
+    }, ""},
+    {R"(gvar(null, 1))", test::exc{
+        typeid(ts::exception::value_null),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Null value"
+    }, ""},
+    {R"(gvar(false, 2))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(gvar(1, 2))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(gvar(-1, 2))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(gvar(vector(), 2))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(gvar(hash(), 2))", test::exc{
+        typeid(ts::exception::value_type),
+        ts::frame_location("", "", 1, 1),
+        "Runtime error: Bad value type"
+    }, ""},
+    {R"(gvar("v", 123))", nullptr, ""},
+    {R"(
+        seq(
+            gvar("v", 123),
+            v()
+        )
+    )", test::uint_t(123U), ""},
+    {R"(
+        seq(
+            gvar("v", "GLOBAL"),
+            var("v", "LOCAL"),
+            v()
+        )
+    )", "LOCAL", ""},
+    {R"(
+        seq(
+            var("v", "LOCAL"),
+            gvar("v", "GLOBAL"),
+            v()
+        )
+    )", "LOCAL", ""},
+    {R"(
+        seq(
+            gvar("a", 1),
+            gvar("b", 11),
+            fun("f", seq(
+                var("a", 2),
+                gvar("b", 12),
+                print("f: ", a(), " ", b(), "\n")
+            )),
+            fun("g", seq(
+                var("a", 3),
+                gvar("b", 13),
+                print("g: ", a(), " ", b(), "\n")
+            )),
+            f(),
+            print("after f: ", a(), " ", b(), "\n"),
+            g(),
+            print("after g: ", a(), " ", b(), "\n")
+        )
+    )", nullptr,
+        "f: 2 12\n"
+        "after f: 1 12\n"
+        "g: 3 13\n"
+        "after g: 1 13\n"
+    },
 }))
 {
     test::check_runner(sample);

@@ -46,4 +46,11 @@ auto basic_state<A>::push_frame(stack_frame&& frame) -> stack_frame&
     return stack.back();
 }
 
+template <impl::allocator A>
+void basic_state<A>::update_sh_vars()
+{
+    sh_vars = vm.sh_vars.load();
+    t_vars.parent = sh_vars.get();
+}
+
 } // namespace threadscript

@@ -9,6 +9,8 @@
 
 namespace threadscript {
 
+template <impl::allocator A> class basic_state;
+
 //! A symbol table
 /*! This class is used to store mappings from variable names to values. Names
  * are strings (a_basic_string), values are shared pointers to basic_value. A
@@ -119,6 +121,8 @@ private:
     storage data; //!< Contents of the symbol table
     //! The optional parent symbol table
     const basic_symbol_table* parent = nullptr;
+    //! It needs to modify \ref parent
+    template <impl::allocator> friend class basic_state;
 };
 
 } // namespace threadscript

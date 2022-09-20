@@ -430,6 +430,26 @@ protected:
                                             std::string_view fun_name) override;
 };
 
+//! Command \c gvar
+/*! It sets a \a value of global variable \a name of the current thread. That
+ * is, it sets a variable in basic_state::t_vars. For getting a value of a
+ * variable or setting a local variable, use f_var.
+ * \param name the variable name
+ * \param value sets the variable to this value
+ * \return \c null
+ * \throw exception::op_narg if the number of arguments is not 2
+ * \throw exception::value_null if \a name if \c null
+ * \throw exception::value_type if \a name is not of type \c string */
+template <impl::allocator A>
+class f_gvar final: public basic_value_native_fun<f_gvar<A>, A> {
+    using basic_value_native_fun<f_gvar<A>, A>::basic_value_native_fun;
+protected:
+    typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
+                                            basic_symbol_table<A>& l_vars,
+                                            const basic_code_node<A>& node,
+                                            std::string_view fun_name) override;
+};
+
 //! Function \c hash
 /*! It creates a new empty value of type \c hash.
  * \return the newly created empty \c hash
@@ -1060,7 +1080,13 @@ protected:
 //! Command \c var
 /*! It gets or sets a \a value of variable \a name. It assings a reference to
  * the \a value instead of copying it. Hence, the same value may be accessible
- * by several names.
+ * by several names. The variable name is searched first in the symbol table of
+ * the current stack frame (the script or the currently executing function;
+ * basic_state::stack_frame::l_vars). If not found, it is searched in the
+ * global symbol table of the current thread (basic_state::t_vars) and finally
+ * in the  symbol table containing global variables shared by all threads of
+ * the current virtual machine (basic_virtual_machine::sh_vars). If setting a
+ * variable, the variable in the current stack frame is always set.
  * \param name the variable name
  * \param value (optional) sets the variable to this value; without it, the
  * variable is unchanged

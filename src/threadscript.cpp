@@ -85,6 +85,7 @@ template class f_erase<allocator_any>;
 template class f_fun<allocator_any>;
 template class f_ge<allocator_any>;
 template class f_gt<allocator_any>;
+template class f_gvar<allocator_any>;
 template class f_hash<allocator_any>;
 template class f_if<allocator_any>;
 template class f_int<allocator_any>;

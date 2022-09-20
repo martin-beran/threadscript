@@ -117,6 +117,8 @@
  * \arg \link threadscript::predef::f_bool bool\endlink -- Conversion to \c bool
  * \arg \link threadscript::predef::f_clone clone\endlink -- Copy a value
  * \arg \link threadscript::predef::f_fun fun\endlink -- Defines a function
+ * \arg \link threadscript::predef::f_gvar gvar\endlink -- Setting thread-local
+ * global variables
  * \arg \link threadscript::predef::f_hash hash\endlink -- Creates an empty hash
  * \arg \link threadscript::predef::f_int int\endlink -- Conversion to a signed
  * integer

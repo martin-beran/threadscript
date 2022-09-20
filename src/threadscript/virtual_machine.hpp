@@ -68,7 +68,7 @@ public:
     /*! It is a shared pointer to a symbol table, so that the global symbol
      * table can be replaced without synchronization of all thread. Existing
      * threads will continue to use the old symbol table until they request the
-     * new one. */
+     * new one by calling basic_state::update_sh_vars(). */
     std::atomic<std::shared_ptr<const basic_symbol_table<A>>> sh_vars;
     //! Used as the standard output stream.
     /*! If \c nullptr, standard output is discarded. It can be overriden
@@ -96,10 +96,10 @@ public:
     //! The constructor registers basic_state in \a vm.
     /*! \param[in] vm the virtual machine which this state is attached to. */
     explicit basic_state(vm_t& vm):
-        vm(vm), alloc(vm.get_allocator()),
-        t_vars(vm.get_allocator(), vm.sh_vars.load().get())
+        vm(vm), t_vars(vm.get_allocator(), nullptr), alloc(vm.get_allocator())
     {
         ++vm._num_states;
+        update_sh_vars();
     }
     //! No copying
     basic_state(const basic_state&) = delete;
@@ -121,7 +121,12 @@ public:
      * trace is returned.
      * \return the stack trace */
     [[nodiscard]] stack_trace current_stack() const noexcept;
-    vm_t& vm; //!< The virtual machine
+    //! Sets parent symbol table of t_vars to global shared variables of \ref vm
+    void update_sh_vars();
+    //! The virtual machine
+    vm_t& vm;
+    //! Global variables of this thread
+    basic_symbol_table<A> t_vars;
     //! Used as the standard output stream.
     /*! If \c nullptr, standard output is discarded. If \c std::nullopt, then
      * \c vm.std_out is used instead. The user of this stream must ensure
@@ -161,12 +166,12 @@ private:
     void pop_frame() noexcept;
     //! The allocator used by this state
     [[no_unique_address]] A alloc;
+    //! The currently used shared variables of the virtual machine
+    std::shared_ptr<const basic_symbol_table<A>> sh_vars;
     //! The maximum stack depth for this thread
     size_t max_stack = basic_virtual_machine<A>::default_max_stack;
     //! The stack of this thread
     stack_t stack;
-    //! Global variables of this thread
-    basic_symbol_table<A> t_vars;
     //! basic_code_node::eval() needs access to basic_state
     friend class basic_code_node<A>;
     //! basic_script::eval() needs access to basic_state
