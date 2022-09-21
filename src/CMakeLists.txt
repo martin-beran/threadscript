@@ -6,7 +6,7 @@ configure_file(
 
 # ThreadScript library
 add_library(
-    libthreadscript
+    threadscript
     debug.cpp
     default_allocator.cpp
     exception.cpp
@@ -17,7 +17,7 @@ add_library(
 
 # Command line interpreter ts
 add_executable(ts ts.cpp)
-target_link_libraries(ts PRIVATE libthreadscript Threads::Threads)
+target_link_libraries(ts PRIVATE threadscript Threads::Threads)
 
 # Check sources by clang-tidy
 find_program(CLANG_TIDY NAMES clang-tidy)

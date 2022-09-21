@@ -1,7 +1,7 @@
 # Link Boost::Test library to test programs
 link_libraries(
     ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}
-    libthreadscript
+    threadscript
     Threads::Threads
 )
 
