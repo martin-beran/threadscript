@@ -384,7 +384,7 @@ f_fun<A>::eval(basic_state<A>& thread, basic_symbol_table<A>&l_vars,
         throw exception::value_type();
     auto f = basic_value_function<A>::create(thread.get_allocator());
     f->value() = node.shared_from_child(1);
-    l_vars.insert(name->cvalue(), f);
+    thread.t_vars.insert(name->cvalue(), f);
     return nullptr;
 }
 

@@ -1409,6 +1409,28 @@ BOOST_DATA_TEST_CASE(f_fun, (std::vector<test::runner_result>{
         "after var: function\n"
         "after call: script\n"
     },
+    {R"(
+        seq(
+            fun("local1", "local1:global\n"),
+            print(local1()),
+            fun("global1", seq(
+                print(local1()),
+                fun("local1", "local1:global1.local\n"),
+                print(local1()),
+                fun("local2", "local2\n")
+            )),
+            fun("global2", print(local2())),
+            global1(),
+            global2(),
+            print(local1())
+        )
+    )", nullptr,
+        "local1:global\n"
+        "local1:global\n"
+        "local1:global1.local\n"
+        "local2\n"
+        "local1:global1.local\n"
+    },
 }))
 {
     test::check_runner(sample);

@@ -349,7 +349,8 @@ protected:
 };
 
 //! Command \c fun
-/*! Defines a function.
+/*! Defines a function. The function is stored in the global symbol table of
+ * the current thread (basic_state::t_vars).
  * \param name the name of the function
  * \param body the body of the function, evaluated every time the function is
  * called
