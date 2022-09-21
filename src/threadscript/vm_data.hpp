@@ -115,8 +115,9 @@ protected:
     //! Evaluates the value and returns the result.
     /*! For "normal" values, it returns the value itself. For values
      * representing code (basic_value_script, basic_value_function,
-     * basic_value_native_fun), it runs the script or calls the function and
-     * returns the result.
+     * basic_value_native_fun, basic_value_object,
+     * basic_value_object::constructor), it runs the script or calls the
+     * function or method and returns the result.
      * \param[in] thread the current thread
      * \param[in] l_vars the symbol table of the current stack frame;
      * in a function, it contains local variables of the current function;
@@ -130,6 +131,46 @@ protected:
     virtual value_ptr eval(basic_state<A>& thread,
         basic_symbol_table<A>& l_vars,
         const basic_code_node<A>& node, std::string_view fun_name);
+    //! Gets the number of arguments.
+    /*! It is intended to be called from eval().
+     * \param[in] node the argument \a node of eval()
+     * \return the number of function arguments. */
+    size_t narg(const basic_code_node<A>& node) const noexcept;
+    //! Evaluates an argument and returns its value.
+    /*! It is intended to be called from eval().
+     * \param[in] thread the argument \a thread of the caller eval()
+     * \param[in] l_vars the argument \a l_vars of the caller eval()
+     * \param[in] node the argument \a node of the caller eval()
+     * \param[in] idx the (zero-based) index of the argument
+     * \return the argument value; \c nullptr if \a idx is greater than the
+     * index of the last argument */
+    typename basic_value<A>::value_ptr arg(basic_state<A>& thread,
+                                           basic_symbol_table<A>& l_vars,
+                                           const basic_code_node<A>& node,
+                                           size_t idx);
+    //! Creates a result of a function.
+    /*! It is used by implementation classes for commands and function in
+     * namespace threadscript::predef.
+     * \tparam T a result type, derived from basic_typed_value
+     * \param[in] thread the argument \a thread of the caller eval()
+     * \param[in] l_vars the argument \a l_vars of the caller eval()
+     * \param[in] node the argument \a node of the caller eval()
+     * \param[in,out] val the value to be stored in the result; the value will
+     * be moved from \a val
+     * \param[in] use_arg if \c true and the argument with index \a arg has
+     * type \a T, the result is stored in it; otherwise (if \c false or the
+     * argument with index \a arg does not have type \a T) a new value is
+     * allocated for the result
+     * \param[in] arg the index of the output argument
+     * \return a basic_typed_value of type \a T, containing \a val
+     * \throw exception::value_read_only if the output argument would be used,
+     * but it is not writable */
+    template <std::derived_from<basic_value<A>> T>
+    typename basic_value<A>::value_ptr make_result(basic_state<A>& thread,
+                                               basic_symbol_table<A>& l_vars,
+                                               const basic_code_node<A>& node,
+                                               typename T::value_type&& val,
+                                               bool use_arg, size_t arg = 0);
 private:
     bool _mt_safe = false; //!< Whether this value is thread-safe
     //! basic_code_node::eval() calls basic_value::eval()
@@ -446,6 +487,118 @@ public:
     /*! \throw exception::value_mt_unsafe if the vector contains at least one
      * value that is not mt-safe. */
     void set_mt_safe() override;
+};
+
+//! The base class for objects of native classes implemented in C++
+/*! Each class \a Object derived from an instance of this template represents a
+ * ThreadScript class with native C++ implementation.
+ *
+ * In order to use objects of this class in a script, the ThreadScript
+ * initialization code (in native C++) creates an instance of class \ref
+ * constructor and makes it available via a basic_symbol_table. Each evaluation
+ * of \ref constructor creates a new instance of \a Object.
+ *
+ * The script can call methods of the object by evaluating the object and
+ * passing the method name as the first argument.
+ * \tparam Object a native class, which must be derived from basic_value_object
+ * (using CRTP); it should be \c final, because objects of classes derived from
+ * \a Object cannot be created by \ref constructor
+ * \tparam Name the name of the class (visible in ThreadScript)
+ * \tparam A an allocator type */
+template <class Object, str_literal Name, impl::allocator A>
+class basic_value_object: public basic_value<A> {
+    //! Used to control access to public constructors
+    struct tag{};
+public:
+    using typename basic_value<A>::value_ptr;
+    //! Implementation of an object method; parameters are passed from eval()
+    using method_impl = value_ptr (Object::*)(basic_state<A>& thread,
+                                              basic_symbol_table<A>& l_vars,
+                                              const basic_code_node<A>& node);
+    //! Mapping from method names to implementations
+    using method_table = a_basic_hash<a_basic_string<A>, method_impl, A>;
+    //! The class of an object used to create instances of \a Object
+    class constructor: public basic_value<A> {
+    public:
+        //! Creates the constructor object
+        /*! \param[in] t an ignored parameter that prevents using this
+         * constructor directly
+         * \param[in] alloc an allocator used to create \ref methods */
+        constructor(tag t, const A& alloc);
+        //! Gets the value type name
+        /*! \return \c "constructor" for a constructor of any \a Object type */
+        std::string_view type_name() const noexcept override;
+        //! Creates the constructor object
+        /*! \param[in] alloc an allocator used to create \ref methods
+         * \return the created constructor */
+        static value_ptr create(const A& alloc);
+    protected:
+        //! Creates an instance of \a Object
+        /*! \copydetails basic_value::eval() */
+        value_ptr eval(basic_state<A>& thread,
+                       basic_symbol_table<A>& l_vars,
+                       const basic_code_node<A>& node,
+                       std::string_view fun_name) override;
+        /*! \copydoc basic_value::shallow_copy_impl()
+         * \throw exception::not_implemented is always thrown, because \ref
+         * constructor is not copyable */
+        value_ptr shallow_copy_impl(const A& alloc, std::optional<bool> mt_safe)
+            const override;
+    private:
+        //! The name of this class, as returned by type_name()
+        inline static constexpr
+            std::string_view constructor_type{"constructor"};
+        //! The table of methods for \a Object instances
+        std::shared_ptr<const method_table> methods;
+    };
+    //! Creates the object
+    /*! Parameters after \a t are passed by constructor::eval().
+     * \param[in] t an ignored parameter that prevents using this
+     * \param[in] methods the mapping from method names to implementations
+     * \param[in] thread the current thread
+     * \param[in] l_vars the symbol table of the current stack frame;
+     * in a function, it contains local variables of the current function;
+     * outside of functions, it contains local variable of the current script
+     * \param[in] node evaluate in the context of this code node
+     * \throw a class derived from exception::base if evaluation fails; other
+     * exceptions are wrapped in exception::wrapped */
+    explicit basic_value_object(tag t,
+                                std::shared_ptr<const method_table> methods,
+                                basic_state<A>& thread,
+                                basic_symbol_table<A>& l_vars,
+                                const basic_code_node<A>& node);
+    //! Gets the value type name
+    /*! \return \a Name */
+    std::string_view type_name() const noexcept override;
+protected:
+    //! Calls a method of the object.
+    /*! The method name is passed as the first argument,
+     * <tt>arg(thread, l_vars, node, 0)</tt>.
+     *
+     * \copydetails basic_value::eval()
+     * \throw exception::op_narg if called without arguments
+     * \throw exception::value_null if the first argument (method name) is \c
+     * null
+     * \throw exception::value_type if the first argument (method name) does
+     * not have type \c string
+     * \throw exception::not_implemented if the method name is unknown */
+    value_ptr eval(basic_state<A>& thread,
+                   basic_symbol_table<A>& l_vars,
+                   const basic_code_node<A>& node,
+                   std::string_view fun_name) override;
+    /*! \copydoc basic_value::shallow_copy_impl()
+     * \throw exception::not_implemented is always thrown, because \a Object is
+     * not copyable by default */
+    value_ptr shallow_copy_impl(const A& alloc, std::optional<bool> mt_safe)
+        const override;
+    //! Gets the mapping from method names to implementations
+    /*! \return the table used by \ref constructor and stored in \ref methods */
+    static method_table init_methods();
+private:
+    //! The table of methods
+    /*! It is initialized by \ref constructor, which obtains it by calling
+     * init_methods(). */
+    std::shared_ptr<const method_table> methods;
 };
 
 } // namespace threadscript

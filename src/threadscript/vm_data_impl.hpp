@@ -11,11 +11,48 @@ namespace threadscript {
 
 /*** basic_value ************************************************************/
 
+template <impl::allocator A> typename basic_value<A>::value_ptr
+basic_value<A>::arg(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
+                    const basic_code_node<A>& node, size_t idx)
+{
+    if (idx >= narg(node))
+        return nullptr;
+    auto p = node._children[idx];
+    assert(p);
+    return p->eval(thread, l_vars);
+}
+
 template <impl::allocator A>
 auto basic_value<A>::eval(basic_state<A>&, basic_symbol_table<A>&,
     const basic_code_node<A>&, std::string_view) -> value_ptr
 {
     return this->shared_from_this();
+}
+
+template <impl::allocator A> template <std::derived_from<basic_value<A>> T>
+typename basic_value<A>::value_ptr
+basic_value<A>::make_result(basic_state<A>& thread,
+                            basic_symbol_table<A>& l_vars,
+                            const basic_code_node<A>& node,
+                            typename T::value_type&& val,
+                            bool use_arg, size_t arg)
+{
+    if (use_arg) {
+        auto a0 = this->arg(thread, l_vars, node, arg);
+        if (auto pr = dynamic_cast<T*>(a0.get())) {
+            pr->value() = std::move(val);
+            return a0;
+        }
+    }
+    auto pr = T::create(thread.get_allocator());
+    pr->value() = std::move(val);
+    return pr;
+}
+
+template <impl::allocator A>
+size_t basic_value<A>:: narg(const basic_code_node<A>& node) const noexcept
+{
+    return node._children.size();
 }
 
 template <impl::allocator A>
@@ -119,6 +156,103 @@ template <impl::allocator A> void basic_value_hash<A>::set_mt_safe()
         if (v.second && !v.second->mt_safe())
             throw exception::value_mt_unsafe();
     return impl::basic_value_hash_base<A>::set_mt_safe();
+}
+
+/*** basic_value_object ******************************************************/
+
+template <class Object, str_literal Name, impl::allocator A>
+basic_value_object<Object, Name, A>::basic_value_object(tag,
+                                  std::shared_ptr<const method_table> methods,
+                                  basic_state<A>&, basic_symbol_table<A>&,
+                                  const basic_code_node<A>&):
+    methods(std::move(methods))
+{
+}
+
+template <class Object, str_literal Name, impl::allocator A> auto
+basic_value_object<Object, Name, A>::eval(basic_state<A>& thread,
+                                          basic_symbol_table<A>& l_vars,
+                                          const basic_code_node<A>& node,
+                                          std::string_view)
+    -> value_ptr
+{
+    auto narg = this->narg(node);
+    if (narg < 1)
+        throw exception::op_narg();
+    auto a0 = this->arg(thread, l_vars, node, 0);
+    if (!a0)
+        throw exception::value_null();
+    auto method = dynamic_cast<basic_value_string<A>*>(a0.get());
+    if (!method)
+        throw exception::value_type();
+    if (auto m = methods->find(method->cvalue()); m != methods->end())
+        return (this->*m.second)(thread, l_vars, node);
+    else
+        throw exception::not_implemented();
+}
+
+template <class Object, str_literal Name, impl::allocator A>
+auto basic_value_object<Object, Name, A>::init_methods() -> method_table
+{
+    return method_table();
+}
+
+template <class Object, str_literal Name, impl::allocator A> auto
+basic_value_object<Object, Name, A>::shallow_copy_impl(const A& alloc,
+                                                 std::optional<bool> mt_safe)
+    const -> value_ptr
+{
+    throw exception::not_implemented();
+}
+
+template <class Object, str_literal Name, impl::allocator A>
+std::string_view basic_value_object<Object, Name, A>::type_name() const noexcept
+{
+    return Name;
+}
+
+/*** basic_value_object::constructor *****************************************/
+
+template <class Object, str_literal Name, impl::allocator A>
+basic_value_object<Object, Name, A>::constructor::constructor(tag,
+                                                              const A& alloc):
+    methods(std::allocate_shared<const method_table>(alloc,
+                                                     Object::init_methods()))
+{
+}
+
+template <class Object, str_literal Name, impl::allocator A> auto
+basic_value_object<Object, Name, A>::constructor::create(const A& alloc)
+    -> value_ptr
+{
+    return std::allocate_shared<constructor>(tag{}, alloc);
+}
+
+template <class Object, str_literal Name, impl::allocator A> auto
+basic_value_object<Object, Name, A>::constructor::eval(basic_state<A>& thread,
+                                                 basic_symbol_table<A>& l_vars,
+                                                 const basic_code_node<A>& node,
+                                                 std::string_view)
+    -> value_ptr
+{
+    return std::allocate_shared<Object>(thread.get_allocator(), tag{}, methods,
+                                        thread, l_vars, node);
+}
+
+template <class Object, str_literal Name, impl::allocator A> auto
+basic_value_object<Object, Name, A>::constructor::shallow_copy_impl(
+                                                  const A& alloc,
+                                                  std::optional<bool> mt_safe)
+    const -> value_ptr
+{
+    throw exception::not_implemented();
+}
+
+template <class Object, str_literal Name, impl::allocator A>
+std::string_view basic_value_object<Object, Name, A>::constructor::type_name()
+    const noexcept
+{
+            return constructor_type;
 }
 
 } // namespace threadscript

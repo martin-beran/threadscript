@@ -283,19 +283,6 @@ basic_value_native_fun<Derived, A>::basic_value_native_fun(
 {
 }
 
-template <class Derived, impl::allocator A> typename basic_value<A>::value_ptr
-basic_value_native_fun<Derived, A>::arg(basic_state<A>& thread,
-                                        basic_symbol_table<A>& l_vars,
-                                        const basic_code_node<A>& node,
-                                        size_t idx)
-{
-    if (idx >= narg(node))
-        return nullptr;
-    auto p = node._children[idx];
-    assert(p);
-    return p->eval(thread, l_vars);
-}
-
 template <class Derived, impl::allocator A>
 template <std::derived_from<Derived> T>
 typename basic_value<A>::value_ptr
@@ -311,27 +298,6 @@ basic_value_native_fun<Derived, A>::eval(basic_state<A>&,
     basic_symbol_table<A>&, const basic_code_node<A>&, std::string_view)
 {
     return nullptr;
-}
-
-template <class Derived, impl::allocator A>
-template <std::derived_from<basic_value<A>> T>
-typename basic_value<A>::value_ptr
-basic_value_native_fun<Derived, A>::make_result(basic_state<A>& thread,
-                                                basic_symbol_table<A>& l_vars,
-                                                const basic_code_node<A>& node,
-                                                typename T::value_type&& val,
-                                                bool use_arg, size_t arg)
-{
-    if (use_arg) {
-        auto a0 = this->arg(thread, l_vars, node, arg);
-        if (auto pr = dynamic_cast<T*>(a0.get())) {
-            pr->value() = std::move(val);
-            return a0;
-        }
-    }
-    auto pr = T::create(thread.get_allocator());
-    pr->value() = std::move(val);
-    return pr;
 }
 
 } // namespace threadscript

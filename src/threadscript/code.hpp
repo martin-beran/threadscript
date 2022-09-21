@@ -115,9 +115,8 @@ private:
     friend class basic_script<A>;
     //! basic_value_function::eval() needs access to node internals
     friend class basic_value_function<A>;
-    //! basic_value_native_fun needs access to _children
-    template <class Derived, impl::allocator Alloc>
-        friend class basic_value_native_fun;
+    //! basic_value needs access to _children
+    template <impl::allocator Alloc> friend class basic_value;
 };
 
 //! Writes a textual description of the node to a stream
@@ -355,48 +354,6 @@ protected:
     typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
         basic_symbol_table<A>& l_vars, const basic_code_node<A>& node,
         std::string_view fun_name) override;
-    //! Gets the number of arguments.
-    /*! It is intended to be called from eval().
-     * \param[in] node the argument \a node of eval()
-     * \return the number of function arguments. */
-    size_t narg(const basic_code_node<A>& node) const noexcept {
-        return node._children.size();
-    }
-    //! Evaluates an argument and returns its value.
-    /*! It is intended to be called from eval().
-     * \param[in] thread the argument \a thread of the caller eval()
-     * \param[in] l_vars the argument \a l_vars of the caller eval()
-     * \param[in] node the argument \a node of the caller eval()
-     * \param[in] idx the (zero-based) index of the argument
-     * \return the argument value; \c nullptr if \a idx is greater than the
-     * index of the last argument */
-    typename basic_value<A>::value_ptr arg(basic_state<A>& thread,
-                                           basic_symbol_table<A>& l_vars,
-                                           const basic_code_node<A>& node,
-                                           size_t idx);
-    //! Creates a result of a function.
-    /*! It is used by implementation classes for commands and function in
-     * namespace threadscript::predef.
-     * \tparam T a result type, derived from basic_typed_value
-     * \param[in] thread the argument \a thread of the caller eval()
-     * \param[in] l_vars the argument \a l_vars of the caller eval()
-     * \param[in] node the argument \a node of the caller eval()
-     * \param[in,out] val the value to be stored in the result; the value will
-     * be moved from \a val
-     * \param[in] use_arg if \c true and the argument with index \a arg has
-     * type \a T, the result is stored in it; otherwise (if \c false or the
-     * argument with index \a arg does not have type \a T) a new value is
-     * allocated for the result
-     * \param[in] arg the index of the output argument
-     * \return a basic_typed_value of type \a T, containing \a val
-     * \throw exception::value_read_only if the output argument would be used,
-     * but it is not writable */
-    template <std::derived_from<basic_value<A>> T>
-    typename basic_value<A>::value_ptr make_result(basic_state<A>& thread,
-                                               basic_symbol_table<A>& l_vars,
-                                               const basic_code_node<A>& node,
-                                               typename T::value_type&& val,
-                                               bool use_arg, size_t arg = 0);
     //! The allocator used by this native function
     A alloc;
 };
