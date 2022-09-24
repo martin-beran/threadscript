@@ -571,11 +571,9 @@ public:
      * \param[in] node evaluate in the context of this code node
      * \throw a class derived from exception::base if evaluation fails; other
      * exceptions are wrapped in exception::wrapped */
-    explicit basic_value_object(tag t,
-                                std::shared_ptr<const method_table> methods,
-                                basic_state<A>& thread,
-                                basic_symbol_table<A>& l_vars,
-                                const basic_code_node<A>& node);
+    basic_value_object(tag t, std::shared_ptr<const method_table> methods,
+                       basic_state<A>& thread, basic_symbol_table<A>& l_vars,
+                       const basic_code_node<A>& node);
     //! Name of this value type
     /*! \return \a Name */
     [[nodiscard]] static consteval std::string_view static_type_name() {
