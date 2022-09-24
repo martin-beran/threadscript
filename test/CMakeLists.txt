@@ -13,6 +13,7 @@ set(
     dummy
     dummy_boost
     exception
+    object
     parser
     parser_ascii
     predef

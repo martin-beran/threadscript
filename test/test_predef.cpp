@@ -19,8 +19,6 @@
 
 //! [parse_run]
 namespace ts = threadscript;
-using namespace std::string_literals;
-using namespace std::string_view_literals;
 
 namespace test {
 
@@ -52,6 +50,9 @@ ts::value::value_ptr script_runner::run()
 
 } // namespace test
 //! [parse_run]
+
+using namespace std::string_literals;
+using namespace std::string_view_literals;
 
 namespace test {
 

@@ -491,7 +491,8 @@ public:
 
 //! The base class for objects of native classes implemented in C++
 /*! Each class \a Object derived from an instance of this template represents a
- * ThreadScript class with native C++ implementation.
+ * ThreadScript class with native C++ implementation. See the test program
+ * test_object.cpp for examples how to define native classes.
  *
  * In order to use objects of this class in a script, the ThreadScript
  * initialization code (in native C++) creates an instance of class \ref
@@ -504,14 +505,22 @@ public:
  * (using CRTP); it should be \c final, because objects of classes derived from
  * \a Object cannot be created by \ref constructor
  * \tparam Name the name of the class (visible in ThreadScript)
- * \tparam A an allocator type */
+ * \tparam A an allocator type
+ * \test in file test_object.cpp */
 template <class Object, str_literal Name, impl::allocator A>
 class basic_value_object: public basic_value<A> {
+protected:
     //! Used to control access to public constructors
     struct tag{};
 public:
+    //! This base class of \a Object.
+    /*! It is especially useful for a definition of inheriting constructor in a
+     * derived class as: <tt>using base::base;</tt> */
+    using base = basic_value_object<Object, Name, A>;
     using typename basic_value<A>::value_ptr;
-    //! Implementation of an object method; parameters are passed from eval()
+    //! Implementation of an object method
+    /*! It is called by eval(). Parameters are passed from eval(). A return
+     * value is returned by eval(). A thrown exception is thrown by eval(). */
     using method_impl = value_ptr (Object::*)(basic_state<A>& thread,
                                               basic_symbol_table<A>& l_vars,
                                               const basic_code_node<A>& node);
@@ -538,7 +547,7 @@ public:
         value_ptr eval(basic_state<A>& thread,
                        basic_symbol_table<A>& l_vars,
                        const basic_code_node<A>& node,
-                       std::string_view fun_name) override;
+                       std::string_view fun_name) final override;
         /*! \copydoc basic_value::shallow_copy_impl()
          * \throw exception::not_implemented is always thrown, because \ref
          * constructor is not copyable */
@@ -567,16 +576,34 @@ public:
                                 basic_state<A>& thread,
                                 basic_symbol_table<A>& l_vars,
                                 const basic_code_node<A>& node);
+    //! Name of this value type
+    /*! \return \a Name */
+    [[nodiscard]] static consteval std::string_view static_type_name() {
+        return Name;
+    }
     //! Gets the value type name
     /*! \return \a Name */
-    std::string_view type_name() const noexcept override;
+    [[nodiscard]] std::string_view type_name() const noexcept final override;
+    //! Gets the mapping from method names to implementations
+    /*! \return the table used by \ref constructor and stored in \ref methods
+     * \note This function is public, because otherwise \ref base would have to
+     * be declaread as \c friend in each derived \a Object class. */
+    [[nodiscard]] static method_table init_methods();
+    //! Creates the \ref constructor and registers it in a symbol table.
+    /*! The \ref constructor variable name will be \a Name.
+     * \param[in] sym registers the class in this symbol table
+     * \param[in] replace if \c false, any existing symbol with the name equal
+     * to \a Name is left unchanged; if \c true, any such symbol is replaced by
+     * the created constructor value */
+    static void register_constructor(basic_symbol_table<A>& sym, bool replace);
 protected:
-    //! Calls a method of the object.
+    //! Gets the object or calls a method of the object.
     /*! The method name is passed as the first argument,
-     * <tt>arg(thread, l_vars, node, 0)</tt>.
+     * <tt>arg(thread, l_vars, node, 0)</tt>. If called with a method name, the
+     * method result is returned. If called without arguments, the object
+     * itself is returned.
      *
      * \copydetails basic_value::eval()
-     * \throw exception::op_narg if called without arguments
      * \throw exception::value_null if the first argument (method name) is \c
      * null
      * \throw exception::value_type if the first argument (method name) does
@@ -591,9 +618,6 @@ protected:
      * not copyable by default */
     value_ptr shallow_copy_impl(const A& alloc, std::optional<bool> mt_safe)
         const override;
-    //! Gets the mapping from method names to implementations
-    /*! \return the table used by \ref constructor and stored in \ref methods */
-    static method_table init_methods();
 private:
     //! The table of methods
     /*! It is initialized by \ref constructor, which obtains it by calling

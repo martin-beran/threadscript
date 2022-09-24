@@ -110,7 +110,8 @@
  * corresponds to a declaration \c f_FUN in the namespace. Detailed
  * documentation of each command or function is contained in the detailed
  * description of its implementation class (linked from the list of built-ins
- * below).
+ * below). Examples of using built-in commands and functions can be found in
+ * test program test_predef.cpp.
  *
  * \subsection Builtin_Values Values, functions, and variables
  *
@@ -219,4 +220,24 @@
  *
  * Due to different rules of signed and unsigned arithmentics, signed and
  * unsigned values may not be mixed in a single expression. Otherwise,
- * exception threadscript::exception::value_type is thrown. */
+ * exception threadscript::exception::value_type is thrown.
+ *
+ * \section Native_classes Native classes and objects
+ *
+ * It is possible to define classes accessible from ThreadScript and
+ * implemented as native C++ code. For each such ThreadScript class, the
+ * corresponding C++ class is derived from threadscript::basic_value_object.
+ *
+ * For each class, a value representing its constructor function must be
+ * created and registered in a symbol table by ThreadScript virtual machine
+ * initialization C++ code. Each call of the constructor function from a script
+ * creates a new object of the class. The instance is a normal ThreadScript
+ * value that can be stored in a variable.
+ *
+ * Calling a method of an object is done by calling the object value as
+ * a function and passing the method name as the first argument, which must
+ * have type \c string.
+ *
+ * Examples of defining and using native classes can be found in test program
+ * test_object.cpp.
+ */

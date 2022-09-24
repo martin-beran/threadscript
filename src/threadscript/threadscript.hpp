@@ -236,4 +236,8 @@ extern template class basic_typed_value<value_hash,
     threadscript::impl::name_value_hash, allocator_any>;
 extern template class basic_value_hash<allocator_any>;
 
+//! The \ref basic_value_object using the configured allocator
+template <class Object, str_literal Name>
+using value_object = basic_value_object<Object, Name, allocator_any>;
+
 } // namespace threadscript

@@ -167,6 +167,8 @@ basic_value_object<Object, Name, A>::basic_value_object(tag,
                                   const basic_code_node<A>&):
     methods(std::move(methods))
 {
+    // This static_assert must be at a place where Object is a complete class
+    static_assert(std::is_base_of_v<basic_value_object, Object>);
 }
 
 template <class Object, str_literal Name, impl::allocator A> auto
@@ -178,7 +180,7 @@ basic_value_object<Object, Name, A>::eval(basic_state<A>& thread,
 {
     auto narg = this->narg(node);
     if (narg < 1)
-        throw exception::op_narg();
+        return this->shared_from_this();
     auto a0 = this->arg(thread, l_vars, node, 0);
     if (!a0)
         throw exception::value_null();
@@ -186,9 +188,9 @@ basic_value_object<Object, Name, A>::eval(basic_state<A>& thread,
     if (!method)
         throw exception::value_type();
     if (auto m = methods->find(method->cvalue()); m != methods->end())
-        return (this->*m.second)(thread, l_vars, node);
+        return (static_cast<Object*>(this)->*(m->second))(thread, l_vars, node);
     else
-        throw exception::not_implemented();
+        throw exception::not_implemented(method->cvalue());
 }
 
 template <class Object, str_literal Name, impl::allocator A>
@@ -197,12 +199,22 @@ auto basic_value_object<Object, Name, A>::init_methods() -> method_table
     return method_table();
 }
 
+template <class Object, str_literal Name, impl::allocator A>
+void basic_value_object<Object, Name, A>::register_constructor(
+                                                    basic_symbol_table<A>& sym,
+                                                    bool replace)
+{
+    a_basic_string<A> name{std::string_view(Name), sym.get_allocator()};
+    if (replace || !sym.contains(name))
+        sym.insert(name, constructor::create(sym.get_allocator()));
+}
+
 template <class Object, str_literal Name, impl::allocator A> auto
-basic_value_object<Object, Name, A>::shallow_copy_impl(const A& alloc,
-                                                 std::optional<bool> mt_safe)
+basic_value_object<Object, Name, A>::shallow_copy_impl(const A&,
+                                                 std::optional<bool>)
     const -> value_ptr
 {
-    throw exception::not_implemented();
+    throw exception::not_implemented("Clone");
 }
 
 template <class Object, str_literal Name, impl::allocator A>
@@ -225,7 +237,7 @@ template <class Object, str_literal Name, impl::allocator A> auto
 basic_value_object<Object, Name, A>::constructor::create(const A& alloc)
     -> value_ptr
 {
-    return std::allocate_shared<constructor>(tag{}, alloc);
+    return std::allocate_shared<constructor>(alloc, tag{}, alloc);
 }
 
 template <class Object, str_literal Name, impl::allocator A> auto
@@ -241,11 +253,11 @@ basic_value_object<Object, Name, A>::constructor::eval(basic_state<A>& thread,
 
 template <class Object, str_literal Name, impl::allocator A> auto
 basic_value_object<Object, Name, A>::constructor::shallow_copy_impl(
-                                                  const A& alloc,
-                                                  std::optional<bool> mt_safe)
+                                                          const A&,
+                                                          std::optional<bool>)
     const -> value_ptr
 {
-    throw exception::not_implemented();
+    throw exception::not_implemented("Clone");
 }
 
 template <class Object, str_literal Name, impl::allocator A>
