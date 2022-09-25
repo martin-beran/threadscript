@@ -36,6 +36,12 @@ template <impl::allocator A> class basic_code_node;
  * cannot be unset, because it may not be possible to trace all places that
  * depend on it.
  *
+ * For objects, that is, classes derived from basic_value_object, the semantics
+ * of mt-safe is defined by an object implementation and may be different from
+ * ordinary values. For example, basic_shared_vector and basic_shared_hash are
+ * always mt-safe and not read-only, because all operations on them are
+ * synchronized by an internal mutex.
+ *
  * To be able to mark a value as mt-safe, all other values referenced by it
  * (e.g., by a basic_value_vector or basic_value_hash) must be already mt-safe.
  * The reason is that after marked mt-safe, the value may be shared among
@@ -548,7 +554,7 @@ public:
                        basic_symbol_table<A>& l_vars,
                        const basic_code_node<A>& node,
                        std::string_view fun_name) final override;
-        /*! \copydoc basic_value::shallow_copy_impl()
+        /*! \copydoc threadscript::basic_value::shallow_copy()
          * \throw exception::not_implemented is always thrown, because \ref
          * constructor is not copyable */
         value_ptr shallow_copy_impl(const A& alloc, std::optional<bool> mt_safe)
@@ -583,11 +589,12 @@ public:
     /*! \return \a Name */
     [[nodiscard]] std::string_view type_name() const noexcept final override;
     //! Gets the mapping from method names to implementations
-    /*! \return the table used by \ref constructor and stored in \ref methods
+    /*! \return the table used by basic_value_object::constructor and stored in
+     * \ref methods
      * \note This function is public, because otherwise \ref base would have to
      * be declaread as \c friend in each derived \a Object class. */
     [[nodiscard]] static method_table init_methods();
-    //! Creates the \ref constructor and registers it in a symbol table.
+    //! Creates basic_value_object::constructor, registers it in a symbol table
     /*! The \ref constructor variable name will be \a Name.
      * \param[in] sym registers the class in this symbol table
      * \param[in] replace if \c false, any existing symbol with the name equal
@@ -597,9 +604,12 @@ public:
 protected:
     //! Gets the object or calls a method of the object.
     /*! The method name is passed as the first argument,
-     * <tt>arg(thread, l_vars, node, 0)</tt>. If called with a method name, the
-     * method result is returned. If called without arguments, the object
-     * itself is returned.
+     * <tt>arg(thread, l_vars, node, 0)</tt>. If called without arguments, the
+     * object itself is returned. If called with a method name, the method
+     * result is returned. It calls the method implementation member function
+     * (of type method_impl) according to the table returned by init_methods().
+     * The implementing member functions gets all arguments of the method call,
+     * including the method name in the first argument.
      *
      * \copydetails basic_value::eval()
      * \throw exception::value_null if the first argument (method name) is \c
@@ -611,7 +621,7 @@ protected:
                    basic_symbol_table<A>& l_vars,
                    const basic_code_node<A>& node,
                    std::string_view fun_name) override;
-    /*! \copydoc basic_value::shallow_copy_impl()
+    /*! \copydoc threadscript::basic_value::shallow_copy()
      * \throw exception::not_implemented is always thrown, because \a Object is
      * not copyable by default */
     value_ptr shallow_copy_impl(const A& alloc, std::optional<bool> mt_safe)

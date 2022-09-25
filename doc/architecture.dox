@@ -121,8 +121,9 @@
  * There are some built-in scalar types (threadscript::value_bool,
  * threadscript::value_int, threadscript::value_unsigned,
  * threadscript::value_string), vectors (threadscript::value vector), and hashes
- * (threadscript::value_hash). New types can be added as extensions implemeted
- * as additional native C++ classes derived from threadscript::value.
+ * (threadscript::value_hash). New types can be added as extensions implemented
+ * by additional native C++ classes derived from threadscript::value (usually
+ * from threadscript::basic_value_object), e.g., threadscript::shared_vector.
  *
  * Memory management of values uses reference counting and is implemented by \c
  * std::shared_ptr and \c std::weak_ptr. There are no provisions for automatic

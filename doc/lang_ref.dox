@@ -56,26 +56,31 @@
  * threadscript::config::value_int_type.
  * \arg \c unsigned -- An unsigned integer of implementation-defined size. It
  * uses modulo arithmetic, therefore it never overflows. It is represented by
- * C++ type threadscript::config::value_unsigned.
+ * C++ type threadscript::config::value_unsigned_type.
  * \arg \c string -- A string of characters of C++ type \c char. It is
- * represented by C++ type std::string. Unlike the C++ type, its storage not
- * only grows, but also shrinks according to its content.
+ * represented by C++ type std::string.
  *
  * ThreadScript core languange provides the following container data types:
  * \arg \c vector -- A vector of arbitrary variable size. Each element can
  * contain a value of any type, including \c null. It is represented by C++
- * type std::vector. Unlike the C++ type, its storage not only grows, but also
- * shrinks according to its content.
+ * type std::vector.
  * \arg \c hash -- An unordered has map of string keys to values of arbitrary
  * types, including \c null. It is represented by C++ type std::unordered_map.
- * Unlike the C++ type, its storage not only grows, but also shrinks according
- * to its content.
  * 
  * Any modifiable value of a type from the core language is thread-local, that
  * is, it is owned by a single thread and cannot be accessed by other threads.
  * In order to make a value shareable among threads, it must be marked as
  * \a thread-safe (sometimes denoted as \a mt-safe), which also makes the value
- * read-only.
+ * read-only. This does not always apply to \link Native_classes
+ * objects\endlink. The object implementation specifies if it is thread-safe
+ * and if it is writable despite being thread-safe.
+ *
+ * Values use reference counting for memory management, without any automatic
+ * breaking of reference cycles. Variable-size values (\c string, variable size
+ * containers \c vector, \c hash, and some objects, e.g., \c shared_vector, \c
+ * shared_hash) handle its storage for elements automatically, growing and
+ * shrinking as necessary. Note that it is different from C++ std containers,
+ * which grow automatically, but shrink only on request.
  *
  * \section Script_execution Script execution
  *
@@ -240,4 +245,13 @@
  *
  * Examples of defining and using native classes can be found in test program
  * test_object.cpp.
+ *
+ * \subsection Builtin_classes Built-in native classes
+ *
+ * \arg \link threadscript::basic_channel channel\endlink -- A channel for
+ * passing values among threads
+ * \arg \link threadscript::basic_shared_hash shared_hash\endlink -- A hash
+ * that can be modified by multiple threads
+ * \arg \link threadscript::basic_shared_vector basic_vector\endlink --
+ * A vector that can be modified by multiple threads
  */

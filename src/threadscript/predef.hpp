@@ -132,7 +132,7 @@ protected:
  * \param idx an index (of type \c int or \c unsigned for a \c vector), or a
  * key (of type \c string for a \c hash)
  * \param value (optional) if used, it is set as the element at \a idx; if
- * missing, the element at \a idx is get; it may be be \c null
+ * missing, the element at \a idx is returned; it may be be \c null
  * \return the existing (for get) or the new (for set) element at \a idx
  * \throw exception::op_narg if the number of arguments is not 2 or 3
  * \throw exception::value_null if the first or the second argument is \c null
@@ -140,9 +140,10 @@ protected:
  * or \c hash, or if \a idx is not of type \c int or \c unsigned (for \a
  * container of type \c vector) or \c string (for \a container of type \c hash)
  * \throw exception::value_out_of_range if a \c vector \a idx is negative or
- * greater than \link a_basic_vector a_basic_vector::max_size()\endlink or
- * (only when \a value is not used) greater than the greatest existing index;
- * or if called without \a value for a \c hash and key \a idx does not exist
+ * greater or equal to \link a_basic_vector a_basic_vector::max_size()\endlink
+ * or (only when \a value is not used) greater than the greatest existing
+ * index; or if called without \a value for a \c hash and key \a idx does not
+ * exist
  * \throw exception::value_read_only if trying to set an element in an
  * read-only \c vector or \c hash */
 template <impl::allocator A>
