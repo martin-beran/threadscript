@@ -9,6 +9,7 @@ set(
     TEST_PROGRAMS
     allocated
     allocator_config
+    channel
     default_allocator
     dummy
     dummy_boost
@@ -17,6 +18,8 @@ set(
     parser
     parser_ascii
     predef
+    shared_hash
+    shared_vector
     symbol_table
     syntax
     syntax_canon

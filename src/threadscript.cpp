@@ -3,10 +3,13 @@
  */
 
 #include "threadscript/threadscript.hpp"
-#include "threadscript/symbol_table_impl.hpp"
+#include "threadscript/channel_impl.hpp"
 #include "threadscript/code_impl.hpp"
 #include "threadscript/code_parser_impl.hpp"
 #include "threadscript/predef_impl.hpp"
+#include "threadscript/shared_hash_impl.hpp"
+#include "threadscript/shared_vector_impl.hpp"
+#include "threadscript/symbol_table_impl.hpp"
 #include "threadscript/virtual_machine_impl.hpp"
 #include "threadscript/vm_data_impl.hpp"
 
@@ -16,6 +19,10 @@ namespace threadscript {
 // Keep declarations and explicit instantiations grouped by files containing
 // primary templates and keep groups lexicographically ordered by file name.
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+/*** threadscript/channel.hpp ************************************************/
+
+template class basic_channel<allocator_any>;
 
 /*** threadscript/code.hpp ***************************************************/
 
@@ -116,6 +123,14 @@ template class f_vector<allocator_any>;
 template class f_while<allocator_any>;
 
 } // namespace predef
+
+/*** threadscript/shared_hash.hpp ******************************************/
+
+template class basic_shared_hash<allocator_any>;
+
+/*** threadscript/shared_vector.hpp ******************************************/
+
+template class basic_shared_vector<allocator_any>;
 
 /*** threadscript/symbol_table.hpp *******************************************/
 

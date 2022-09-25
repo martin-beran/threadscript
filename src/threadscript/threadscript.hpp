@@ -7,10 +7,13 @@
  */
 
 #include "threadscript/configure.hpp"
+#include "threadscript/channel.hpp"
 #include "threadscript/code.hpp"
 #include "threadscript/code_builder_impl.hpp"
 #include "threadscript/code_parser.hpp"
 #include "threadscript/predef.hpp"
+#include "threadscript/shared_hash.hpp"
+#include "threadscript/shared_vector.hpp"
 #include "threadscript/symbol_table.hpp"
 #include "threadscript/virtual_machine.hpp"
 #include "threadscript/vm_data.hpp"
@@ -39,6 +42,12 @@ template <class T> using a_vector = a_basic_vector<T, allocator_any>;
 //! A deque type using the configured allocator
 /*! \tparam T a type of deque elements */
 template <class T> using a_deque = a_basic_deque<T, allocator_any>;
+
+/*** threadscript/channel.hpp ************************************************/
+
+//! The channel using the configured allocator
+using channel = basic_channel<allocator_any>;
+extern template class basic_channel<allocator_any>;
 
 /*** threadscript/code.hpp ***************************************************/
 
@@ -172,9 +181,21 @@ extern template class f_while<allocator_any>;
 
 } // namespace predef
 
+/*** threadscript/shared_hash.hpp ********************************************/
+
+//! The shared hash using the configured allocator
+using shared_hash = basic_shared_hash<allocator_any>;
+extern template class basic_shared_hash<allocator_any>;
+
+/*** threadscript/shared_vector.hpp ******************************************/
+
+//! The shared vector using the configured allocator
+using shared_vector = basic_shared_vector<allocator_any>;
+extern template class basic_shared_vector<allocator_any>;
+
 /*** threadscript/symbol_table.hpp *******************************************/
 
-//! The symbol_table using the configured allocator
+//! The symbol table using the configured allocator
 using symbol_table = basic_symbol_table<allocator_any>;
 extern template class basic_symbol_table<allocator_any>;
 
