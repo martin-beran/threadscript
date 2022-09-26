@@ -141,4 +141,28 @@ using a_basic_hash = std::unordered_map<K, T, impl::hash_for_t<K>,
     typename std::allocator_traits<A>::template rebind_alloc<
         std::pair<const K, T>>>;
 
+//! Automatic reducing of capacity of std container and string classes
+/*! This function shrinks the capacity if there is a large unused capacity.
+ * Common implementations double the capacity when reallocating, therefore we
+ * reduce the capacity when only 1/3 of it is used. This prevents frequent
+ * reallocations if the size oscillates around the reallocation boundary.
+ * Special cases:
+ * \arg \c std::hash -- it manipulates the load factor instead of the capacity
+ * \arg \c std::deque -- it does nothing, because \c std::deque handles freeing
+ * unsused memory automatically
+ * \tparam a std container or string type
+ * \param[in] v a container or a string */
+template <class T> void std_container_shrink(T& v) {
+    if constexpr (requires (T v) { v.size(); v.capacity(); v.shrink_to_fit(); })
+    {
+        if (v.size() <= v.capacity() / 3)
+            v.shrink_to_fit();
+    } else if constexpr(requires (T v) { v.load_factor(); }) {
+        if (v.load_factor() <= v.max_load_factor() / 3)
+            v.rehash(v.size() / v.max_load_factor() / 2 * 3);
+    } else {
+        // assume automatic shrinking implemented by T
+    }
+}
+
 } // namespace threadscript

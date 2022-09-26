@@ -4,6 +4,7 @@
  * \brief Various concepts used in ThreadScript sources
  */
 
+#include <concepts>
 #include <memory>
 #include <type_traits>
 
@@ -29,6 +30,7 @@ concept uses_allocator = requires {
 };
 
 //! Requirements for a template argument of threadscript::finally
+/*! \tparam F a callable type */
 template <class F>
 concept finally_fun = std::is_nothrow_invocable_v<F>;
 

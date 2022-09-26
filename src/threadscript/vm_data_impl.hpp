@@ -22,6 +22,23 @@ basic_value<A>::arg(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
     return p->eval(thread, l_vars);
 }
 
+template <impl::allocator A> size_t
+basic_value<A>::arg_index(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
+                          const basic_code_node<A>& node, size_t idx)
+{
+    auto arg = this->arg(thread, l_vars, node, idx);
+    if (!arg)
+        throw exception::value_null();
+    if (auto pi = dynamic_cast<basic_value_int<A>*>(arg.get())) {
+        if (pi->cvalue() < 0)
+            throw exception::value_out_of_range();
+        return size_t(pi->cvalue());
+    } else if (auto pi = dynamic_cast<basic_value_unsigned<A>*>(arg.get()))
+        return size_t(pi->cvalue());
+    else
+        throw exception::value_type();
+}
+
 template <impl::allocator A>
 auto basic_value<A>::eval(basic_state<A>&, basic_symbol_table<A>&,
     const basic_code_node<A>&, std::string_view) -> value_ptr

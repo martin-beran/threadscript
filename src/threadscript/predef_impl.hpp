@@ -109,19 +109,10 @@ f_at<A>::eval(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
     if (narg != 2 && narg != 3)
         throw exception::op_narg();
     auto container = this->arg(thread, l_vars, node, 0);
-    auto idx = this->arg(thread, l_vars, node, 1);
-    if (!container || !idx)
+    if (!container)
         throw exception::value_null();
     if (auto pv = dynamic_cast<basic_value_vector<A>*>(container.get())) {
-        size_t i = 0;
-        if (auto pi = dynamic_cast<basic_value_int<A>*>(idx.get())) {
-            if (pi->cvalue() < 0)
-                throw exception::value_out_of_range();
-            i = size_t(pi->cvalue());
-        } else if (auto pi = dynamic_cast<basic_value_unsigned<A>*>(idx.get()))
-            i = size_t(pi->cvalue());
-        else
-            throw exception::value_type();
+        size_t i = this->arg_index(thread, l_vars, node, 1);
         if (narg == 2 && i >= pv->cvalue().size())
             throw exception::value_out_of_range();
         if (narg == 2)
@@ -135,6 +126,9 @@ f_at<A>::eval(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
             return pv->value()[i] = this->arg(thread, l_vars, node, 2);
         }
     } else if (auto ph = dynamic_cast<basic_value_hash<A>*>(container.get())) {
+        auto idx = this->arg(thread, l_vars, node, 1);
+        if (!container || !idx)
+            throw exception::value_null();
         if (auto pk = dynamic_cast<basic_value_string<A>*>(idx.get())) {
             if (narg == 2) {
                 if (auto it = ph->cvalue().find(pk->cvalue());
@@ -339,24 +333,15 @@ f_erase<A>::eval(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
         else
             throw exception::value_type();
     } else {
-        auto idx = this->arg(thread, l_vars, node, 1);
-        if (!idx)
-            throw exception::value_null();
         if (auto pv = dynamic_cast<basic_value_vector<A>*>(container.get())) {
-            size_t i = 0;
-            if (auto pi = dynamic_cast<basic_value_int<A>*>(idx.get())) {
-                if (pi->cvalue() < 0)
-                    throw exception::value_out_of_range();
-                i = size_t(pi->cvalue());
-            } else
-                if (auto pi = dynamic_cast<basic_value_unsigned<A>*>(idx.get()))
-                    i = size_t(pi->cvalue());
-                else
-                    throw exception::value_type();
+            size_t i = this->arg_index(thread, l_vars, node, 1);
             if (i < pv->cvalue().size())
                 pv->value().resize(i);
         } else
             if (auto ph = dynamic_cast<basic_value_hash<A>*>(container.get())) {
+                auto idx = this->arg(thread, l_vars, node, 1);
+                if (!idx)
+                    throw exception::value_null();
                 if (auto pk = dynamic_cast<basic_value_string<A>*>(idx.get()))
                     ph->value().erase(pk->cvalue());
                 else
@@ -969,33 +954,15 @@ f_substr<A>::eval(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
     if (narg != 2 && narg != 3)
         throw exception::op_narg();
     auto a0 = this->arg(thread, l_vars, node, 0);
-    auto a1 = this->arg(thread, l_vars, node, 1);
-    auto a2 = this->arg(thread, l_vars, node, 2);
-    if (!a0 || !a1 || (narg == 3 && !a2))
+    if (!a0)
         throw exception::value_null();
     auto str = dynamic_cast<basic_value_string<A>*>(a0.get());
     if (!str)
         throw exception::value_type();
-    size_t idx = 0;
-    if (auto pi = dynamic_cast<basic_value_int<A>*>(a1.get())) {
-        if (pi->cvalue() < 0)
-            throw exception::value_out_of_range();
-        idx = size_t(pi->cvalue());
-    } else if (auto pi = dynamic_cast<basic_value_unsigned<A>*>(a1.get()))
-        idx = size_t(pi->cvalue());
-    else
-        throw exception::value_type();
+    size_t idx = this->arg_index(thread, l_vars, node, 1);
     size_t len = std::string::npos;
-    if (a2) {
-        if (auto pl = dynamic_cast<basic_value_int<A>*>(a2.get())) {
-            if (pl->cvalue() < 0)
-                throw exception::value_out_of_range();
-            len = size_t(pl->cvalue());
-        } else if (auto pl = dynamic_cast<basic_value_unsigned<A>*>(a2.get()))
-            len = size_t(pl->cvalue());
-        else
-            throw exception::value_type();
-    }
+    if (narg == 3)
+        len = this->arg_index(thread, l_vars, node, 2);
     auto pr = basic_value_string<A>::create(thread.get_allocator());
     if (idx < str->cvalue().size())
         pr->value() = str->cvalue().substr(idx, len);

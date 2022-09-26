@@ -22,6 +22,8 @@ namespace threadscript {
 
 /*** threadscript/channel.hpp ************************************************/
 
+template class basic_value_object<basic_channel<allocator_any>,
+    threadscript::impl::name_channel, allocator_any>;
 template class basic_channel<allocator_any>;
 
 /*** threadscript/code.hpp ***************************************************/
@@ -126,10 +128,14 @@ template class f_while<allocator_any>;
 
 /*** threadscript/shared_hash.hpp ******************************************/
 
+template class basic_value_object<basic_shared_hash<allocator_any>,
+    threadscript::impl::name_shared_hash, allocator_any>;
 template class basic_shared_hash<allocator_any>;
 
 /*** threadscript/shared_vector.hpp ******************************************/
 
+template class basic_value_object<basic_shared_vector<allocator_any>,
+    threadscript::impl::name_shared_vector, allocator_any>;
 template class basic_shared_vector<allocator_any>;
 
 /*** threadscript/symbol_table.hpp *******************************************/

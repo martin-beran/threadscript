@@ -154,6 +154,20 @@ protected:
                                            basic_symbol_table<A>& l_vars,
                                            const basic_code_node<A>& node,
                                            size_t idx);
+    //! Evaluates an argument as an index and returns its value.
+    /*! It is intended to be called from eval() for arguments interpreted as
+     * zero-based indices.
+     * \param[in] thread the argument \a thread of the caller eval()
+     * \param[in] l_vars the argument \a l_vars of the caller eval()
+     * \param[in] node the argument \a node of the caller eval()
+     * \param[in] idx the (zero-based) index of the argument
+     * \return the argument value
+     * \throw exception::value_null if the argument is \c null
+     * \throw exception::value_type if the argument does not have type \c int
+     * or \c unsigned
+     * \throw exception::out_of_range if \a idx is negative */
+    size_t arg_index(basic_state<A>& thread, basic_symbol_table<A>& l_vars,
+                     const basic_code_node<A>& node, size_t idx);
     //! Creates a result of a function.
     /*! It is used by implementation classes for commands and function in
      * namespace threadscript::predef.
@@ -390,8 +404,7 @@ public:
     typename basic_value_string::value_type& value() {
         typename basic_value_string::value_type& v =
             impl::basic_value_string_base<A>::value();
-        if (v.size() <= v.capacity() / 3)
-            v.shrink_to_fit();
+        std_container_shrink(v);
         return v;
     }
     //! Writes a textual representation of this value to a stream
@@ -437,8 +450,7 @@ public:
     typename basic_value_vector::value_type& value() {
         typename basic_value_vector::value_type& v =
             impl::basic_value_vector_base<A>::value();
-        if (v.size() <= v.capacity() / 3)
-            v.shrink_to_fit();
+        std_container_shrink(v);
         return v;
     }
     //! \copybrief impl::basic_value_vector_base<A>::set_mt_safe()
@@ -485,8 +497,7 @@ public:
     typename basic_value_hash::value_type& value() {
         typename basic_value_hash::value_type& v =
             impl::basic_value_hash_base<A>::value();
-        if (v.load_factor() <= v.max_load_factor() / 3)
-            v.rehash(v.size() / v.max_load_factor() / 2 * 3);
+        std_container_shrink(v);
         return v;
     }
     //! \copybrief impl::basic_value_hash_base<A>::set_mt_safe()

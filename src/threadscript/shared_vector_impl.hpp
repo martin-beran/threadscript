@@ -9,44 +9,82 @@
 namespace threadscript {
 
 template <impl::allocator A>
-basic_shared_vector::basic_shared_vector(tag t,
-                                 std::shared_ptr<const method_table> methods,
-                                 ts::state& thread, ts::symbol_table& l_vars,
-                                 const ts::code_node& node):
-    basic_value_object(t, methods, thread, l_vars, node)
+basic_shared_vector<A>::basic_shared_vector(
+        typename basic_shared_vector<A>::tag t,
+        std::shared_ptr<const typename basic_shared_vector<A>::method_table>
+            methods,
+        typename threadscript::basic_state<A>& thread,
+        typename threadscript::basic_symbol_table<A>& l_vars,
+        const typename threadscript::basic_code_node<A>& node):
+    impl::basic_shared_vector_base<A>(t, methods, thread, l_vars, node)
 {
-    set_mt_safe();
+    this->set_mt_safe();
 }
 
-template <impl::allocator A>
-auto basic_shared_vector<A>::at(ts::state& /*thread*/, ts::symbol_table& /*l_vars*/,
-                                const ts::code_node& /*node*/) -> value_ptr
+template <impl::allocator A> basic_shared_vector<A>::value_ptr
+basic_shared_vector<A>::at(typename threadscript::basic_state<A>& thread,
+    typename threadscript::basic_symbol_table<A>& l_vars,
+    const typename threadscript::basic_code_node<A>& node)
 {
-    // TODO
-    return nullptr;
-}
-
-template <impl::allocator A>
-auto basic_shared_vector<A>::erase(ts::state& /*thread*/, ts::symbol_table& /*l_vars*/,
-                                   const ts::code_node& /*node*/) -> value_ptr
-{
-    // TODO
-    return nullptr;
-}
-
-template <impl::allocator A>
-auto basic_shared_vector<A>::size(ts::state& thread, ts::symbol_table&,
-                                  const ts::code_node& node) -> value_ptr
-{
-    if (narg(node) != 1)
+    size_t narg = this->narg(node);
+    if (narg !=2 && narg != 3)
         throw exception::op_narg();
-    auto res = ts::value_unsigned::create(thread.get_allocator());
+    size_t i = this->arg_index(thread, l_vars, node, 1);
+    if (narg == 2) {
+        std::lock_guard lck(mtx);
+        if (i >= data.size())
+            throw exception::value_out_of_range();
+        return data[i];
+    } else {
+        assert(narg == 3);
+        auto v = this->arg(thread, l_vars, node, 2);
+        std::lock_guard lck(mtx);
+        if (i >= data.max_size())
+            throw exception::value_out_of_range();
+        if (i >= data.size())
+            data.resize(i + 1);
+        return data[i] = v;
+    }
+}
+
+template <impl::allocator A> basic_shared_vector<A>::value_ptr
+basic_shared_vector<A>::erase(
+    typename threadscript::basic_state<A>& thread,
+    typename threadscript::basic_symbol_table<A>& l_vars,
+    const typename threadscript::basic_code_node<A>& node)
+{
+    size_t narg = this->narg(node);
+    if (narg != 1 && narg != 2)
+        throw exception::op_narg();
+    if (narg == 1) {
+        std::lock_guard lck(mtx);
+        data.clear();
+    } else {
+        size_t i = this->arg_index(thread, l_vars, node, 1);
+        std::lock_guard lck(mtx);
+        if (i < data.size()) {
+            data.resize(i);
+            std_container_shrink(data);
+        }
+    }
+    return nullptr;
+}
+
+template <impl::allocator A> basic_shared_vector<A>::value_ptr
+basic_shared_vector<A>::size(typename threadscript::basic_state<A>& thread,
+    typename threadscript::basic_symbol_table<A>&,
+    const typename threadscript::basic_code_node<A>& node)
+{
+    if (this->narg(node) != 1)
+        throw exception::op_narg();
+    auto res = value_unsigned::create(thread.get_allocator());
     std::lock_guard lck(mtx);
     res->value() = data.size();
     return res;
 }
 
-template <impl::allocator A> method_table basic_shared_vector<A>::init_methods()
+template <impl::allocator A> basic_shared_vector<A>::method_table
+basic_shared_vector<A>::init_methods()
 {
     return {
         //! [methods]

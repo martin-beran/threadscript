@@ -47,6 +47,8 @@ template <class T> using a_deque = a_basic_deque<T, allocator_any>;
 
 //! The channel using the configured allocator
 using channel = basic_channel<allocator_any>;
+extern template class basic_value_object<basic_channel<allocator_any>,
+    threadscript::impl::name_channel, allocator_any>;
 extern template class basic_channel<allocator_any>;
 
 /*** threadscript/code.hpp ***************************************************/
@@ -185,12 +187,16 @@ extern template class f_while<allocator_any>;
 
 //! The shared hash using the configured allocator
 using shared_hash = basic_shared_hash<allocator_any>;
+extern template class basic_value_object<basic_shared_hash<allocator_any>,
+    threadscript::impl::name_shared_hash, allocator_any>;
 extern template class basic_shared_hash<allocator_any>;
 
 /*** threadscript/shared_vector.hpp ******************************************/
 
 //! The shared vector using the configured allocator
 using shared_vector = basic_shared_vector<allocator_any>;
+extern template class basic_value_object<basic_shared_vector<allocator_any>,
+    threadscript::impl::name_shared_vector, allocator_any>;
 extern template class basic_shared_vector<allocator_any>;
 
 /*** threadscript/symbol_table.hpp *******************************************/
