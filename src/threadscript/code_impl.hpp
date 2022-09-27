@@ -233,6 +233,27 @@ std::ostream& operator<<(std::ostream& os, const basic_script<A>& script)
 /*** basic_value_function ****************************************************/
 
 template <impl::allocator A> typename basic_value<A>::value_ptr
+basic_value_function<A>::call(basic_state<A>& thread, std::string_view fun_name,
+                              std::shared_ptr<basic_value_vector<A>> args) const
+{
+    if (const auto& f = this->cvalue()) {
+        auto alloc = thread.get_allocator();
+        if (!args)
+            args = basic_value_vector<A>::create(alloc);
+        auto& frame =
+            thread.push_frame(typename basic_state<A>::stack_frame(alloc,
+                                                                   thread));
+        finally pop{[&thread]() noexcept { thread.pop_frame(); }};
+        frame.l_vars.insert(a_basic_string<A>{symbol_params, alloc},
+                            std::move(args));
+        frame.location.file = f->_script.file();
+        frame.location.function = fun_name;
+        return f->eval(thread, frame.l_vars);
+    } else
+        return nullptr;
+}
+
+template <impl::allocator A> typename basic_value<A>::value_ptr
 basic_value_function<A>::eval(basic_state<A>& thread,
                               basic_symbol_table<A>& l_vars,
                               const basic_code_node<A>& node,
@@ -253,7 +274,7 @@ basic_value_function<A>::eval(basic_state<A>& thread,
         finally pop{[&thread]() noexcept { thread.pop_frame(); }};
         frame.l_vars.insert(a_basic_string<A>{symbol_params, alloc},
                             std::move(args));
-        frame.location.file = node._script.file();
+        frame.location.file = f->_script.file();
         frame.location.function = fun_name;
         return f->eval(thread, frame.l_vars);
     } else

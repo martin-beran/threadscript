@@ -24,6 +24,12 @@
  * a ThreadScript virtual machine, parsing and running a script:
  * \snippet script_runner.hpp parse_run
  *
+ * A more complex example is in test_shared_vector.cpp. It first runs a script
+ * in a single thread in order to define global variables and functions. Then
+ * it calls functions defined by the script in several parallel threads which
+ * share data.
+ * \snippet test_shared_vector.cpp run_threads
+ *
  * \section API_Native Native objects
  *
  * An example (from test_object.cpp) of a definition of a native class

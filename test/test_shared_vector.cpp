@@ -4,6 +4,7 @@
 
 //! \cond
 #include "threadscript/threadscript.hpp"
+#include "threadscript/symbol_table_impl.hpp"
 
 #define BOOST_TEST_MODULE shared_vector
 #define BOOST_TEST_DYN_LINK
@@ -11,6 +12,8 @@
 #include <boost/test/data/test_case.hpp>
 
 #include "script_runner.hpp"
+
+#include <thread>
 
 auto sh_vars = test::make_sh_vars<ts::shared_vector>();
 //! \endcond
@@ -354,5 +357,132 @@ BOOST_DATA_TEST_CASE(method_size, (std::vector<test::runner_result>{
 }))
 {
     test::check_runner(sample, sh_vars);
+}
+//! \endcond
+
+/*! \file
+ * \test \c threads -- Tests accessing threadscript::basic_shared_vector from
+ * multiple threads */
+//! \cond
+BOOST_AUTO_TEST_CASE(threads)
+{
+    auto script = R"(
+seq(
+    gvar("counters", shared_vector()),
+    gvar("e", shared_vector()),
+    gvar("ei", shared_vector()),
+    counters("at", 0, 0),
+
+    fun("f_main", seq(
+        var("iter", 0),
+        while(lt(iter(), max()),
+            var("i", 1),
+            var("step", true),
+            while(le(i(), num_threads()), seq(
+                if(
+                    or(
+                        ge(i(), counters("size")),
+                        ne(counters("at", i()), counters("at", 0))
+                    ),
+                    var("step", false)
+                ),
+                var("i", add(i(), 1))
+            )),
+            if(step(), seq(
+                counters("at", 0, mt_safe(add(counter("at", 0), 1))),
+                if(lt(e("size"), num_threads()),
+                    e("at", sub(num_threads(), 1), mt_safe(clone(iter())))
+                ),
+                if(lt(ei("size"), num_threads()),
+                    e("at", sub(num_threads(), 1), mt_safe(clone(iter())))
+                ),
+                var("iter", add(iter(), 1))
+            ))
+        ),
+        var("ok", true),
+        var("i", 0),
+        while(lt(i(), counters("size")),
+            if(ne(counter("at", i()), max()),
+                var("ok", false)
+            )
+        ),
+        print("ok=", ok()),
+        ok()
+    )),
+
+    fun("f_thread", seq(
+        var("t_idx", at(_args(), 0)),
+        var("run", true),
+        while(run(), seq(
+            if(le(counters("size"), t_idx()),
+                counters("at", t_idx(), 0)
+            ),
+            if(gt(counters("at", 0), counters("at", t_idx())), seq(
+                counters("at", t_idx(), mt_safe(clone(counters("at", 0)))),
+                e("erase"),
+                ei("erase", t_idx())
+            ))
+        ))
+    ))
+)
+    )"sv;
+    //! [run_threads]
+    // Prepare VM
+    constexpr unsigned num_threads = 10;
+    constexpr unsigned max = 100;
+    std::ostringstream std_out;
+    ts::virtual_machine vm{test::alloc};
+    vm.std_out = &std_out;
+    // Pass variables from C++ to the script
+    auto sh_vars = test::make_sh_vars<ts::shared_vector>();
+    auto set_uint = [&sh_vars](auto&& name, auto val) {
+        auto v = ts::value_unsigned::create(sh_vars->get_allocator());
+        v->value() = val;
+        v->set_mt_safe();
+        sh_vars->insert(name, v);
+    };
+    set_uint("num_threads", num_threads);
+    set_uint("max", max);
+    vm.sh_vars = sh_vars;
+    // Parse and run the script, defining functions and variables and storing
+    // them in the global shared symbol table
+    auto parsed = ts::parse_code(vm.get_allocator(), script, "string");
+    {
+        ts::state s_prepare{vm};
+        BOOST_REQUIRE_NO_THROW(parsed->eval(s_prepare));
+        for (auto&& sym: s_prepare.t_vars.csymbols())
+            sh_vars->insert(sym.first, sym.second);
+    }
+    // Run functions in threads
+    ts::a_string fname_thread("f_thread", vm.get_allocator());
+    auto f_thread =
+        dynamic_pointer_cast<ts::value_function>(sh_vars->lookup(fname_thread).
+                                                 value_or(nullptr));
+    BOOST_REQUIRE_NE(f_thread, nullptr);
+    std::vector<std::thread> threads;
+    for (size_t t = 0; t < num_threads; ++t)
+        threads.emplace_back([&vm, &fname_thread, &f_thread, i = t + 1]() {
+            auto args = ts::value_vector::create(vm.get_allocator());
+            auto arg_i = ts::value_unsigned::create(vm.get_allocator());
+            arg_i->value() = i;
+            args->value().push_back(arg_i);
+            ts::state s_thread{vm};
+            f_thread->call(s_thread, fname_thread, args);
+        });
+    ts::a_string fname_main("f_main", vm.get_allocator());
+    auto f_main =
+        dynamic_pointer_cast<ts::value_function>(sh_vars->lookup(fname_main).
+                                                 value_or(nullptr));
+    BOOST_REQUIRE_NE(f_main, nullptr);
+    ts::state s_main{vm};
+    auto result =
+        dynamic_pointer_cast<ts::value_bool>(f_main->call(s_main, fname_main));
+    // Wait for threads and check the result
+    for (auto&& t: threads)
+        t.join();
+    BOOST_REQUIRE_NE(result, nullptr);
+    BOOST_CHECK(result->cvalue());
+    BOOST_CHECK_EQUAL(std_out.view(), "ok=true"sv);
+    //! [run_threads]
 }
 //! \endcond

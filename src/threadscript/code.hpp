@@ -102,8 +102,7 @@ private:
      * exceptions are wrapped in exception::wrapped */
     typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
                                         basic_symbol_table<A>& l_vars) const;
-    //! The script file name
-    /*! The owner script. */
+    //! The owner script
     const basic_script<A>& _script;
     file_location location; //!< Location in the script source file
     a_basic_string<A> name; //!< Node name
@@ -113,7 +112,7 @@ private:
     value_t value; //!< Value of the node
     //! The owner basic_script needs access to node internals
     friend class basic_script<A>;
-    //! basic_value_function::eval() needs access to node internals
+    //! Member functions of basic_value_function need access to node internals
     friend class basic_value_function<A>;
     //! basic_value needs access to _children
     template <impl::allocator Alloc> friend class basic_value;
@@ -268,6 +267,21 @@ public:
     /*! The vector is constructed from function call arguments and inserted to
      * the newly created local symbol table when the function is called. */
     static constexpr std::string_view symbol_params{"_args"};
+    //! Calls the function and returns the result.
+    /*! It is used to call ThreadScript functions from C++.
+     * \param[in] thread the current thread
+     * \param[in] fun_name the name that is used for calling the function (it
+     * may be different from the name used in the function definition)
+     * \param[in] args if not \c nullptr, it will be passed as function
+     * arguments to the function in the local variable with the name defined by
+     * symbol_params; if \c nullptr, the function will be called with an empty
+     * array of arguments
+     * \return the result of evaluation
+     * \throw a class derived from exception::base if evaluation fails; other
+     * exceptions are wrapped in exception::wrapped */
+    typename basic_value<A>::value_ptr
+    call(basic_state<A>& thread, std::string_view fun_name,
+         std::shared_ptr<basic_value_vector<A>> args = nullptr) const;
 protected:
     //! Calls the referenced function.
     /*! It returns \c nullptr if the internal pointer to a function

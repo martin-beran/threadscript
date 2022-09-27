@@ -89,15 +89,35 @@ public:
      * \return \c true if the symbol is contained in this table or in a table
      * accessed by the chain of parent_table(); \c false otherwise */
     bool contains(const key_type& name, bool use_parent = true) const;
+    //! Checks if the symbol table contains a symbol.
+    /*! \tparam K a type compatible with key_type
+     * \param[in] name a symbol name
+     * \param[in] use_parent whether to search the chain of parent tables if
+     * the symbol is not found in this table
+     * \return \c true if the symbol is contained in this table or in a table
+     * accessed by the chain of parent_table(); \c false otherwise */
+    template <class K>
+    bool contains(const K& name, bool use_parent = true) const;
     //! Finds a symbol.
     /*! \param[in] name a symbol name
      * \param[in] use_parent whether to search the chain of parent tables if
      * the symbol is not found in this table
      * \return the symbol value if the symbol exists in this table or in a
      * table accessed by the chain of parent_table(); \c std::nullopt
-     * otherwise*/
-    std::optional<value_type> lookup(const key_type& name,
-                                     bool use_parent = true) const;
+     * otherwise */
+    auto lookup(const key_type& name,
+                bool use_parent = true) const -> std::optional<value_type>;
+    //! Finds a symbol.
+    /*! \tparam K a type compatible with key_type
+     * \param[in] name a symbol name
+     * \param[in] use_parent whether to search the chain of parent tables if
+     * the symbol is not found in this table
+     * \return the symbol value if the symbol exists in this table or in a
+     * table accessed by the chain of parent_table(); \c std::nullopt
+     * otherwise */
+    template <class K>
+    auto lookup(const K& name,
+                bool use_parent = true) const -> std::optional<value_type>;
     //! Assings a value to a symbol name.
     /*! It creates a new symbol if it does not exist. It operates on this table
      * only, it does not access parent_table().
@@ -106,12 +126,28 @@ public:
      * \return \c true if a new symbol has been added, \c false if symbol \a
      * name has already existed */
     bool insert(key_type name, value_type value);
+    //! Assings a value to a symbol name.
+    /*! It creates a new symbol if it does not exist. It operates on this table
+     * only, it does not access parent_table().
+     * \tparam K a type compatible with key_type
+     * \param[in] name a symbol name
+     * \param[in] value a symbol value
+     * \return \c true if a new symbol has been added, \c false if symbol \a
+     * name has already existed */
+    template <class K> bool insert(const K& name, value_type value);
     //! Deletes a symbol (a name and a value).
     /*! It operates on this table only, it does not access parent_table().
      * \param[in] name a symbol name
      * \return \c true if the symbol has been deleted, \c if symbol does not
      * exist in the table. */
     bool erase(const key_type& name);
+    //! Deletes a symbol (a name and a value).
+    /*! It operates on this table only, it does not access parent_table().
+     * \tparam K a type compatible with key_type
+     * \param[in] name a symbol name
+     * \return \c true if the symbol has been deleted, \c if symbol does not
+     * exist in the table. */
+    template <class K> bool erase(const K& name);
     //! Get the allocator used by this symbol table.
     /*! \return a copy of the allocator object */
     [[nodiscard]] A get_allocator() const noexcept {

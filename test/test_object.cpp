@@ -6,6 +6,7 @@
 
 //! \cond
 #include "threadscript/threadscript.hpp"
+#include "threadscript/symbol_table_impl.hpp"
 #include "threadscript/vm_data_impl.hpp"
 
 #define BOOST_TEST_MODULE object

@@ -8,6 +8,7 @@
 
 //! \cond
 #include "threadscript/threadscript.hpp"
+#include "threadscript/symbol_table_impl.hpp"
 
 #define BOOST_TEST_MODULE predef
 #define BOOST_TEST_DYN_LINK
@@ -2176,8 +2177,7 @@ BOOST_DATA_TEST_CASE(f_mod, (std::vector<test::runner_result>{
 //! \endcond
 
 /*! \file
- * \test \c f_mt_safe -- Test of threadscript::predef::f_mt_safe
- * \todo \c f_mt_safe: test throwing threadscript::exception::value_mt_unsafe */
+ * \test \c f_mt_safe -- Test of threadscript::predef::f_mt_safe */
 //! \cond
 BOOST_DATA_TEST_CASE(f_mt_safe, (std::vector<test::runner_result>{
     {R"(mt_safe())", test::exc{
@@ -2194,6 +2194,28 @@ BOOST_DATA_TEST_CASE(f_mt_safe, (std::vector<test::runner_result>{
         typeid(ts::exception::value_null),
         ts::frame_location("", "", 1, 1),
         "Runtime error: Null value"
+    }, ""},
+    {R"(
+        seq(
+            var("v", vector()),
+            at(v(), 0, clone(false)),
+            mt_safe(v())
+        )
+    )", test::exc{
+        typeid(ts::exception::value_mt_unsafe),
+        ts::frame_location("", "", 5, 13),
+        "Runtime error: Thread-unsafe value"
+    }, ""},
+    {R"(
+        seq(
+            var("h", hash()),
+            at(h(), "key", clone(true)),
+            mt_safe(h())
+        )
+    )", test::exc{
+        typeid(ts::exception::value_mt_unsafe),
+        ts::frame_location("", "", 5, 13),
+        "Runtime error: Thread-unsafe value"
     }, ""},
     {R"(mt_safe(1234))", test::uint_t(1234), ""},
     {R"(mt_safe(clone(1234)))", test::uint_t(1234), ""},
@@ -3537,5 +3559,51 @@ BOOST_DATA_TEST_CASE(loop, (std::vector<test::runner_result>{
 }))
 {
     test::check_runner(sample);
+}
+//! \endcond
+
+/*! \file
+  * \test \c stack_trace -- Test of stack trace from functions in multiple
+  * scripts */
+//! \cond
+BOOST_AUTO_TEST_CASE(stack_trace)
+{
+    ts::virtual_machine vm{test::alloc};
+    vm.sh_vars = ts::predef_symbols(vm.get_allocator());
+    auto caller = ts::parse_code(vm.get_allocator(), R"(f())", "caller");
+    auto callee = ts::parse_code(vm.get_allocator(), R"(
+seq(
+    fun("f", throw("Test exception")),
+    fun("g", f())
+)
+    )", "callee");
+    ts::state thread{vm};
+    callee->eval(thread);
+    BOOST_CHECK_EXCEPTION(caller->eval(thread), ts::exception::base,
+        ([](auto&& e) {
+             BOOST_CHECK_EQUAL(e.trace().to_string(),
+                               "    0. callee:3:14:f()\n"
+                               "    1. caller:1:1:()\n");
+             return true;
+        }));
+    auto caller2 = ts::parse_code(vm.get_allocator(), R"(g())", "caller2");
+    BOOST_CHECK_EXCEPTION(caller2->eval(thread), ts::exception::base,
+        ([](auto&& e) {
+             BOOST_CHECK_EQUAL(e.trace().to_string(),
+                               "    0. callee:3:14:f()\n"
+                               "    1. callee:4:14:g()\n"
+                               "    2. caller2:1:1:()\n");
+             return true;
+        }));
+    // Renamed function f
+    thread.t_vars.insert("f2", thread.t_vars.lookup("f").value_or(nullptr));
+    auto caller3 = ts::parse_code(vm.get_allocator(), R"(f2())", "caller3");
+    BOOST_CHECK_EXCEPTION(caller3->eval(thread), ts::exception::base,
+        ([](auto&& e) {
+             BOOST_CHECK_EQUAL(e.trace().to_string(),
+                               "    0. callee:3:14:f2()\n"
+                               "    1. caller3:1:1:()\n");
+             return true;
+        }));
 }
 //! \endcond
