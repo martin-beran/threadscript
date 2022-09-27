@@ -20,9 +20,9 @@
  *
  * \section API_VM Virtual machine
  *
- * An example (from test_predef.cpp) of using the API for creating
+ * An example (from script_runner.hpp) of using the API for creating
  * a ThreadScript virtual machine, parsing and running a script:
- * \snippet test_predef.cpp parse_run
+ * \snippet script_runner.hpp parse_run
  *
  * \section API_Native Native objects
  *

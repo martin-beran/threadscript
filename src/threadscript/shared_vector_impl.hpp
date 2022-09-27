@@ -38,6 +38,8 @@ basic_shared_vector<A>::at(typename threadscript::basic_state<A>& thread,
     } else {
         assert(narg == 3);
         auto v = this->arg(thread, l_vars, node, 2);
+        if (v && !v->mt_safe())
+            throw exception::value_mt_unsafe();
         std::lock_guard lck(mtx);
         if (i >= data.max_size())
             throw exception::value_out_of_range();
