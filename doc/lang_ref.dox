@@ -181,8 +181,10 @@
  * \subsection  Builtin_vector_functions Vector functions
  *
  * \arg \link threadscript::predef::f_at at\endlink -- Indexing
- * \arg \link threadscript::predef::f_erase erase\endlink -- Shrink a vector
+ * \arg \link threadscript::predef::f_erase erase\endlink -- Shrinks a vector
  * \arg \link threadscript::predef::f_size size\endlink -- Number of elements
+ * \arg \link threadscript::predef::f_vector vector\endlink -- Creates an empty
+ * vector
  *
  * \subsection  Builtin_hash_functions Hash functions
  *
@@ -190,6 +192,7 @@
  * a key
  * \arg \link threadscript::predef::f_contains contains\endlink -- Key
  * membership test
+ * \arg \link threadscript::predef::f_erase erase\endlink -- Erases elements
  * \arg \link threadscript::predef::f_hash hash\endlink -- Creates an empty hash
  * \arg \link threadscript::predef::f_keys keys\endlink -- Gets all keys of
  * a hash
@@ -252,6 +255,6 @@
  * passing values among threads
  * \arg \link threadscript::basic_shared_hash shared_hash\endlink -- A hash
  * that can be modified by multiple threads
- * \arg \link threadscript::basic_shared_vector basic_vector\endlink --
+ * \arg \link threadscript::basic_shared_vector shared_vector\endlink --
  * A vector that can be modified by multiple threads
  */

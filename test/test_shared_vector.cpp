@@ -499,7 +499,13 @@ seq(
     auto parsed = ts::parse_code(vm.get_allocator(), script, "string");
     {
         ts::state s_prepare{vm};
-        BOOST_REQUIRE_NO_THROW(parsed->eval(s_prepare));
+        BOOST_REQUIRE_NO_THROW(
+            try {
+                parsed->eval(s_prepare);
+            } catch (std::exception& e) {
+                BOOST_TEST_INFO("exception: " << e.what());
+                throw;
+            });
         for (auto&& sym: s_prepare.t_vars.csymbols())
             sh_vars->insert(sym.first, sym.second);
     }
@@ -531,12 +537,14 @@ seq(
     BOOST_REQUIRE_NE(f_main, nullptr);
     ts::state s_main{vm};
     ts::value_bool::typed_value_ptr result{};
-    try {
-        result = dynamic_pointer_cast<ts::value_bool>(f_main->call(s_main,
+    BOOST_REQUIRE_NO_THROW(
+        try {
+            result = dynamic_pointer_cast<ts::value_bool>(f_main->call(s_main,
                                                                    fname_main));
-    } catch (std::exception& e) {
-        std::cout << "main exception=" << e.what() << std::endl;
-    }
+        } catch (std::exception& e) {
+            BOOST_TEST_INFO("exception: " << e.what());
+            throw;
+        });
     // Wait for threads and check the result
     for (auto&& t: threads)
         t.join();

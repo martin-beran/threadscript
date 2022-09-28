@@ -54,6 +54,27 @@ basic_shared_hash<A>::at(typename threadscript::basic_state<A>& thread,
 }
 
 template <impl::allocator A> basic_shared_hash<A>::value_ptr
+basic_shared_hash<A>::contains(
+    typename threadscript::basic_state<A>& thread,
+    typename threadscript::basic_symbol_table<A>& l_vars,
+    const typename threadscript::basic_code_node<A>& node)
+{
+    size_t narg = this->narg(node);
+    if (narg != 2)
+        throw exception::op_narg();
+    auto a1 = this->arg(thread, l_vars, node, 1);
+    if (!a1)
+        throw exception::value_null();
+    auto key = dynamic_cast<basic_value_string<A>*>(a1.get());
+    if (!key)
+        throw exception::value_type();
+    auto result = basic_value_bool<A>::create(thread.get_allocator());
+    std::lock_guard lck(mtx);
+    result->value() = data.contains(key->cvalue());
+    return result;
+}
+
+template <impl::allocator A> basic_shared_hash<A>::value_ptr
 basic_shared_hash<A>::erase(
     typename threadscript::basic_state<A>& thread,
     typename threadscript::basic_symbol_table<A>& l_vars,
@@ -124,6 +145,7 @@ basic_shared_hash<A>::init_methods()
     return {
         //! [methods]
         {"at", &basic_shared_hash::at},
+        {"contains", &basic_shared_hash::contains},
         {"erase", &basic_shared_hash::erase},
         {"keys", &basic_shared_hash::keys},
         {"size", &basic_shared_hash::size},

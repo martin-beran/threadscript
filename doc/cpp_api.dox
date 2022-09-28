@@ -32,7 +32,22 @@
  *
  * \section API_Native Native objects
  *
+ * A native class is derived from threadscript::basic_value_object. It is then
+ * registered in a symbol table by calling
+ * threadscript::basic_value_object::register_constructor().
+ *
  * An example (from test_object.cpp) of a definition of a native class
  * implemented in C++:
+ * \code
+ * namespace ts = threadscript;
+ * \endcode
  * \snippet test_object.cpp native_object
+ *
+ * An example (from test_object.cpp) of a registration of native classes:
+ * \code
+ * namespace ts = threadscript;
+ * ts::allocator_any alloc;
+ * ts::virtual_machine vm{alloc};
+ * \endcode
+ * \snippet test_object.cpp register_constructor
  */

@@ -106,12 +106,14 @@ struct script_runner {
     script_runner(std::string script): script(std::move(script)) {
         // Redirect standard output to a string stream
         vm.std_out = &std_out;
+//! [register_constructor]
         // Register default predefined built-in native commands and functions
         auto sh_vars = ts::predef_symbols(alloc);
         vm.sh_vars = sh_vars;
         // Register native classes
         empty_object::register_constructor(*sh_vars, true);
         test_object::register_constructor(*sh_vars, true);
+//! [register_constructor]
     }
     ts::value::value_ptr run(bool print_destroys = false);
     ts::value::value_ptr run(ts::state& thread, bool print_destroys = false);
