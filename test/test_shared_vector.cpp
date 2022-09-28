@@ -375,13 +375,14 @@ seq(
 
     fun("f_main", seq(
         var("iter", 0),
-        while(lt(iter(), max()),
+        while(lt(iter(), max()), seq(
             var("i", 1),
             var("step", true),
             while(le(i(), num_threads()), seq(
                 if(
                     or(
                         ge(i(), counters("size")),
+                        is_null(counters("at", i())),
                         ne(counters("at", i()), counters("at", 0))
                     ),
                     var("step", false)
@@ -389,7 +390,7 @@ seq(
                 var("i", add(i(), 1))
             )),
             if(step(), seq(
-                counters("at", 0, mt_safe(add(counter("at", 0), 1))),
+                counters("at", 0, mt_safe(add(counters("at", 0), 1))),
                 if(lt(e("size"), num_threads()),
                     e("at", sub(num_threads(), 1), mt_safe(clone(iter())))
                 ),
@@ -398,11 +399,11 @@ seq(
                 ),
                 var("iter", add(iter(), 1))
             ))
-        ),
+        )),
         var("ok", true),
         var("i", 0),
         while(lt(i(), counters("size")),
-            if(ne(counter("at", i()), max()),
+            if(ne(counters("at", i()), max()),
                 var("ok", false)
             )
         ),
@@ -414,14 +415,20 @@ seq(
         var("t_idx", at(_args(), 0)),
         var("run", true),
         while(run(), seq(
-            if(le(counters("size"), t_idx()),
+            if(or(
+                ge(t_idx(), counters("size")),
+                is_null(counters("at", t_idx()))
+            ),
                 counters("at", t_idx(), 0)
             ),
             if(gt(counters("at", 0), counters("at", t_idx())), seq(
                 counters("at", t_idx(), mt_safe(clone(counters("at", 0)))),
                 e("erase"),
                 ei("erase", t_idx())
-            ))
+            )),
+            if(eq(counters("at", t_idx()), max()),
+                var("run", false)
+            )
         ))
     ))
 )
@@ -467,7 +474,12 @@ seq(
             arg_i->value() = i;
             args->value().push_back(arg_i);
             ts::state s_thread{vm};
-            f_thread->call(s_thread, fname_thread, args);
+            try {
+                f_thread->call(s_thread, fname_thread, args);
+            } catch (std::exception& e) {
+                std::cout << "thread=" << i << " exception=" << e.what() <<
+                    std::endl;
+            }
         });
     ts::a_string fname_main("f_main", vm.get_allocator());
     auto f_main =
@@ -475,8 +487,13 @@ seq(
                                                  value_or(nullptr));
     BOOST_REQUIRE_NE(f_main, nullptr);
     ts::state s_main{vm};
-    auto result =
-        dynamic_pointer_cast<ts::value_bool>(f_main->call(s_main, fname_main));
+    ts::value_bool::typed_value_ptr result{};
+    try {
+        result = dynamic_pointer_cast<ts::value_bool>(f_main->call(s_main,
+                                                                   fname_main));
+    } catch (std::exception& e) {
+        std::cout << "main exception=" << e.what() << std::endl;
+    }
     // Wait for threads and check the result
     for (auto&& t: threads)
         t.join();
