@@ -22,7 +22,7 @@ template <allocator A> using basic_shared_vector_base =
 //! A thread-safe vector class
 /*! Unlike basic_value_vector, all objects of this class are marked thread-safe
  * and can be accessed and modified by multiple threads simultaneously. The
- * storage for vector data are provided by a_basic_vector and its capacity is
+ * storage for vector data is provided by a_basic_vector and its capacity is
  * managed automatically using the same algorithm as for basic_value_vector, as
  * described in basic_value_vector::value().
  *

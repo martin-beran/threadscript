@@ -21,4 +21,112 @@ basic_shared_hash<A>::basic_shared_hash(
     this->set_mt_safe();
 }
 
+template <impl::allocator A> basic_shared_hash<A>::value_ptr
+basic_shared_hash<A>::at(typename threadscript::basic_state<A>& thread,
+    typename threadscript::basic_symbol_table<A>& l_vars,
+    const typename threadscript::basic_code_node<A>& node)
+{
+    size_t narg = this->narg(node);
+    if (narg !=2 && narg != 3)
+        throw exception::op_narg();
+    auto a1 = this->arg(thread, l_vars, node, 1);
+    if (!a1)
+        throw exception::value_null();
+    auto key = dynamic_cast<basic_value_string<A>*>(a1.get());
+    if (narg == 2) {
+        std::lock_guard lck(mtx);
+        auto it = data.find(key->cvalue());
+        if (it == data.end())
+            throw exception::value_out_of_range();
+        else
+            return it->second;
+    } else {
+        assert(narg == 3);
+        auto v = this->arg(thread, l_vars, node, 2);
+        if (v && !v->mt_safe())
+            throw exception::value_mt_unsafe();
+        std::lock_guard lck(mtx);
+        data[key->cvalue()] = v;
+        return v;
+    }
+}
+
+template <impl::allocator A> basic_shared_hash<A>::value_ptr
+basic_shared_hash<A>::erase(
+    typename threadscript::basic_state<A>& thread,
+    typename threadscript::basic_symbol_table<A>& l_vars,
+    const typename threadscript::basic_code_node<A>& node)
+{
+    size_t narg = this->narg(node);
+    if (narg != 1 && narg != 2)
+        throw exception::op_narg();
+    if (narg == 1) {
+        std::lock_guard lck(mtx);
+        data.clear();
+    } else {
+        auto a1 = this->arg(thread, l_vars, node, 1);
+        if (!a1)
+            throw exception::value_null();
+        auto key = dynamic_cast<basic_value_string<A>*>(a1.get());
+        if (!key)
+            throw exception::value_type();
+        std::lock_guard lck(mtx);
+        data.erase(key->cvalue());
+        std_container_shrink(data);
+    }
+    return nullptr;
+}
+
+template <impl::allocator A> basic_shared_hash<A>::value_ptr
+basic_shared_hash<A>::keys(typename threadscript::basic_state<A>& thread,
+    typename threadscript::basic_symbol_table<A>&,
+    const typename threadscript::basic_code_node<A>& node)
+{
+    size_t narg = this->narg(node);
+    if (narg != 1)
+        throw exception::op_narg();
+    auto result = basic_value_vector<A>::create(thread.get_allocator());
+    {
+        std::lock_guard lck(mtx);
+        for (auto&& [k, v]: data) {
+            auto pk = basic_value_string<A>::create(thread.get_allocator());
+            pk->value() = k;
+            pk->set_mt_safe();
+            result->value().push_back(std::move(pk));
+        }
+    }
+    std::sort(result->value().begin(), result->value().end(),
+        [](auto&& a, auto&& b) {
+            return static_cast<basic_value_string<A>*>(a.get())->cvalue() <
+            static_cast<basic_value_string<A>*>(b.get())->cvalue();
+        });
+    return result;
+}
+
+template <impl::allocator A> basic_shared_hash<A>::value_ptr
+basic_shared_hash<A>::size(typename threadscript::basic_state<A>& thread,
+    typename threadscript::basic_symbol_table<A>&,
+    const typename threadscript::basic_code_node<A>& node)
+{
+    if (this->narg(node) != 1)
+        throw exception::op_narg();
+    auto res = value_unsigned::create(thread.get_allocator());
+    std::lock_guard lck(mtx);
+    res->value() = data.size();
+    return res;
+}
+
+template <impl::allocator A> basic_shared_hash<A>::method_table
+basic_shared_hash<A>::init_methods()
+{
+    return {
+        //! [methods]
+        {"at", &basic_shared_hash::at},
+        {"erase", &basic_shared_hash::erase},
+        {"keys", &basic_shared_hash::keys},
+        {"size", &basic_shared_hash::size},
+        //! [methods]
+    };
+}
+
 } // namespace threadscript

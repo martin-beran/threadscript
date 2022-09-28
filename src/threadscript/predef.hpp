@@ -579,7 +579,7 @@ protected:
 };
 
 //! Function \c keys
-/*! Gets a vector of keys from a hash. The elements of the returned vectors,
+/*! Gets a vector of keys from a hash. The elements of the returned vector,
  * but not the vector itself, are thread-safe (read-only, function f_is_mt_safe
  * returns \c true for them)
  * \param hash a hash
