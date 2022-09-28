@@ -374,39 +374,49 @@ seq(
     counters("at", 0, 0),
 
     fun("f_main", seq(
-        var("iter", 0),
-        while(lt(iter(), max()), seq(
-            var("i", 1),
+        var("iter", clone(0)),
+        var("tmp_b0", clone(false)),
+        var("tmp_b1", clone(false)),
+        var("tmp_u", clone(0)),
+        while(lt(tmp_b0(), iter(), max()), seq(
+            var("i", clone(1)),
             var("step", true),
-            while(le(i(), num_threads()), seq(
+            while(le(tmp_b0(), i(), num_threads()), seq(
                 if(
-                    or(
-                        ge(i(), counters("size")),
-                        is_null(counters("at", i())),
-                        ne(counters("at", i()), counters("at", 0))
+                    or_r(
+                        tmp_b0(),
+                        ge(tmp_b1(), i(), counters("size")),
+                        is_null(tmp_b1(), counters("at", i())),
+                        ne(tmp_b1(), counters("at", i()), counters("at", 0))
                     ),
                     var("step", false)
                 ),
-                var("i", add(i(), 1))
+                add(i(), i(), 1)
             )),
             if(step(), seq(
                 counters("at", 0, mt_safe(add(counters("at", 0), 1))),
-                if(lt(e("size"), num_threads()),
-                    e("at", sub(num_threads(), 1), mt_safe(clone(iter())))
+                if(lt(tmp_b0(), e("size"), num_threads()),
+                    e("at", sub(tmp_u(), num_threads(), 1), mt_safe(clone(iter())))
                 ),
-                if(lt(ei("size"), num_threads()),
-                    e("at", sub(num_threads(), 1), mt_safe(clone(iter())))
+                if(lt(tmp_b0(), ei("size"), num_threads()),
+                    e("at", sub(tmp_u(), num_threads(), 1), mt_safe(clone(iter())))
                 ),
-                var("iter", add(iter(), 1))
+                add(iter(), iter(), 1)
             ))
         )),
         var("ok", true),
-        var("i", 0),
-        while(lt(i(), counters("size")),
-            if(ne(counters("at", i()), max()),
-                var("ok", false)
-            )
-        ),
+        var("i", clone(0)),
+        while(lt(i(), counters("size")), seq(
+            var("ci", counters("at", i())),
+            if(and(
+                ne(ci(), max()),
+                ne(ci(), sub(max(), 1))
+            ), seq(
+                var("ok", false),
+                print("i=", i(), " val=", ci(), " max=", max(), "\n")
+            )),
+            add(i(), i(), 1)
+        )),
         print("ok=", ok()),
         ok()
     )),
@@ -414,10 +424,11 @@ seq(
     fun("f_thread", seq(
         var("t_idx", at(_args(), 0)),
         var("run", true),
+        var("tmp_b", clone(false)),
         while(run(), seq(
             if(or(
-                ge(t_idx(), counters("size")),
-                is_null(counters("at", t_idx()))
+                ge(tmp_b(), t_idx(), counters("size")),
+                is_null(tmp_b(), counters("at", t_idx()))
             ),
                 counters("at", t_idx(), 0)
             ),
@@ -435,8 +446,8 @@ seq(
     )"sv;
     //! [run_threads]
     // Prepare VM
-    constexpr unsigned num_threads = 10;
-    constexpr unsigned max = 100;
+    constexpr unsigned num_threads = 20;
+    constexpr unsigned max = 200;
     std::ostringstream std_out;
     ts::virtual_machine vm{test::alloc};
     vm.std_out = &std_out;
