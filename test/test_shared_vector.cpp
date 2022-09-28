@@ -106,6 +106,38 @@ BOOST_DATA_TEST_CASE(method_at, (std::vector<test::runner_result>{
         }, ""},
     {R"(seq(
             var("o", shared_vector()),
+            o("at", vector())
+        ))", test::exc{
+            typeid(ts::exception::value_type),
+            ts::frame_location("", "", 3, 13),
+            "Runtime error: Bad value type"
+        }, ""},
+    {R"(seq(
+            var("o", shared_vector()),
+            o("at", vector(), 1)
+        ))", test::exc{
+            typeid(ts::exception::value_type),
+            ts::frame_location("", "", 3, 13),
+            "Runtime error: Bad value type"
+        }, ""},
+    {R"(seq(
+            var("o", shared_vector()),
+            o("at", hash())
+        ))", test::exc{
+            typeid(ts::exception::value_type),
+            ts::frame_location("", "", 3, 13),
+            "Runtime error: Bad value type"
+        }, ""},
+    {R"(seq(
+            var("o", shared_vector()),
+            o("at", hash(), 1)
+        ))", test::exc{
+            typeid(ts::exception::value_type),
+            ts::frame_location("", "", 3, 13),
+            "Runtime error: Bad value type"
+        }, ""},
+    {R"(seq(
+            var("o", shared_vector()),
             o("at", -1)
         ))", test::exc{
             typeid(ts::exception::value_out_of_range),
@@ -177,9 +209,9 @@ BOOST_DATA_TEST_CASE(method_at, (std::vector<test::runner_result>{
             o("at", 6, mt_safe(hash())),
             print(o("at", 4), " ", o("at", 5), " ", o("at", 6), "\n")
         ))", nullptr,
-            "false 11 -22 abcd\n"
-            "111\n"
-            "null vector hash\n"
+        "false 11 -22 abcd\n"
+        "111\n"
+        "null vector hash\n"
     },
 }))
 {

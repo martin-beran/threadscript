@@ -1928,6 +1928,15 @@ BOOST_DATA_TEST_CASE(f_keys, (std::vector<test::runner_result>{
             size(k())
         )
     )", test::uint_t(5U), ",Xy,a,bc,xyz"},
+    {R"(
+        seq(
+            var("h", hash()),
+            at(h(), "Xy", 0), at(h(), "xyz", 1),
+            var("k", keys(h())),
+            print(is_mt_safe(at(k(), 0)), ",", is_mt_safe(at(k(), 1))),
+            size(k())
+        )
+    )", test::uint_t(2U), "true,true"},
 }))
 {
     test::check_runner(sample);

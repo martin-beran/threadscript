@@ -33,6 +33,8 @@ basic_shared_hash<A>::at(typename threadscript::basic_state<A>& thread,
     if (!a1)
         throw exception::value_null();
     auto key = dynamic_cast<basic_value_string<A>*>(a1.get());
+    if (!key)
+        throw exception::value_type();
     if (narg == 2) {
         std::lock_guard lck(mtx);
         auto it = data.find(key->cvalue());
