@@ -100,6 +100,20 @@ basic_shared_hash<A>::erase(
     return nullptr;
 }
 
+template <impl::allocator A> basic_shared_hash<A>::method_table
+basic_shared_hash<A>::init_methods()
+{
+    return {
+        //! [methods]
+        {"at", &basic_shared_hash::at},
+        {"contains", &basic_shared_hash::contains},
+        {"erase", &basic_shared_hash::erase},
+        {"keys", &basic_shared_hash::keys},
+        {"size", &basic_shared_hash::size},
+        //! [methods]
+    };
+}
+
 template <impl::allocator A> basic_shared_hash<A>::value_ptr
 basic_shared_hash<A>::keys(typename threadscript::basic_state<A>& thread,
     typename threadscript::basic_symbol_table<A>&,
@@ -137,20 +151,6 @@ basic_shared_hash<A>::size(typename threadscript::basic_state<A>& thread,
     std::lock_guard lck(mtx);
     res->value() = data.size();
     return res;
-}
-
-template <impl::allocator A> basic_shared_hash<A>::method_table
-basic_shared_hash<A>::init_methods()
-{
-    return {
-        //! [methods]
-        {"at", &basic_shared_hash::at},
-        {"contains", &basic_shared_hash::contains},
-        {"erase", &basic_shared_hash::erase},
-        {"keys", &basic_shared_hash::keys},
-        {"size", &basic_shared_hash::size},
-        //! [methods]
-    };
 }
 
 } // namespace threadscript

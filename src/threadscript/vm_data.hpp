@@ -514,7 +514,8 @@ public:
  * In order to use objects of this class in a script, the ThreadScript
  * initialization code (in native C++) creates an instance of class \ref
  * constructor and makes it available via a basic_symbol_table. Each evaluation
- * of \ref constructor creates a new instance of \a Object.
+ * of \ref constructor creates a new instance of \a Object, passing any
+ * arguments to the construct of class \a Object.
  *
  * The script can call methods of the object by evaluating the object and
  * passing the method name as the first argument.
@@ -559,8 +560,10 @@ public:
          * \return the created constructor */
         static value_ptr create(const A& alloc);
     protected:
-        //! Creates an instance of \a Object
-        /*! \copydetails basic_value::eval() */
+        //! Creates and returns an instance of \a Object
+        /*! Arguments are passed to the constructor of class \a Object.
+         *
+         * \copydetails basic_value::eval() */
         value_ptr eval(basic_state<A>& thread,
                        basic_symbol_table<A>& l_vars,
                        const basic_code_node<A>& node,
@@ -579,15 +582,16 @@ public:
     };
     //! Creates the object
     /*! Parameters after \a t are passed by constructor::eval().
-     * \param[in] t an ignored parameter that prevents using this
+     * \param[in] t an ignored parameter that prevents using this constructor
+     * directly
      * \param[in] methods the mapping from method names to implementations
      * \param[in] thread the current thread
-     * \param[in] l_vars the symbol table of the current stack frame;
-     * in a function, it contains local variables of the current function;
-     * outside of functions, it contains local variable of the current script
+     * \param[in] l_vars the symbol table of the current stack frame
      * \param[in] node evaluate in the context of this code node
-     * \throw a class derived from exception::base if evaluation fails; other
-     * exceptions are wrapped in exception::wrapped */
+     * \throw a class derived from exception::base if object creation fails;
+     * other exceptions are wrapped in exception::wrapped
+     * \throw exception::op_narg if the number of arguments in \a node (passed
+     * from a script) is not 0 */
     basic_value_object(tag t, std::shared_ptr<const method_table> methods,
                        basic_state<A>& thread, basic_symbol_table<A>& l_vars,
                        const basic_code_node<A>& node);
@@ -613,6 +617,22 @@ public:
      * the created constructor value */
     static void register_constructor(basic_symbol_table<A>& sym, bool replace);
 protected:
+    //! Selects a constructor that can have arguments passed from a script.
+    struct tag_args {};
+    //! Creates the object
+    /*! Parameters after \a t are passed by constructor::eval().
+     * \param[in] t an ignored parameter that prevents using this constructor
+     * directly
+     * \param[in] methods the mapping from method names to implementations
+     * \param[in] thread the current thread
+     * \param[in] l_vars the symbol table of the current stack frame
+     * \param[in] node evaluate in the context of this code node; contains any
+     * arguments passed to \ref constructor from a script
+     * \throw a class derived from exception::base if object creation fails;
+     * other exceptions are wrapped in exception::wrapped */
+    basic_value_object(tag_args t, std::shared_ptr<const method_table> methods,
+                       basic_state<A>& thread, basic_symbol_table<A>& l_vars,
+                       const basic_code_node<A>& node);
     //! Gets the object or calls a method of the object.
     /*! The method name is passed as the first argument,
      * <tt>arg(thread, l_vars, node, 0)</tt>. If called without arguments, the

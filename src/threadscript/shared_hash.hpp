@@ -32,7 +32,7 @@ template <allocator A> using basic_shared_hash_base =
  * \threadsafe{safe,safe}
  * \test in file test_shared_hash.cpp */
 template <impl::allocator A>
-class basic_shared_hash: public impl::basic_shared_hash_base<A> {
+class basic_shared_hash final: public impl::basic_shared_hash_base<A> {
 public:
     //! It marks the object mt-safe.
     /*! \copydetails basic_value_object<A>::basic_value_object() */
@@ -66,7 +66,6 @@ private:
     at(typename threadscript::basic_state<A>& thread,
        typename threadscript::basic_symbol_table<A>& l_vars,
        const typename threadscript::basic_code_node<A>& node);
-    typename basic_shared_hash::value_ptr
     //! Tests if the hash contains an element with \a key.
     /*! \param[in] thread the current thread
      * \param[in] l_vars the symbol table of the current stack frame
@@ -79,6 +78,7 @@ private:
      * method_name) is not 2
      * \throw exception::value_null if \a key is \c null
      * \throw exception::value_type if \a key is not of type \c string */
+    typename basic_shared_hash::value_ptr
     contains(typename threadscript::basic_state<A>& thread,
              typename threadscript::basic_symbol_table<A>& l_vars,
              const typename threadscript::basic_code_node<A>& node);

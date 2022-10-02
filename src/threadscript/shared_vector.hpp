@@ -32,7 +32,7 @@ template <allocator A> using basic_shared_vector_base =
  * \threadsafe{safe,safe}
  * \test in file test_shared_vector.cpp */
 template <impl::allocator A>
-class basic_shared_vector: public impl::basic_shared_vector_base<A> {
+class basic_shared_vector final: public impl::basic_shared_vector_base<A> {
 public:
     //! It marks the object mt-safe.
     /*! \copydetails basic_value_object<A>::basic_value_object() */

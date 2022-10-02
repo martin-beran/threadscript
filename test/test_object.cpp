@@ -22,7 +22,8 @@ namespace test {
 
 ts::allocator_any alloc;
 
-class empty_object: public ts::value_object<empty_object, "empty_object"> {
+class empty_object final: public ts::value_object<empty_object, "empty_object">
+{
     using base::base;
 public:
     ~empty_object() {
@@ -34,7 +35,7 @@ public:
     inline static uintmax_t destroyed = 0;
 };
 
-class test_object: public ts::value_object<test_object, "test_object"> {
+class test_object final: public ts::value_object<test_object, "test_object"> {
     using base::base;
 public:
     test_object(tag t, std::shared_ptr<const method_table> methods,
@@ -58,10 +59,10 @@ public:
     }
 };
 
-test_object::test_object(tag t, std::shared_ptr<const method_table> methods,
+test_object::test_object(tag, std::shared_ptr<const method_table> methods,
                          ts::state& thread, ts::symbol_table& l_vars,
                          const ts::code_node& node):
-    base(t, methods, thread, l_vars, node)
+    base(tag_args{}, methods, thread, l_vars, node)
 {
     if (narg(node) > 1)
         throw ts::exception::op_library();

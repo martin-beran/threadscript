@@ -72,6 +72,18 @@ basic_shared_vector<A>::erase(
     return nullptr;
 }
 
+template <impl::allocator A> basic_shared_vector<A>::method_table
+basic_shared_vector<A>::init_methods()
+{
+    return {
+        //! [methods]
+        {"at", &basic_shared_vector::at},
+        {"erase", &basic_shared_vector::erase},
+        {"size", &basic_shared_vector::size},
+        //! [methods]
+    };
+}
+
 template <impl::allocator A> basic_shared_vector<A>::value_ptr
 basic_shared_vector<A>::size(typename threadscript::basic_state<A>& thread,
     typename threadscript::basic_symbol_table<A>&,
@@ -83,18 +95,6 @@ basic_shared_vector<A>::size(typename threadscript::basic_state<A>& thread,
     std::lock_guard lck(mtx);
     res->value() = data.size();
     return res;
-}
-
-template <impl::allocator A> basic_shared_vector<A>::method_table
-basic_shared_vector<A>::init_methods()
-{
-    return {
-        //! [methods]
-        {"at", &basic_shared_vector::at},
-        {"erase", &basic_shared_vector::erase},
-        {"size", &basic_shared_vector::size},
-        //! [methods]
-    };
 }
 
 } // namespace threadscript

@@ -180,12 +180,25 @@ template <impl::allocator A> void basic_value_hash<A>::set_mt_safe()
 template <class Object, str_literal Name, impl::allocator A>
 basic_value_object<Object, Name, A>::basic_value_object(tag,
                                   std::shared_ptr<const method_table> methods,
+                                  basic_state<A>& thread,
+                                  basic_symbol_table<A>& l_vars,
+                                  const basic_code_node<A>& node):
+    basic_value_object(tag_args{}, methods, thread, l_vars, node)
+{
+    if (this->narg(node) != 0)
+        throw exception::op_narg();
+}
+
+template <class Object, str_literal Name, impl::allocator A>
+basic_value_object<Object, Name, A>::basic_value_object(tag_args,
+                                  std::shared_ptr<const method_table> methods,
                                   basic_state<A>&, basic_symbol_table<A>&,
                                   const basic_code_node<A>&):
     methods(std::move(methods))
 {
     // This static_assert must be at a place where Object is a complete class
     static_assert(std::is_base_of_v<basic_value_object, Object>);
+    static_assert(std::is_final_v<Object>);
 }
 
 template <class Object, str_literal Name, impl::allocator A> auto
