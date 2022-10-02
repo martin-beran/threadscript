@@ -619,6 +619,19 @@ BOOST_AUTO_TEST_CASE(op_div_zero)
 //! \endcond
 
 /*! \file
+ * \test \c op_would_block -- Class threadscript::exception::op_would_block */
+//! \cond
+BOOST_AUTO_TEST_CASE(op_would_block)
+{
+    ex::op_would_block exc({ts::frame_location{"main", "script", 10, 1}});
+    BOOST_TEST(exc.type() == "op_would_block");
+    BOOST_TEST(exc.trace().size() == 1);
+    BOOST_TEST(exc.to_string(false) ==
+               "script:10:1:main(): Runtime error: Operation would block");
+}
+//! \endcond
+
+/*! \file
  * \test \c op_library -- Class threadscript::exception::op_library */
 //! \cond
 BOOST_AUTO_TEST_CASE(op_library)

@@ -602,6 +602,18 @@ public:
     }
 };
 
+//! Thrown by a non-blocking operation, if its blocking counterpart would block.
+class op_would_block: public operation {
+public:
+    //! Stores an error message.
+    /*! \param[in] trace a stack trace */
+    explicit op_would_block(stack_trace trace = {}):
+        operation("Operation would block", std::move(trace)) {}
+    std::string_view type() const noexcept override {
+        return "op_would_block";
+    }
+};
+
 //! A failed call to an OS or library function.
 /*! It is used if there is no more specific exception class. */
 class op_library: public operation {
