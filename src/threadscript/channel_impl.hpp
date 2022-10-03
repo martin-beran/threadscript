@@ -22,7 +22,7 @@ basic_channel<A>::basic_channel(
     size_t narg = this->narg(node);
     if (narg != 1)
         throw exception::op_narg();
-    auto c = this->arg_index(thread, l_vars, node, 1);
+    auto c = this->arg_index(thread, l_vars, node, 0);
     if (c != 0) {
         data.resize(c);
         it_push = data.begin();
@@ -91,7 +91,9 @@ basic_channel<A>::recv(
             cond_recv.wait(lck, [&]() { return senders > 0 && value; });
         },
         [&](auto& lck) {
+            ++receivers;
             cond_recv.wait(lck, [&]() { return has_data(); });
+            --receivers;
         });
 }
 
@@ -133,7 +135,9 @@ basic_channel<A>::send(
             cond_send.wait(lck, [&]() { return receivers > 0 && !value; });
         },
         [&](auto& lck) {
+            ++senders;
             cond_send.wait(lck, [&]() { return has_space(); });
+            --senders;
         });
 }
 

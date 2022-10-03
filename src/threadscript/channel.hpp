@@ -37,6 +37,9 @@ template <allocator A> using basic_channel_base =
  * waiting. recv() blocks until send() or try_recv() is called. try_recv()
  * succeeds only if there is send() waiting. A pair of try_send() and
  * try_recv() never succeeds for a zero capacity channel.
+ *
+ * Methods:
+ * \snippet channel_impl.hpp methods
  * \tparam A an allocator type
  * \threadsafe{safe,safe}
  * \test in file test_channel.cpp */
@@ -52,6 +55,7 @@ public:
      * \param[in] node the code node, with constructor arguments:
      *     \arg \c capacity the channel capacity, of type \c int or \c unsigned
      * \throw exception::op_narg if the number of arguments is not 1
+     * \throw exception::value_null if \a capacity is \c null
      * \throw exception::value_type if \a capacity does not have type \c int or
      * \c c unsigned
      * \throw exception::value_out_of_range if \a capacity is negative */
@@ -164,7 +168,9 @@ private:
      * \param[in] node the code node, with method call arguments:
      *     \arg \c method_name
      * \return a value of type \c int; the number of threads blocked in send()
-     * if positive; minus the number of threads blocked in recv() if negative */
+     * if positive; minus the number of threads blocked in recv() if negative
+     * \throw exception::op_narg if the number of arguments (incl. \c
+     * method_name) is not 1 */
     typename basic_channel::value_ptr
     balance(typename threadscript::basic_state<A>& thread,
             typename threadscript::basic_symbol_table<A>& l_vars,

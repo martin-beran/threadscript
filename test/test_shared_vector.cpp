@@ -23,6 +23,11 @@ auto sh_vars = test::make_sh_vars<ts::shared_vector>();
  */
 //! \cond
 BOOST_DATA_TEST_CASE(create_object, (std::vector<test::runner_result>{
+    {R"(shared_vector(1))", test::exc{
+            typeid(ts::exception::op_narg),
+            ts::frame_location("", "", 1, 1),
+            "Runtime error: Bad number of arguments"
+        }, ""},
     {R"(type(shared_vector()))", "shared_vector", ""},
 }))
 {

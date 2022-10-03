@@ -22,6 +22,11 @@ auto sh_vars = test::make_sh_vars<ts::shared_hash>();
  * \test \c create_object -- Creates a threadscript::basic_shared_hash object */
 //! \cond
 BOOST_DATA_TEST_CASE(create_object, (std::vector<test::runner_result>{
+    {R"(shared_hash(1))", test::exc{
+            typeid(ts::exception::op_narg),
+            ts::frame_location("", "", 1, 1),
+            "Runtime error: Bad number of arguments"
+        }, ""},
     {R"(type(shared_hash()))", "shared_hash", ""},
 }))
 {
