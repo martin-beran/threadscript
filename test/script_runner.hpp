@@ -19,21 +19,22 @@ struct script_runner {
                   std::shared_ptr<ts::symbol_table> sh_vars = nullptr);
     ts::value::value_ptr run();
     std::ostringstream std_out;
+    std::shared_ptr<ts::symbol_table> sh_vars;
     ts::virtual_machine vm{alloc};
     std::string script;
 };
 
 script_runner::script_runner(std::string script,
                              std::shared_ptr<ts::symbol_table> sh_vars):
-    script(std::move(script))
+    sh_vars(std::move(sh_vars)), script(std::move(script))
 {
     // Redirect standard output to a string stream
     vm.std_out = &std_out;
     // Register default predefined built-in native commands and functions
-    if (!sh_vars)
-        sh_vars = ts::predef_symbols(alloc);
+    if (!this->sh_vars)
+        this->sh_vars = ts::predef_symbols(alloc);
     // Set global shared symbols to VM
-    vm.sh_vars = sh_vars;
+    vm.sh_vars = this->sh_vars;
 }
 
 ts::value::value_ptr script_runner::run()
@@ -62,6 +63,76 @@ using namespace std::string_literals;
 using namespace std::string_view_literals;
 
 namespace test {
+
+struct script_runner_threads: script_runner {
+    using script_runner::script_runner;
+    ts::value::value_ptr run();
+};
+
+ts::value::value_ptr script_runner_threads::run()
+{
+    // Parse and run the script, expect it to define variable num_threads and
+    // functions f_main, f_thread
+    auto parsed = ts::parse_code(vm.get_allocator(), script, "string");
+    {
+        ts::state s_prepare{vm};
+        BOOST_REQUIRE_NO_THROW(
+            try {
+                parsed->eval(s_prepare);
+            } catch (std::exception& e) {
+                BOOST_TEST_INFO("exception: " << e.what());
+                throw;
+            });
+        // Store definitions in the global symbol table
+        for (auto&& sym: s_prepare.t_vars.csymbols())
+            sh_vars->insert(sym.first, sym.second);
+    }
+    auto name_num_threads = "num_threads";
+    auto name_f_main = "f_main";
+    auto name_f_thread = "f_thread";
+    auto num_threads = dynamic_pointer_cast<ts::value_unsigned>(
+                        sh_vars->lookup(name_num_threads).value_or(nullptr));
+    BOOST_REQUIRE_NE(num_threads, nullptr);
+    auto f_main =
+        dynamic_pointer_cast<ts::value_function>(sh_vars->lookup(name_f_main).
+                                                 value_or(nullptr));
+    BOOST_REQUIRE_NE(f_main, nullptr);
+    auto f_thread =
+        dynamic_pointer_cast<ts::value_function>(sh_vars->lookup(name_f_thread).
+                                                 value_or(nullptr));
+    BOOST_REQUIRE_NE(f_thread, nullptr);
+    // Run functions in threads
+    const size_t nt = num_threads->cvalue();
+    std::vector<std::thread> threads;
+    for (size_t t = 0; t < nt; ++t)
+        threads.emplace_back([this, &name_f_thread, &f_thread, t]() {
+            auto args = ts::value_vector::create(vm.get_allocator());
+            auto arg_t = ts::value_unsigned::create(vm.get_allocator());
+            arg_t->value() = t;
+            args->value().push_back(arg_t);
+            ts::state s_thread{vm};
+            try {
+                f_thread->call(s_thread, name_f_thread, args);
+            } catch (std::exception& e) {
+                std::cout << "thread=" << t << " exception=" << e.what() <<
+                    std::endl;
+            }
+        });
+    ts::value::value_ptr result = nullptr;
+    std::exception_ptr exc{};
+    try {
+        ts::state s_main{vm};
+        result = f_main->call(s_main, name_f_main);
+    } catch (...) {
+        exc = std::current_exception();
+    }
+    // Wait for threads and finish
+    for (auto&& t: threads)
+        t.join();
+    if (exc)
+        std::rethrow_exception(exc);
+    return result;
+}
 
 using int_t = ts::config::value_int_type;
 using uint_t = ts::config::value_unsigned_type;
@@ -103,10 +174,11 @@ void check_value(ts::value::value_ptr result, E* expected)
     BOOST_CHECK_EQUAL(pr->cvalue(), *expected);
 }
 
+template <class R = script_runner>
 void check_runner(const runner_result& sample,
                   std::shared_ptr<ts::symbol_table> sh_vars = nullptr)
 {
-    test::script_runner runner(sample.script, sh_vars);
+    R runner(sample.script, sh_vars);
     if (auto ps = std::get_if<test::exc>(&sample.result)) {
         BOOST_CHECK_EXCEPTION(runner.run(), ts::exception::base,
             ([&sample, &ps](auto&& e) {

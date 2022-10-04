@@ -15,8 +15,8 @@
  * in threadscript.cpp, then the appropriate <tt>*_impl.hpp</tt> file with
  * template definitions must be included in order to be able to instantiate the
  * required templates. An example is test program test_object.cpp, which
- * instantiates template basic_value_objects and therefore it includes
- * vm_data_impl.hpp.
+ * instantiates template threadscript::basic_value_object and therefore it
+ * includes vm_data_impl.hpp.
  *
  * \section API_VM Virtual machine
  *

@@ -399,7 +399,8 @@ BOOST_DATA_TEST_CASE(method_size, (std::vector<test::runner_result>{
 
 /*! \file
  * \test \c threads -- Tests accessing threadscript::basic_shared_vector from
- * multiple threads */
+ * multiple threads
+ * \todo use \c test::script_runner_threads */
 //! \cond
 BOOST_AUTO_TEST_CASE(threads)
 {

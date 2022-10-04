@@ -4,6 +4,7 @@
 
 //! \cond
 #include "threadscript/threadscript.hpp"
+#include "threadscript/symbol_table_impl.hpp"
 
 #define BOOST_TEST_MODULE channel
 #define BOOST_TEST_DYN_LINK
@@ -406,5 +407,27 @@ BOOST_DATA_TEST_CASE(methods, (std::vector<test::runner_result>{
 }))
 {
     test::check_runner(sample, sh_vars);
+}
+//! \endcond
+
+/*! \file
+ * \test \c threads -- Tests various patterns of sending and receiving data via
+ * a channel in multiple threads */
+//! \cond
+BOOST_DATA_TEST_CASE(threads, (std::vector<test::runner_result>{
+    {R"(seq(
+            gvar("num_threads", 1),
+            gvar("o", channel(1)),
+            fun("f_main", seq(
+                o("recv")
+            )),
+            fun("f_thread", seq(
+                o("send", "MSG")
+            ))
+        ))", "MSG", ""},
+    // TODO
+}))
+{
+    test::check_runner<test::script_runner_threads>(sample, sh_vars);
 }
 //! \endcond
