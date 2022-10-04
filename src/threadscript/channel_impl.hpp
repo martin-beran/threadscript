@@ -64,6 +64,8 @@ template <impl::allocator A> typename basic_channel<A>::value_ptr
 basic_channel<A>::pop()
 {
     auto result = std::move(*it_pop++);
+    if (it_pop == data.end())
+        it_pop = data.begin();
     if (it_pop == it_push)
         it_pop = data.end();
     return result;

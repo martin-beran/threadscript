@@ -652,9 +652,9 @@ BOOST_AUTO_TEST_CASE(script_throw)
     ex::script_throw exc("thrown_from_script",
                          {ts::frame_location{"main", "script", 10, 1}});
     BOOST_TEST(exc.type() == "script_throw");
-    BOOST_TEST(exc.msg() == "thrown_from_script");
+    BOOST_TEST(exc.msg() == "Script exception: thrown_from_script");
     BOOST_TEST(exc.trace().size() == 1);
     BOOST_TEST(exc.to_string(false) ==
-               "script:10:1:main(): thrown_from_script");
+               "script:10:1:main(): Script exception: thrown_from_script");
 }
 //! \endcond

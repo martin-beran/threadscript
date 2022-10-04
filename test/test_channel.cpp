@@ -333,7 +333,76 @@ BOOST_DATA_TEST_CASE(types, (std::vector<test::runner_result>{
  * a channel in a single thread */
 //! \cond
 BOOST_DATA_TEST_CASE(methods, (std::vector<test::runner_result>{
-    // TODO
+    {R"(seq(
+            var("o", channel(3)),
+            o("send", "a"),
+            print(o("recv"), "\n"),
+            o("send", "b"), o("send", "c"), o("send", "d"),
+            print(o("recv"), o("recv"), o("recv"), "\n"),
+            o("send", "e"), o("send", "f"),
+            print(o("recv"), "\n"),
+            o("send", "g"), o("send", "h"),
+            print(o("recv"), "\n"),
+            o("try_send", "i"),
+            try(
+                o("try_send", "j"),
+                "op_would_block", seq(
+                    print(o("recv"), "\n"),
+                    o("try_send", "J")
+                )
+            ),
+            print(o("recv"), o("recv"), o("recv"), "\n")
+        ))", nullptr,
+            "a\n"
+            "bcd\n"
+            "e\n"
+            "f\n"
+            "g\n"
+            "hiJ\n"
+        },
+    {R"(seq(
+            var("o", channel(3)),
+            o("try_send", "a"),
+            print(o("try_recv"), "\n"),
+            o("try_send", "b"), o("try_send", "c"), o("try_send", "d"),
+            print(o("try_recv"), o("try_recv"), o("try_recv"), "\n"),
+            o("try_send", "e"), o("try_send", "f"),
+            print(o("try_recv"), "\n"),
+            o("try_send", "g"), o("try_send", "h"),
+            print(o("try_recv"), "\n"),
+            o("try_send", "i"),
+            try(
+                o("try_send", "j"),
+                "op_would_block", seq(
+                    print(o("try_recv"), "\n"),
+                    o("try_send", "J")
+                )
+            ),
+            print(o("try_recv"), o("try_recv"), o("try_recv"), "\n")
+        ))", nullptr,
+            "a\n"
+            "bcd\n"
+            "e\n"
+            "f\n"
+            "g\n"
+            "hiJ\n"
+        },
+    {R"(seq(
+            var("o", channel(3)),
+            o("send", "a"),
+            print(o("try_recv"), "\n"),
+            o("try_send", "b"),
+            print(o("recv"), "\n"),
+            o("send", "c"), o("try_send", "d"),
+            print(o("recv"), o("try_recv"), "\n"),
+            o("try_send", "e"), o("send", "f"),
+            print(o("try_recv"), o("recv"), "\n")
+        ))", nullptr,
+            "a\n"
+            "b\n"
+            "cd\n"
+            "ef\n"
+        },
 }))
 {
     test::check_runner(sample, sh_vars);

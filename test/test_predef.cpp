@@ -3031,12 +3031,12 @@ BOOST_DATA_TEST_CASE(f_throw, (std::vector<test::runner_result>{
     )", test::exc{
         typeid(ts::exception::script_throw),
         ts::frame_location("", "", 3, 13),
-        "Error message"
+        "Script exception: Error message"
     }, "handler"},
     {R"(throw("Error message"))", test::exc{
         typeid(ts::exception::script_throw),
         ts::frame_location("", "", 1, 1),
-        "Error message"
+        "Script exception: Error message"
     }, ""},
 }))
 {
@@ -3193,7 +3193,7 @@ BOOST_DATA_TEST_CASE(f_try, (std::vector<test::runner_result>{
     )", test::exc{
         typeid(ts::exception::script_throw),
         ts::frame_location("", "", 3, 13),
-        "Exception"
+        "Script exception: Exception"
     }, ""},
     {R"(
         try(
@@ -3203,7 +3203,7 @@ BOOST_DATA_TEST_CASE(f_try, (std::vector<test::runner_result>{
     )", test::exc{
         typeid(ts::exception::script_throw),
         ts::frame_location("", "", 3, 13),
-        "Exception"
+        "Script exception: Exception"
     }, ""},
     {R"(
         try(

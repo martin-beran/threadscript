@@ -1016,7 +1016,8 @@ f_try<A>::eval(basic_state<A>& thread, basic_symbol_table<A>&l_vars,
             if (exc->cvalue().empty() ||
                 (exc->cvalue().front() == '!' &&
                  typeid(e) == typeid(exception::script_throw) &&
-                 std::string_view(exc->cvalue()).substr(1) == e.msg()) ||
+                 std::string_view(exc->cvalue()).substr(1) ==
+                    dynamic_cast<exception::script_throw&>(e).script_msg()) ||
                 (exc->cvalue() == e.type()))
             {
                 return this->arg(thread, l_vars, node, i + 1);

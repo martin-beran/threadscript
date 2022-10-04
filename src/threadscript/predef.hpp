@@ -1005,7 +1005,7 @@ protected:
  * exception type name, as returned by exception::base::type().
  * \arg If \a exc begins with \c '!' and the exception type is
  * exception::script_throw, the rest of \a exc value after \c '!' is compared
- * to the exception message, as returned by exception::base::msg().
+ * to the exception message, as returned by exception::base::script_msg().
  * \arg If \a exc is the empty string, it matches any exception.
  * 
  * If a matching \a exc is found, the immediately following argument \a handler

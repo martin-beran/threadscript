@@ -8,6 +8,7 @@
  * when reporting an allocation failure.
  */
 
+#include <cassert>
 #include <exception>
 #include <sstream>
 #include <stdexcept>
@@ -632,13 +633,21 @@ public:
  * throw (implemented by class predef::f_throw). */
 class script_throw: public base {
 public:
+    //! The fixed prefix of a message
+    static constexpr std::string_view prefix{"Script exception: "};
     //! Stores an error message.
     /*! \param[in] msg the message passed to predef::f_throw
      * \param[in] trace a stack trace */
     explicit script_throw(std::string_view msg, stack_trace trace = {}):
-        base(msg, std::move(trace)) {}
+        base(std::string(prefix).append(msg), std::move(trace)) {}
     std::string_view type() const noexcept override {
         return "script_throw";
+    }
+    //! Gets the stored part of the message after the \ref prefix.
+    /*! \return the message as set by predef::f_throw */
+    std::string_view script_msg() const noexcept {
+        assert(msg().size() >= prefix.size());
+        return msg().substr(prefix.size());
     }
 };
 
