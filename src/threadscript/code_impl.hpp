@@ -55,7 +55,7 @@ basic_code_node<A>::eval(basic_state<A>& thread,
     // value ? value : lookup.lookup(name) would make a copy of value
     // Initialization of the reference extends lifetime of the temporary object
     // returned by lookup().
-    const value_t& v = value ? value :
+    const value_t& v = value || name.empty() ? value :
         static_cast<const value_t&>(l_vars.lookup(name));
     if (!v)
         throw exception::unknown_symbol(name, thread.current_stack());
@@ -98,6 +98,22 @@ bool basic_code_node<A>::operator==(const basic_code_node& o) const noexcept
                 return false;
     }
     return true;
+}
+
+template <impl::allocator A>
+void basic_code_node<A>::resolve(const basic_symbol_table<A>& sym,
+                                 bool replace, bool remove)
+{
+    if (!name.empty()) {
+        if (auto v = sym.lookup(name)) {
+            if (!value || replace)
+                value = *v;
+        } else
+            if (value && remove)
+                value.reset();
+    }
+    for (auto&& c: _children)
+        c->resolve(sym, replace, remove);
 }
 
 template <impl::allocator A>
@@ -228,6 +244,14 @@ std::ostream& operator<<(std::ostream& os, const basic_script<A>& script)
         script._root->write(os, basic_script<A>::node_type::indent_step);
     os << "}\n";
     return os;
+}
+
+template <impl::allocator A>
+void basic_script<A>::resolve(const basic_symbol_table<A>& sym,
+                              bool replace, bool remove)
+{
+    if (_root)
+        _root->resolve(sym, replace, remove);
 }
 
 /*** basic_value_function ****************************************************/

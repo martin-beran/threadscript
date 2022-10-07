@@ -147,6 +147,21 @@
  * a threadscript::script object. It owns a tree of threadscript::code_node
  * objects, which represent code of the script.
  *
+ * If a node corresponds to a source code constant, it does not have a name and
+ * its value is fixed. If a node corresponds to a variable (a name in
+ * threadscript::symbol_table), the name is stored in the node and it is looked
+ * up in a symbol table each time the node is evaluated. Alternatively, it is
+ * possible to \e resolve names in a script by calling
+ * threadscript::script::resolve(), that is, fix the mapping from names to
+ * values according to the symbol table used for name resolution. The intended
+ * usage is an optimization by elimination repeated symbol lookups when calling
+ * functions defined by a script. Before a script is executed, it is possible
+ * to resolve predefined symbols, e.g., commands and function from namespace
+ * threadscript::predef. After a script has been executed, it is possible to
+ * resolve calls to functions and accesses to variables defined by the script.
+ * Any future calls of functions from the script do not have to repeat name
+ * lookups.
+ *
  * \subsection Architecture_Parser Parser
  *
  * Parsing of ThreadScript source code is provided by functions

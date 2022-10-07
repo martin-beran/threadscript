@@ -28,9 +28,9 @@ public:
     using allocator_type = A; //!< The allocator type used by this class
     //! Type of a value of the node
     /*! It is not \c std::nullopt if either the node \ref name has been
-     * resolved, or if a fixed value is assigned to the node by the script
-     * source code. If it is \c std::nullopt, then \ref name will be resolved
-     * to a value using a symbol_table. */
+     * resolved (by resolve()), or if a fixed value is assigned to the node by
+     * the script source code. If it is \c std::nullopt, then \ref name will be
+     * resolved to a value using a symbol_table. */
     using value_t = std::optional<typename basic_value<A>::value_ptr>;
     //! A publicly available pointer to a code node
     /*! It points to a basic_code_node, but manages its owner basic_script.
@@ -102,10 +102,27 @@ private:
      * exceptions are wrapped in exception::wrapped */
     typename basic_value<A>::value_ptr eval(basic_state<A>& thread,
                                         basic_symbol_table<A>& l_vars) const;
+    //! Resolves the node and all descendant nodes recursively
+    /*! Name resolution is performed for nodes with nonempty \ref name. If
+     * lookup of \ref name in \a sym succeeds, the returned value is stored in
+     * \ref value. The same operation is applied recursively to _children.
+     *
+     * If the node already has a \ref value and \ref name is found in \a sym,
+     * then \a replace is checked. If it is \c true, the \ref value is updated.
+     * Otherwise, the existing \ref value is kept.
+     *
+     * If the node already has a \ref value and (nonempty) \ref name is not
+     * found in \a sym, then \a remove is checked. If it is \c true, the \ref
+     * value is set to \c std::nullopt. Otherwise, the existing \ref value is
+     * kept.
+     * \param[in] sym the symbol table used for resolving names
+     * \param[in] replace whether to replace existing values
+     * \param[in] remove values of unknown names */
+    void resolve(const basic_symbol_table<A>& sym, bool replace, bool remove);
     //! The owner script
     const basic_script<A>& _script;
     file_location location; //!< Location in the script source file
-    a_basic_string<A> name; //!< Node name
+    a_basic_string<A> name; //!< Node name (the empty string means no name)
     //! Child nodes
     /*! Member are never \c nullptr. */
     a_basic_vector<priv_ptr, A> _children;
@@ -222,6 +239,13 @@ public:
      * \param[in] o another script
      * \return whether \c this and \a o are equal */
     bool operator==(const basic_script& o) const noexcept;
+    //! Resolves all nodes of the script.
+    /*! It calls basic_code_node::resolve() on the root node, if it exists.
+     * See documentation of basic_code_node::resolve() for more details.
+     * \param[in] sym the symbol table used for resolving names
+     * \param[in] replace whether to replace existing values
+     * \param[in] remove values of unknown names */
+    void resolve(const basic_symbol_table<A>& sym, bool replace, bool remove);
 private:
     //! The script file name
     a_basic_string<A> _file;
