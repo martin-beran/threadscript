@@ -104,21 +104,6 @@ private:
     try_send(typename threadscript::basic_state<A>& thread,
              typename threadscript::basic_symbol_table<A>& l_vars,
              const typename threadscript::basic_code_node<A>& node);
-    //! Internal function used by send() and try_send()
-    /*! \tparam F0 function type of \a cond0
-     * \tparam F function type of \a cond
-     * Parameters passed by send() and try_send():
-     * \param[in] thread
-     * \param[in] l_vars
-     * \param[in] node
-     * \param[in] cond0 an internal function
-     * \param[in] cond an internal function
-     * \return \c null */
-    template <class F0, class F> typename basic_channel::value_ptr
-    send_impl(typename threadscript::basic_state<A>& thread,
-              typename threadscript::basic_symbol_table<A>& l_vars,
-              const typename threadscript::basic_code_node<A>& node,
-              F0&& cond0, F&& cond);
     //! Receives a message from the channel in the blocking mode.
     /*! If the channel is not empty, the first message in the message queue is
      * removed and returned. Otherwise, the operation blocks until a message
@@ -151,17 +136,6 @@ private:
     try_recv(typename threadscript::basic_state<A>& thread,
              typename threadscript::basic_symbol_table<A>& l_vars,
              const typename threadscript::basic_code_node<A>& node);
-    //! Internal function used by recv() and try_recv()
-    /*! \tparam F0 function type of \a cond0
-     * \tparam F function type of \a cond
-     * Parameters passed by recv() and try_recv():
-     * \param[in] node
-     * \param[in] cond0 an internal function
-     * \param[in] cond an internal function
-     * \return \c null */
-    template <class F0, class F> typename basic_channel::value_ptr
-    recv_impl(const typename threadscript::basic_code_node<A>& node,
-              F0&& cond0, F&& cond);
     //! Gets the number of waiting senders/receivers.
     /*! \param[in] thread the current thread
      * \param[in] l_vars the symbol table of the current stack frame

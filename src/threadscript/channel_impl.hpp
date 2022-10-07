@@ -40,8 +40,8 @@ basic_channel<A>::balance(
     size_t narg = this->narg(node);
     if (narg != 1)
         throw exception::op_narg();
-    std::unique_lock lck{mtx};
     auto result = basic_value_int<A>::create(thread.get_allocator());
+    std::unique_lock lck{mtx};
     result->value() = config::value_int_type(senders - receivers);
     return result;
 }
@@ -87,29 +87,14 @@ basic_channel<A>::recv(
     typename threadscript::basic_symbol_table<A>&,
     const typename threadscript::basic_code_node<A>& node)
 {
-    return recv_impl(node,
-        [&](auto& lck) {
-            ++receivers;
-            cond_recv.wait(lck, [&]() { return senders > 0 && value; });
-        },
-        [&](auto& lck) {
-            ++receivers;
-            cond_recv.wait(lck, [&]() { return has_data(); });
-            --receivers;
-        });
-}
-
-template <impl::allocator A> template <class F0, class F>
-basic_channel<A>::value_ptr basic_channel<A>::recv_impl(
-    const typename threadscript::basic_code_node<A>& node,
-    F0&& cond0, F&& cond)
-{
     size_t narg = this->narg(node);
     if (narg != 1)
         throw exception::op_narg();
     std::unique_lock lck{mtx};
     if (capacity() == 0) {
-        cond0(lck);
+        ++receivers;
+        cond_send.notify_one();
+        cond_recv.wait(lck, [&]() { return senders > 0 && value; });
         auto result = std::move(*value);
         value.reset();
         --senders;
@@ -117,7 +102,9 @@ basic_channel<A>::value_ptr basic_channel<A>::recv_impl(
         cond_send.notify_one();
         return result;
     } else {
-        cond(lck);
+        ++receivers;
+        cond_recv.wait(lck, [&]() { return has_data(); });
+        --receivers;
         auto result = pop();
         lck.unlock();
         cond_send.notify_one();
@@ -131,25 +118,6 @@ basic_channel<A>::send(
     typename threadscript::basic_symbol_table<A>& l_vars,
     const typename threadscript::basic_code_node<A>& node)
 {
-    return send_impl(thread, l_vars, node,
-        [&](auto& lck) {
-            ++senders;
-            cond_send.wait(lck, [&]() { return receivers > 0 && !value; });
-        },
-        [&](auto& lck) {
-            ++senders;
-            cond_send.wait(lck, [&]() { return has_space(); });
-            --senders;
-        });
-}
-
-template <impl::allocator A> template <class F0, class F>
-basic_channel<A>::value_ptr basic_channel<A>::send_impl(
-    typename threadscript::basic_state<A>& thread,
-    typename threadscript::basic_symbol_table<A>& l_vars,
-    const typename threadscript::basic_code_node<A>& node,
-    F0&& cond0, F&& cond)
-{
     size_t narg = this->narg(node);
     if (narg != 2)
         throw exception::op_narg();
@@ -158,13 +126,17 @@ basic_channel<A>::value_ptr basic_channel<A>::send_impl(
         throw exception::value_mt_unsafe();
     std::unique_lock lck{mtx};
     if (capacity() == 0) {
-        cond0(lck);
+        ++senders;
+        cond_recv.notify_one();
+        cond_send.wait(lck, [&]() { return receivers > 0 && !value; });
         value = std::move(v);
         --receivers;
         lck.unlock();
         cond_recv.notify_one();
     } else {
-        cond(lck);
+        ++senders;
+        cond_send.wait(lck, [&]() { return has_space(); });
+        --senders;
         push(std::move(v));
         lck.unlock();
         cond_recv.notify_one();
@@ -178,16 +150,30 @@ basic_channel<A>::try_recv(
     typename threadscript::basic_symbol_table<A>&,
     const typename threadscript::basic_code_node<A>& node)
 {
-    return recv_impl(node,
-        [&](auto&) {
-            if (senders == 0 || !value)
-                throw exception::op_would_block();
-            ++receivers;
-        },
-        [&](auto&) {
-            if (!has_data())
-                throw exception::op_would_block();
-        });
+    size_t narg = this->narg(node);
+    if (narg != 1)
+        throw exception::op_narg();
+    std::unique_lock lck{mtx};
+    if (capacity() == 0) {
+        if (senders == 0)
+            throw exception::op_would_block();
+        ++receivers;
+        --senders;
+        cond_send.notify_one();
+        cond_recv.wait(lck, [&]() { return bool(value); });
+        auto result = std::move(*value);
+        value.reset();
+        lck.unlock();
+        cond_send.notify_one();
+        return result;
+    } else {
+        if (!has_data())
+            throw exception::op_would_block();
+        auto result = pop();
+        lck.unlock();
+        cond_send.notify_one();
+        return result;
+    }
 }
 
 template <impl::allocator A> basic_channel<A>::value_ptr
@@ -196,16 +182,31 @@ basic_channel<A>::try_send(
     typename threadscript::basic_symbol_table<A>& l_vars,
     const typename threadscript::basic_code_node<A>& node)
 {
-    return send_impl(thread, l_vars, node,
-        [&](auto&) {
-            if (receivers == 0 || value)
-                throw exception::op_would_block();
-            ++senders;
-        },
-        [&](auto&) {
-            if (!has_space())
-                throw exception::op_would_block();
-        });
+    size_t narg = this->narg(node);
+    if (narg != 2)
+        throw exception::op_narg();
+    auto v = this->arg(thread, l_vars, node, 1);
+    if (v && !v->mt_safe())
+        throw exception::value_mt_unsafe();
+    std::unique_lock lck{mtx};
+    if (capacity() == 0) {
+        if (receivers == 0)
+            throw exception::op_would_block();
+        ++senders;
+        --receivers;
+        cond_recv.notify_one();
+        cond_send.wait(lck, [&]() { return !value; });
+        value = std::move(v);
+        lck.unlock();
+        cond_recv.notify_one();
+    } else {
+        if (!has_space())
+            throw exception::op_would_block();
+        push(std::move(v));
+        lck.unlock();
+        cond_recv.notify_one();
+    }
+    return nullptr;
 }
 
 } // namespace threadscript

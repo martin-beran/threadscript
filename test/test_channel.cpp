@@ -416,6 +416,7 @@ BOOST_DATA_TEST_CASE(methods, (std::vector<test::runner_result>{
 //! \cond
 BOOST_DATA_TEST_CASE(threads, (std::vector<test::runner_result>{
     {R"(seq(
+            # capacity 1, send + recv
             gvar("num_threads", 1),
             gvar("o", channel(1)),
             fun("f_main", seq(
@@ -425,7 +426,459 @@ BOOST_DATA_TEST_CASE(threads, (std::vector<test::runner_result>{
                 o("send", "MSG")
             ))
         ))", "MSG", ""},
-    // TODO
+    {R"(seq(
+            # capacity 1, multiple send + recv
+            gvar("num_threads", 1),
+            gvar("o", channel(1)),
+            fun("f_main", seq(
+                print(o("recv"), o("recv"), o("recv"))
+            )),
+            fun("f_thread", seq(
+                o("send", "MSG1"),
+                o("send", "MSG2"),
+                o("send", "MSG3")
+            ))
+        ))", nullptr, "MSG1MSG2MSG3"},
+    {R"(seq(
+            # capacity 1, send + try_recv
+            gvar("num_threads", 1),
+            gvar("o", channel(1)),
+            gvar("ctrl", channel(1)),
+            fun("f_main", seq(
+                var("v", null),
+                var("start", true),
+                while(is_null(v()), try(
+                    var("v", o("try_recv")),
+                    "op_would_block", if(start(), seq(
+                        ctrl("send", null),
+                        var("start", false)
+                    ))
+                )),
+                v()
+            )),
+            fun("f_thread", seq(
+                ctrl("recv"), # at least one failed o("try_recv")
+                o("send", "MSG")
+            ))
+        ))", "MSG", ""},
+    {R"(seq(
+            # capacity 1, try_send + recv
+            gvar("num_threads", 1),
+            gvar("o", channel(1)),
+            gvar("ctrl", channel(1)),
+            fun("f_main", seq(
+                ctrl("recv"), # at least one failed o("try_send")
+                print(o("recv")),
+                o("recv")
+            )),
+            fun("f_thread", seq(
+                o("send", "MSG1"),
+                var("wait", true),
+                var("start", true),
+                while(wait(), try(
+                    seq(
+                        o("try_send", "MSG2"),
+                        var("wait", false)
+                    ),
+                    "op_would_block", if(start(), seq(
+                        ctrl("send", null),
+                        var("start", false)
+                    ))
+                ))
+            ))
+        ))", "MSG2", "MSG1"},
+    {R"(seq(
+            # capacity 1, try_send + try_recv
+            gvar("num_threads", 1),
+            gvar("o", channel(1)),
+            fun("f_main", seq(
+                var("run", true),
+                while(run(), try(
+                    seq(
+                        var("v", o("try_recv")),
+                        print(v()),
+                        var("run", not(is_null(v())))
+                    ),
+                    "op_would_block", seq()
+                ))
+            )),
+            fun("f_thread", seq(
+                var("i", 0),
+                while(lt(i(), 10), try(
+                    seq(
+                        o("try_send", i()),
+                        var("i", mt_safe(add(i(), 1)))
+                    ),
+                    "op_would_block", seq()
+                )),
+                o("send", null)
+            ))
+        ))", false, "0123456789null"},
+    {R"(seq(
+            # capacity 0, send + recv
+            gvar("num_threads", 1),
+            gvar("o", channel(0)),
+            fun("f_main", seq(
+                o("recv")
+            )),
+            fun("f_thread", seq(
+                o("send", "MSG")
+            ))
+        ))", "MSG", ""},
+    {R"(seq(
+            # capacity 1, multiple send + recv
+            gvar("num_threads", 1),
+            gvar("o", channel(0)),
+            fun("f_main", seq(
+                print(o("recv"), o("recv"), o("recv"))
+            )),
+            fun("f_thread", seq(
+                o("send", "MSG1"),
+                o("send", "MSG2"),
+                o("send", "MSG3")
+            ))
+        ))", nullptr, "MSG1MSG2MSG3"},
+    {R"(seq(
+            # capacity 0, send + recv, wait for blocked send
+            gvar("num_threads", 1),
+            gvar("o", channel(0)),
+            fun("f_main", seq(
+                while(ne(o("balance"), +1), o("balance")),
+                o("recv")
+            )),
+            fun("f_thread", seq(
+                o("send", "MSG")
+            ))
+        ))", "MSG", ""},
+    {R"(seq(
+            # capacity 0, send + recv, wait for blocked recv
+            gvar("num_threads", 1),
+            gvar("o", channel(0)),
+            fun("f_main", seq(
+                o("recv")
+            )),
+            fun("f_thread", seq(
+                while(ne(o("balance"), -1), seq()),
+                o("send", "MSG")
+            ))
+        ))", "MSG", ""},
+    {R"(seq(
+            # capacity 0, send + try_recv
+            gvar("num_threads", 1),
+            gvar("o", channel(0)),
+            gvar("ctrl", channel(1)),
+            fun("f_main", seq(
+                var("v", null),
+                var("start", true),
+                while(is_null(v()), try(
+                    var("v", o("try_recv")),
+                    "op_would_block", if(start(), seq(
+                        ctrl("send", null),
+                        var("start", false)
+                    ))
+                )),
+                v()
+            )),
+            fun("f_thread", seq(
+                ctrl("recv"), # at least one failed o("try_recv")
+                o("send", "MSG")
+            ))
+        ))", "MSG", ""},
+    {R"(seq(
+            # capacity 0, send + try_recv, wait for blocked send
+            gvar("num_threads", 1),
+            gvar("o", channel(0)),
+            fun("f_main", seq(
+                while(ne(o("balance"), +1), o("balance")),
+                o("try_recv")
+            )),
+            fun("f_thread", seq(
+                o("send", "MSG")
+            ))
+        ))", "MSG", ""},
+    {R"(seq(
+            # capacity 0, send + try_recv, wait for multiple blocked senders
+            gvar("num_threads", 2),
+            gvar("o", channel(0)),
+            fun("f_main", seq(
+                while(ne(o("balance"), +2), o("balance")),
+                print(o("try_recv"), o("try_recv"))
+            )),
+            fun("f_thread", seq(
+                o("send", "MSG")
+            ))
+        ))", nullptr, "MSGMSG"},
+    {R"(seq(
+            # capacity 0, try_send + recv
+            gvar("num_threads", 1),
+            gvar("o", channel(0)),
+            gvar("ctrl", channel(1)),
+            fun("f_main", seq(
+                ctrl("recv"), # at least one failed o("try_send")
+                o("recv")
+            )),
+            fun("f_thread", seq(
+                var("wait", true),
+                var("start", true),
+                while(wait(), try(
+                    seq(
+                        o("try_send", "MSG"),
+                        var("wait", false)
+                    ),
+                    "op_would_block", if(start(), seq(
+                        ctrl("send", null),
+                        var("start", false)
+                    ))
+                ))
+            ))
+        ))", "MSG", ""},
+    {R"(seq(
+            # capacity 0, try_send + recv, wait for blocked recv
+            gvar("num_threads", 1),
+            gvar("o", channel(0)),
+            fun("f_main", seq(
+                o("recv")
+            )),
+            fun("f_thread", seq(
+                while(ne(o("balance"), -1), seq()),
+                o("try_send", "MSG")
+            ))
+        ))", "MSG", ""},
+    {R"(seq(
+            # capacity 0, try_send + recv, wait for multiple blocked receivers
+            gvar("num_threads", 5),
+            gvar("o", channel(0)),
+            fun("f_main", seq(
+                o("recv")
+            )),
+            fun("f_thread", seq(
+                if(gt(at(_args(), 0), 0), seq(
+                    o("recv")
+                ), seq(
+                    while(ne(o("balance"), -5), seq()),
+                    o("try_send", "MSG"),
+                    o("try_send", "MSG"),
+                    o("try_send", "MSG"),
+                    o("try_send", "MSG"),
+                    o("try_send", "MSG")
+                ))
+            ))
+        ))", "MSG", ""},
+    {R"(seq(
+            # capacity 0, try_send + try_recv
+            gvar("num_threads", 1),
+            gvar("o", channel(0)),
+            gvar("fail", channel(1)),
+            fun("f_main", seq(
+                var("i", clone(0)),
+                var("err", clone(0)),
+                while(lt(i(), 10000), seq(
+                    try(seq(
+                        o("try_recv"),
+                        add(err(), err(), 1)
+                    ), "op_would_block", seq(
+                    )),
+                    add(i(), i(), 1)
+                )),
+                print("try_send=", fail("recv"), " try_recv=", err())
+            )),
+            fun("f_thread", seq(
+                var("i", clone(0)),
+                var("err", clone(0)),
+                while(lt(i(), 10000), seq(
+                    try(seq(
+                        o("try_send", null),
+                        add(err(), err(), 1)
+                    ), "op_would_block", seq(
+                    )),
+                    add(i(), i(), 1)
+                )),
+                mt_safe(err()),
+                fail("send", err())
+            ))
+        ))", nullptr, "try_send=0 try_recv=0"},
+    {R"(seq(
+            # capacity >1, send + recv
+            gvar("num_threads", 1),
+            gvar("o", channel(3)),
+            fun("f_main", seq(
+                o("recv")
+            )),
+            fun("f_thread", seq(
+                o("send", "MSG")
+            ))
+        ))", "MSG", ""},
+    {R"(seq(
+            # capacity >1, multiple send + recv
+            gvar("num_threads", 1),
+            gvar("o", channel(3)),
+            fun("f_main", seq(
+                print(o("recv"), o("recv"), o("recv"), o("recv"), o("recv"))
+            )),
+            fun("f_thread", seq(
+                o("send", "MSG1"),
+                o("send", "MSG2"),
+                o("send", "MSG3"),
+                o("send", "MSG4"),
+                o("send", "MSG5")
+            ))
+        ))", nullptr, "MSG1MSG2MSG3MSG4MSG5"},
+    {R"(seq(
+            # capacity >1, send + try_recv
+            gvar("num_threads", 1),
+            gvar("o", channel(3)),
+            gvar("ctrl", channel(1)),
+            fun("f_main", seq(
+                var("v", clone("")),
+                var("n", clone(0)),
+                var("start", true),
+                while(lt(n(), 5), try(
+                    seq(
+                        add(v(), v(), o("try_recv")),
+                        add(n(), n(), 1)
+                    ),
+                    "op_would_block", if(start(), seq(
+                        ctrl("send", null),
+                        var("start", false)
+                    ))
+                )),
+                v()
+            )),
+            fun("f_thread", seq(
+                ctrl("recv"), # at least one failed o("try_recv")
+                o("send", "1"),
+                o("send", "2"),
+                o("send", "3"),
+                o("send", "4"),
+                o("send", "5")
+            ))
+        ))", "12345", ""},
+    {R"(seq(
+            # capacity >1, try_send + recv
+            gvar("num_threads", 1),
+            gvar("o", channel(3)),
+            gvar("ctrl", channel(1)),
+            fun("f_main", seq(
+                ctrl("recv"), # at least one failed o("try_send")
+                print(o("recv"), o("recv"), o("recv")),
+                print(o("recv"), o("recv"), o("recv"), o("recv"), o("recv"))
+            )),
+            fun("f_thread", seq(
+                o("send", "MSG1"),
+                o("send", "MSG2"),
+                o("send", "MSG3"),
+                var("wait", true),
+                var("start", true),
+                var("n", clone(0)),
+                while(lt(n(), 5), try(
+                    seq(
+                        o("try_send", mt_safe(clone(n()))),
+                        add(n(), n(), 1)
+                    ),
+                    "op_would_block", if(start(), seq(
+                        ctrl("send", null),
+                        var("start", false)
+                    ))
+                ))
+            ))
+        ))", nullptr, "MSG1MSG2MSG301234"},
+    {R"(seq(
+            # capacity >1, try_send + try_recv
+            gvar("num_threads", 1),
+            gvar("o", channel(4)),
+            fun("f_main", seq(
+                var("run", true),
+                while(run(), try(
+                    seq(
+                        var("v", o("try_recv")),
+                        print(v()),
+                        var("run", not(is_null(v())))
+                    ),
+                    "op_would_block", seq()
+                ))
+            )),
+            fun("f_thread", seq(
+                var("i", 0),
+                while(lt(i(), 10), try(
+                    seq(
+                        o("try_send", i()),
+                        var("i", mt_safe(add(i(), 1)))
+                    ),
+                    "op_would_block", seq()
+                )),
+                o("send", null)
+            ))
+        ))", false, "0123456789null"},
+    {R"(seq(
+            # 1-to-N
+            gvar("num_threads", 10),
+            gvar("o", channel(2)),
+            gvar("done", channel(20)),
+            gvar("num_vals", 1000),
+            fun("f_main", seq(
+                var("i", clone(0)),
+                while(lt(i(), mul(num_threads(), num_vals())), seq(
+                    o("send", mt_safe(clone(i()))),
+                    add(i(), i(), 1)
+                )),
+                var("ok", true),
+                var("i", clone(0)),
+                while(lt(i(), num_threads()), seq(
+                    if(ne(done("recv"), num_vals()),
+                        var("ok", false)
+                    ),
+                    add(i(), i(), 1)
+                )),
+                ok()
+            )),
+            fun("f_thread", seq(
+                var("i", clone(0)),
+                while(lt(i(), num_vals()), seq(
+                    o("recv"),
+                    add(i(), i(), 1)
+                )),
+                done("send", mt_safe(i()))
+            ))
+        ))", true, ""},
+    {R"(seq(
+            # M-to-1
+            gvar("num_threads", 10),
+            gvar("o", channel(15)),
+            gvar("num_vals", 1000),
+            fun("f_main", seq(
+                var("i", clone(0)),
+                while(lt(i(), mul(num_threads(), num_vals())), seq(
+                    o("recv"),
+                    add(i(), i(), 1)
+                ))
+            )),
+            fun("f_thread", seq(
+                var("i", clone(0)),
+                while(lt(i(), num_vals()), seq(
+                    o("send", mt_safe(clone(i()))),
+                    add(i(), i(), 1)
+                ))
+            ))
+        ))", test::uint_t(10000U), ""},
+    {R"(seq(
+            # M-to-N
+            gvar("mn", 10),
+            gvar("num_threads", mul(2, mn())),
+            gvar("o", channel(4)),
+            gvar("num_vals", 1000),
+            fun("f_main", seq(
+            )),
+            fun("f_thread", seq(
+                var("i", clone(0)),
+                while(lt(i(), num_vals()), seq(
+                    if(lt(at(_args(), 0), mn()),
+                        o("send", mt_safe(clone(i()))),
+                        o("recv")
+                    ),
+                    add(i(), i(), 1)
+                ))
+            ))
+        ))", nullptr, ""},
 }))
 {
     test::check_runner<test::script_runner_threads>(sample, sh_vars);

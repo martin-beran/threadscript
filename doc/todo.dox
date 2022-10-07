@@ -8,8 +8,6 @@
  *
  * \section To_do_first_release To-do list for the first release
  *
- * \todo Passing data between threads
- *
  * \todo Resolving names in a parsed script before running the script
  *
  * \todo Command line interface to ThreadScript -- \ref Cmdline_ts. It should
