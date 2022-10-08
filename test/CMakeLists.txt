@@ -10,6 +10,7 @@ set(
     allocated
     allocator_config
     channel
+    code_node_resolve
     default_allocator
     dummy
     dummy_boost

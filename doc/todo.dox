@@ -8,8 +8,6 @@
  *
  * \section To_do_first_release To-do list for the first release
  *
- * \todo Resolving names in a parsed script before running the script
- *
  * \todo Command line interface to ThreadScript -- \ref Cmdline_ts. It should
  * provide command line options for memory and stack limits and for running
  * multiple threads.
