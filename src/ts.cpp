@@ -6,6 +6,7 @@
  * around the ThreadScript C++ API, therefore it consists of a single file.
  *
  * See \ref Cmdline_ts for documentation of \c ts.
+ * \test in file test_ts.cpp
  */
 
 #include "threadscript/threadscript.hpp"
@@ -24,6 +25,12 @@ constexpr std::string_view main_fun{"_main"};
 constexpr std::string_view thread_fun{"_thread"};
 
 //! Exit status codes
+/* \note The standard library defines \c EXIT_SUCCESS as 0 and \c EXIT_FAILURE
+ * as 1.
+ * \note The special exit status values are chosen so that they do not collide
+ * with small values returned from a script. They are also compatible with
+ * shell processing, which uses values from 128 for processes terminated by a
+ * signal. */
 enum class exit_status: int {
     success = EXIT_SUCCESS, //!< Successful termination
     failure = EXIT_FAILURE, //!< A generic failure
@@ -55,5 +62,16 @@ class args {
  * \return the program exit status */
 int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
 {
-    return EXIT_SUCCESS;
+    using namespace pg_ts;
+    auto result = exit_status::success;
+    try {
+        // TODO
+    } catch (std::exception& e) {
+        std::cerr << "Unhandled exception: " << e.what() << std::endl;
+        result = exit_status::unhandled_exception;
+    } catch (...) {
+        std::cerr << "Unhandled unknown exception" << std::endl;
+        result = exit_status::unhandled_exception;
+    }
+    return static_cast<int>(result);
 }

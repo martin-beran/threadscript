@@ -24,6 +24,7 @@ set(
     symbol_table
     syntax
     syntax_canon
+    ts
     vm_data
     virtual_machine
 )
