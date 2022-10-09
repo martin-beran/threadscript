@@ -215,7 +215,7 @@
  * (threadscript::predef::f_fun). When a user-defined function is called, its
  * arguments are available as local variable \c _args (the name defined by
  * threadscript::basic_value_function::symbol_params) of type \c vector. The
- * called function returns the return value of its body.
+ * called function returns the value obtained by evaluation of its body.
  *
  * \section Integer_arithmetic Integer arithmetic
  *

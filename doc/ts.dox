@@ -1,4 +1,74 @@
 /*! \page Cmdline_ts Command line interpreter ts
  *
  * \tableofcontents
+ *
+ * Program \c ts can be used to run a script in the ThreadScript language from
+ * the command line. It also demonstrates how to embed ThreadScript in a C++
+ * program.
+ *
+ * \section ts_features Features
+ *
+ * \arg Parsing ThreadScript code using any supported syntax
+ * \arg Running the script
+ * \arg Optional call of functions defined by the script
+ * \arg Calling functions in multiple threads, with sharing data
+ * \arg Optional resolution of named values (variables and functions)
+ * \arg Setting limits for consumed memory size and stack depth
+ *
+ * \section ts_operation Operation of the program
+ *
+ * First, a script, specified by a command line argument, is parsed and
+ * executed. If command line options select a \a single-phase run, \c ts
+ * terminates with \link ts_status status\endlink derived from the script
+ * execution result.
+ *
+ * If a two-phase run is selected by command line options, all functions and
+ * thread-safe variables are moved from the symbol table containing global
+ * variables of the main thread to the shared variables of the virtual machine.
+ * Function \c _main (the name defined by pg_ts::main_fun), which must have
+ * been defined by the script in the first phase, is executed in the main
+ * thread, with the global symbol table of the thread retained from the first
+ * phase and containing all symbols not moved to the shared symbol table
+ * (variables that are not thread-safe). The result of the function is used as
+ * the \link ts_status exit status\endlink.
+ *
+ * If multithreaded run is specified by command line options, the script must
+ * define function \c _thread (the name defined by pg_ts::thread_fun) in the
+ * first phase. A set of threads is started before \c _main is called and
+ * joined after \c _main returns and before \c ts terminates. In each thread,
+ * function \c _thread is called and the thread finishes after the function
+ * returns. The threads have consecutive indices starting at 0. Each \c _thread
+ * function gets the index of its thread as the argument (the value with index
+ * 0 in its local vector \c _args).
+ *
+ * \section ts_cmdline Command line arguments
+ *
+ * Run <tt>ts -h</tt> or visit documentation of class pg_ts::args to see
+ * available command line arguments of program \c ts. Command line arguments
+ * after the last argument handled by \c ts itself are available in a script as
+ * the global variable of type \c vector with name \c _cmdline. This variable
+ * is thread-safe, therefore it is shared by all threads in the second-phase of
+ * execution.
+ *
+ * \section ts_output Output
+ *
+ * Output written by function \link threadscript::predef::f_print print\endlink
+ * goes to the standard output.
+ *
+ * \section ts_status Exit status
+ *
+ * If a script terminates normally, then the result of script evaluation is
+ * returned in a single-phase run, or the result of function \c _main is
+ * returned in a two-phase run. A result of type \c int or \c unsigned is
+ * converted to C++ type \c int and returned. If the result has type \c bool,
+ * then \c false is converted to pg_ts::exit_status::failure (1) and \c true is
+ * converted to pg_ts::exit_status::success (0). If the result has any other
+ * type or is \c null, then pg_ts::exit_status::success (0) is returned.
+ *
+ * If \c ts terminates successfully without running a script,
+ * pg_ts::exit_status::success is returned.
+ *
+ * If an exception is thrown by an executed script, or if \c ts fails, then
+ * a non-zero status is returned. The value, taken from
+ * pg_ts::exit_status, describes the failure reason.
  */
