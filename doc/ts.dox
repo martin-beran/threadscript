@@ -43,12 +43,13 @@
  *
  * \section ts_cmdline Command line arguments
  *
- * Run <tt>ts -h</tt> or visit documentation of class pg_ts::args to see
- * available command line arguments of program \c ts. Command line arguments
- * after the last argument handled by \c ts itself are available in a script as
- * the global variable of type \c vector with name \c _cmdline. This variable
- * is thread-safe, therefore it is shared by all threads in the second-phase of
- * execution.
+ * Run <tt>ts -h</tt> or visit documentation of class pg_ts::args (especially
+ * content of pg_ts::args::_help_msg) to see available command line arguments
+ * of program \c ts. Command line arguments after the last argument handled by
+ * \c ts itself are available in a script as the global variable of type \c
+ * vector with name \c _cmdline (the name defined by pg_ts::cmdline_var) and
+ * containing elements of type \c string. This variable is thread-safe,
+ * therefore it is shared by all threads in the second-phase of execution.
  *
  * \section ts_output Output
  *
