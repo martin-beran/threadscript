@@ -17,17 +17,25 @@
  *
  * \section ts_operation Operation of the program
  *
- * First, a script, specified by a command line argument, is parsed and
- * executed. If command line options select a \a single-phase run, \c ts
- * terminates with \link ts_status status\endlink derived from the script
- * execution result.
+ * First, if a command line option selects a \a two-phase run, variable \c
+ * _num_threads (the name defined by pg_ts::num_threads_var) of type \c
+ * unsigned is created in the symbol table containing global variables of the
+ * main thread. It contains the number of additional threads to be started in
+ * the second phase, as specified on the command line.
  *
- * If a \a two-phase run is selected by command line options, all functions and
- * thread-safe variables are moved from the symbol table containing global
- * variables of the main thread to the shared variables of the virtual machine.
- * Global shared thread-safe variable \c _num_threads (the name defined by
- * pg_ts::num_threads_var) of type \c unsigned is created and set to the number
- * of threads to be started in addition of the main thread (it can be zero).
+ * Then a script, specified by a command line argument, is parsed and
+ * executed. The script can create or modify variable \c _num_threads. If,
+ * after the script finishes execution, the variable exists and has a value of
+ * type \c unsigned (even if it is zero), it enables the second phase and is
+ * set to be thread-safe. Otherwise (the variable does not exist, has other
+ * type than \c unsigned, or is \c null), program \c ts terminates with \link
+ * ts_status status\endlink derived from the script execution result.
+ *
+ * If a \a two-phase run is selected by variable \c _num_threads after the
+ * first phase, all functions and thread-safe variables (including \c
+ * _num_threads) are moved from the symbol table containing global variables of
+ * the main thread to the shared variables of the virtual machine.
+ *
  * Function \c _main (the name defined by pg_ts::main_fun), which must have
  * been defined by the script in the first phase, is executed in the main
  * thread, with the global symbol table of the thread retained from the first
@@ -35,15 +43,15 @@
  * (variables that are not thread-safe). The result of the function is used as
  * the \link ts_status exit status\endlink.
  *
- * If multithreaded run is specified by command line options (that is,
- * in a two-phase run with nonzero number of additional threads), the script
- * must define function \c _thread (the name defined by pg_ts::thread_fun) in
- * the first phase. A set of threads is started before \c _main is called and
- * joined after \c _main returns and before \c ts terminates. In each thread,
- * function \c _thread is called and the thread finishes after the function
- * returns. The threads have consecutive indices starting at 0. Each \c _thread
- * function gets the index of its thread as the argument (the value with index
- * 0 in its local vector \c _args).
+ * If multithreaded run is specified by variable \c _num_threads (it contains
+ * a nonzero number of additional threads), the script must define function \c
+ * _thread (the name defined by pg_ts::thread_fun) in the first phase. A set of
+ * threads is started before \c _main is called and joined after \c _main
+ * returns and before \c ts terminates. In each thread, function \c _thread is
+ * called and the thread finishes after the function returns. The threads have
+ * consecutive indices starting at 0. Each \c _thread function gets the index
+ * of its thread as the argument (the value with index 0 in its local vector \c
+ * _args).
  *
  * \section ts_cmdline Command line arguments
  *

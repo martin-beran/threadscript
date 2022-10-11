@@ -139,6 +139,13 @@
  * \arg the global symbol table containing variables shared by all threads (the
  * parent of the thread global variables, not having a parent itself)
  *
+ * There is a set of predefined commands and functions in namespace
+ * threadscript::predef. They are usually registered in the global symbol table
+ * by function threadscript::predef_symbols() or
+ * threadscript::add_predef_symbols(). There is also a set of predefined
+ * classes. Their constructors are usually registered in the global symbol
+ * table by function threadscript::add_predef_objects().
+ *
  * \section Architecture_Code Script code and parsing
  *
  * \subsection Architecture_Code_Parsed Parsed script code
@@ -165,11 +172,12 @@
  * \subsection Architecture_Parser Parser
  *
  * Parsing of ThreadScript source code is provided by functions
- * threadscript::parse_code() and threadscript::parse_code_file(). They take
- * the script text, either as a string view, or a text file, and a selection of
- * a syntax variant. They return the parsed internal representation of the
- * script as a shared pointer to threadscript::basic_script. If parsing fails
- * or the source file cannot be read, an exception is thrown.
+ * threadscript::parse_code(), threadscript::parse_code_stream(), and
+ * threadscript::parse_code_file(). They take the script text, either as
+ * a string view, or a text file, and a selection of a syntax variant. They
+ * return the parsed internal representation of the script as a shared pointer
+ * to threadscript::basic_script. If parsing fails or the source file cannot be
+ * read, an exception is thrown.
  *
  * Internally, these functions create a parser by threadscript::syntax_factory
  * and a builder for the internal representation, being an implementation of

@@ -115,14 +115,18 @@ seq(
             print("only1_dynamic()")
         )),
         resolve("1"),
-        only1()
+        only1(),
+        print(v_unsafe(), v_safe()),
+        print(is_null(null))
     )),
     fun("call_only1", seq(
         only1()
     )),
     fun("call_only2", seq(
         only2()
-    ))
+    )),
+    gvar("v_unsafe", clone("unsafe1")),
+    gvar("v_safe", "safe1")
 )
 )SCRIPT"};
 
@@ -133,7 +137,10 @@ seq(
     )),
     fun("only2", seq(
         print("only2()")
-    ))
+    )),
+    fun("is_null", "PredefReplaced"),
+    gvar("v_unsafe", clone("unsafe2")),
+    gvar("v_safe", "safe2")
 )
 )SCRIPT"};
 } // namespace test
@@ -146,7 +153,8 @@ BOOST_AUTO_TEST_CASE(no_resolve)
 {
     test::resolving_runner runner(test::script1, test::script2,
                                   false, false, false);
-    BOOST_CHECK_EQUAL(runner.run("check"), "resolve_dynamic(1)only1_dynamic()");
+    BOOST_CHECK_EQUAL(runner.run("check"),
+                      "resolve_dynamic(1)only1_dynamic()unsafe1safe1true");
     runner.no_fun("only2");
 }
 //! \endcond
@@ -159,7 +167,8 @@ BOOST_AUTO_TEST_CASE(resolve)
 {
     test::resolving_runner runner(test::script1, test::script2,
                                   true, false, false);
-    BOOST_CHECK_EQUAL(runner.run("check"), "resolve(1)only1()");
+    BOOST_CHECK_EQUAL(runner.run("check"),
+                      "resolve(1)only1()unsafe1safe1true");
     BOOST_CHECK_EQUAL(runner.run("call_only2"), "only2()");
 }
 //! \endcond
@@ -172,7 +181,8 @@ BOOST_AUTO_TEST_CASE(resolve_replace)
 {
     test::resolving_runner runner(test::script1, test::script2,
                                   true, true, false);
-    BOOST_CHECK_EQUAL(runner.run("check"), "resolve_script2(1)only1()");
+    BOOST_CHECK_EQUAL(runner.run("check"),
+                      "resolve_script2(1)only1()unsafe1safe2PredefReplaced");
     BOOST_CHECK_EQUAL(runner.run("call_only2"), "only2()");
 }
 //! \endcond
@@ -185,7 +195,8 @@ BOOST_AUTO_TEST_CASE(resolve_remove)
 {
     test::resolving_runner runner(test::script1, test::script2,
                                   true, false, true);
-    BOOST_CHECK_EQUAL(runner.run("check"), "resolve(1)only1_dynamic()");
+    BOOST_CHECK_EQUAL(runner.run("check"),
+                      "resolve(1)only1_dynamic()unsafe1safe1true");
     BOOST_CHECK_EQUAL(runner.run("call_only2"), "only2()");
 }
 //! \endcond
@@ -198,7 +209,8 @@ BOOST_AUTO_TEST_CASE(resolve_replace_remove)
 {
     test::resolving_runner runner(test::script1, test::script2,
                                   true, true, true);
-    BOOST_CHECK_EQUAL(runner.run("check"), "resolve_script2(1)only1_dynamic()");
+    BOOST_CHECK_EQUAL(runner.run("check"),
+              "resolve_script2(1)only1_dynamic()unsafe1safe2PredefReplaced");
     BOOST_CHECK_EQUAL(runner.run("call_only2"), "only2()");
 }
 //! \endcond

@@ -106,7 +106,7 @@ void basic_code_node<A>::resolve(const basic_symbol_table<A>& sym,
 {
     if (!name.empty()) {
         if (auto v = sym.lookup(name)) {
-            if (!value || replace)
+            if ((!value || replace) && (!(*v) || (*v)->mt_safe()))
                 value = *v;
         } else
             if (value && remove)
@@ -326,6 +326,7 @@ basic_value_native_fun<Derived, A>::basic_value_native_fun(
     impl::basic_value_native_fun_base<Derived, A>(t, alloc),
     alloc(alloc)
 {
+    this->set_mt_safe();
 }
 
 template <class Derived, impl::allocator A>

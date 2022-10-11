@@ -104,7 +104,8 @@ private:
                                         basic_symbol_table<A>& l_vars) const;
     //! Resolves the node and all descendant nodes recursively
     /*! Name resolution is performed for nodes with nonempty \ref name. If
-     * lookup of \ref name in \a sym succeeds, the returned value is stored in
+     * lookup of \ref name in \a sym succeed and the returned value is \c
+     * nullptr or thread-safe, the returned value is stored in
      * \ref value. The same operation is applied recursively to _children.
      *
      * If the node already has a \ref value and \ref name is found in \a sym,
@@ -117,7 +118,10 @@ private:
      * kept.
      * \param[in] sym the symbol table used for resolving names
      * \param[in] replace whether to replace existing values
-     * \param[in] remove values of unknown names */
+     * \param[in] remove whether to remove values of unknown names
+     * \note Name resolution is performed only for thread-safe values, because
+     * assigning a value to a script node makes it shared by all threads that
+     * evaluate the node. */
     void resolve(const basic_symbol_table<A>& sym, bool replace, bool remove);
     //! The owner script
     const basic_script<A>& _script;
@@ -244,7 +248,7 @@ public:
      * See documentation of basic_code_node::resolve() for more details.
      * \param[in] sym the symbol table used for resolving names
      * \param[in] replace whether to replace existing values
-     * \param[in] remove values of unknown names */
+     * \param[in] remove whether to remove values of unknown names */
     void resolve(const basic_symbol_table<A>& sym, bool replace, bool remove);
 private:
     //! The script file name
@@ -257,16 +261,6 @@ private:
     friend std::ostream& operator<< <A>(std::ostream&, const basic_script<A>&);
     //! basic_value_script needs access to _root
     friend class basic_value_script<A>;
-};
-
-//! Common handling of funtion calls
-/*! This class provides common functionality needed by basic_value_function and
- * classes derived from basic_value_native_fun. It handles adjusting the stack
- * and processing function call arguments.
- * \todo use basic_call_context for common handling of function calls in
- * basic_value_function and classes derived from basic_value_native_fun */
-template <impl::allocator A> class basic_call_context {
-    // TODO
 };
 
 namespace impl {
@@ -369,7 +363,7 @@ template <class Derived, impl::allocator A> class basic_value_native_fun:
     using impl::basic_value_native_fun_base<Derived, A>::
         basic_value_native_fun_base;
 public:
-    //! Stores the allocator
+    //! Stores the allocator and makes the value thread-safe
     /*! \param[in] t an ignored parameter that prevents using this constructor
      * directly
      * \param[in] alloc an allocator to be used by this object */

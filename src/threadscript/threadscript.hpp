@@ -108,6 +108,17 @@ parse_code<allocator_any>(const allocator_any& alloc, std::string_view src,
 /*! Documentation of the primary template function applies, except that \a A is
  * fixed to allocator_any:
  *
+ * \copydetails parse_code_stream(const A&, std::istream&, std::string_view,
+ * std::string_view, parser::context::trace_t) */
+extern template script::script_ptr
+parse_code_stream<allocator_any>(const allocator_any& alloc, std::istream& is,
+                                 std::string_view file, std::string_view syntax,
+                                 parser::context::trace_t trace);
+
+//! The script parser using the configured allocator
+/*! Documentation of the primary template function applies, except that \a A is
+ * fixed to allocator_any:
+ *
  * \copydetails parse_code_file(const A&, std::string_view, std::string_view,
  * parser::context::trace_t) */
 extern template script::script_ptr
@@ -133,6 +144,17 @@ predef_symbols(const allocator_any& alloc);
  */
 extern template std::shared_ptr<basic_symbol_table<allocator_any>>
 add_predef_symbols<allocator_any>(
+                        std::shared_ptr<basic_symbol_table<allocator_any>> sym,
+                        bool replace);
+
+//! Registers constructor of predefined built-in classes to a symbol table.
+/*! Documentation of the primary template function applies, except that \a A is
+ * fixed to allocator_any:
+ *
+ * \copydetails add_predef_objects(std::shared_ptr<basic_symbol_table<A>>,bool)
+ */
+extern template std::shared_ptr<basic_symbol_table<allocator_any>>
+add_predef_objects<allocator_any>(
                         std::shared_ptr<basic_symbol_table<allocator_any>> sym,
                         bool replace);
 

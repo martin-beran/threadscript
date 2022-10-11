@@ -351,7 +351,8 @@ protected:
 
 //! Command \c fun
 /*! Defines a function. The function is stored in the global symbol table of
- * the current thread (basic_state::t_vars).
+ * the current thread (basic_state::t_vars). The function value in the symbol
+ * table is always thread-safe.
  * \param name the name of the function
  * \param body the body of the function, evaluated every time the function is
  * called
@@ -1165,5 +1166,18 @@ std::shared_ptr<basic_symbol_table<A>> predef_symbols(const A& alloc);
  * \return \a sym */
 template <impl::allocator A> std::shared_ptr<basic_symbol_table<A>>
 add_predef_symbols(std::shared_ptr<basic_symbol_table<A>> sym, bool replace);
+
+//! Registers constructor of predefined built-in classes to a symbol table.
+/*! It add built-in C++ native classes included in ThreadScript implementation.
+ * Registered classes:
+ * \snippet predef_impl.hpp register_constructor
+ * \tparam A an allocator type
+ * \param[in] sym a symbol table
+ * \param[in] replace if \c false, any existing symbol with a name equal to
+ * a class name to be added is left unchanged; if \c true, any such symbol is
+ * replaced by the created constructor value
+ * \return \a sym */
+template <impl::allocator A> std::shared_ptr<basic_symbol_table<A>>
+add_predef_objects(std::shared_ptr<basic_symbol_table<A>> sym, bool replace);
 
 } // namespace threadscript

@@ -48,6 +48,12 @@ ts::value::value_ptr script_runner::run()
     return result;
 }
 
+} // namespace test
+//! [parse_run]
+
+//! [make_sh_vars]
+namespace test {
+
 // Register native object classes
 template <class ...Objects> std::shared_ptr<ts::symbol_table> make_sh_vars()
 {
@@ -57,7 +63,7 @@ template <class ...Objects> std::shared_ptr<ts::symbol_table> make_sh_vars()
 }
 
 } // namespace test
-//! [parse_run]
+//! [make_sh_vars]
 
 using namespace std::string_literals;
 using namespace std::string_view_literals;

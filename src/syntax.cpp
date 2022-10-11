@@ -21,16 +21,23 @@ void syntax_base::parse(script_builder& builder, std::string_view src,
     run_parser(builder, src, std::move(trace));
 }
 
-void syntax_base::parse_file(script_builder& builder, std::string_view file,
-                             parser::context::trace_t trace)
+void syntax_base::parse_stream(script_builder& builder, std::istream& is,
+                               std::string_view file,
+                               parser::context::trace_t trace)
 {
-    std::ifstream is{std::string{file}};
     is.exceptions(std::ifstream::failbit); // throw if open failed
     is.exceptions(std::ifstream::goodbit); // do not throw on empty file
     std::stringbuf sb;
     is >> &sb; // read file, C++ streams cannot report errors here
     std::string src = std::move(sb).str();
     parse(builder, src, file, std::move(trace));
+}
+
+void syntax_base::parse_file(script_builder& builder, std::string_view file,
+                             parser::context::trace_t trace)
+{
+    std::ifstream is{std::string{file}};
+    parse_stream(builder, is, file, std::move(trace));
 }
 
 /*** syntax_factory **********************************************************/

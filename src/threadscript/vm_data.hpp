@@ -511,6 +511,10 @@ public:
  * ThreadScript class with native C++ implementation. See the test program
  * test_object.cpp for examples how to define native classes.
  *
+ * Registration of constructors of all classes derived from this template and
+ * included as predefined in the implementation of ThreadScript should be added
+ * to add_predef_objects().
+ *
  * In order to use objects of this class in a script, the ThreadScript
  * initialization code (in native C++) creates an instance of class \ref
  * constructor and makes it available via a basic_symbol_table. Each evaluation

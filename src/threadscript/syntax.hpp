@@ -64,8 +64,24 @@ public:
      * \throw exception::parse_error if parsing fails */
     void parse(script_builder& builder, std::string_view src,
                std::string_view file = {}, parser::context::trace_t trace = {});
+    //! Parses a script from an input stream
+    /*! It reads the \a src stream and passes it to parse(). The \a file is not
+     * accessed during parsing. It is expected that its content is provided in
+     * \a src. The file name is only stored in \a builder for later reporting
+     * of code locations, or it is recorded in a thrown exception.
+     * \param[in,out] builder a builder object used to create the internal
+     * representation of the parsed script
+     * \param[in] is the source code to be parsed
+     * \param[in] file an optional file name, which will be stored in the
+     * internal representation of the script
+     * \param[in] trace an optional tracing function
+     * \throw exception::parse_error if parsing fails
+     * \throw std::ios_base::failure if reading of \a file fails */
+    void parse_stream(script_builder& builder, std::istream& is,
+                      std::string_view file = {},
+                      parser::context::trace_t trace = {});
     //! Parses a script file
-    /*! It reads the \a file and passes it to parse().
+    /*! It opens the \a file and passes it to parse_stream().
      * \param[in,out] builder a builder object used to create the internal
      * representation of the parsed script
      * \param[in] file the file name

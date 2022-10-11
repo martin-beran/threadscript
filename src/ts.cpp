@@ -10,11 +10,13 @@
  */
 
 #include "threadscript/threadscript.hpp"
+#include "threadscript/symbol_table_impl.hpp"
 
 #include <unistd.h>
 
 #include <cstdlib>
 #include <cstring>
+#include <syncstream>
 #include <unordered_set>
 
 using namespace std::string_literals;
@@ -57,8 +59,11 @@ enum class exit_status: int {
     success = EXIT_SUCCESS, //!< Successful termination
     failure = EXIT_FAILURE, //!< A generic failure
     unhandled_exception = 64, //!< Terminated by an unhandled exception
-    args_error, //!< Invalid command line arguments
-    parse_error, //!< Terminated by an error during parsing the script
+    args_error = 65, //!< Invalid command line arguments
+    parse_error = 66, //!< Terminated by an error during parsing the script
+    run_exception = 67, //!< Script execution terminated by an exception
+    no_fun = 68, //!< Missing function \c _main or \c _thread
+    thread_exception = 69, //!< An additional thread terminated by an exception
 };
 
 //! The exception thrown if command line arguments are invalid
@@ -79,6 +84,8 @@ class args_error: public std::runtime_error {
  */
 class args {
 public:
+    //! The script name denoting the standard input
+    static constexpr std::string_view script_stdin = "-"sv;
     //! Processes command line arguments.
     /*! Processed arguments are stored in member variables of this object.
      * Any argument values are copied from \a argv, therefore \a argc and \a
@@ -108,7 +115,7 @@ public:
     //! Gets the number of threads.
     /*! \return \c std::nullopt for a single-phase run; otherwise the number
      * of threads started in addition to the main thread */
-    std::optional<int_t> threads() const {
+    std::optional<uint_t> threads() const {
         return _threads;
     }
     //! Gets the maximum allowed memory used by the script
@@ -243,9 +250,9 @@ Options:
 
     -r
         The names of symbols (variables and functions) will be resolved after
-        the first phase of execution. It allows to resolve names of variables
-        and functions defined during the first phase and use the resolved
-        values in the second phase.
+        the first phase of execution, using the symbol table of the main
+        thread. It allows to resolve names of variables and functions defined
+        during the first phase and use the resolved values in the second phase.
 
     -h
         Display this help message and exit.
@@ -364,6 +371,23 @@ std::string args::help_msg() const {
 
 /*** actions *****************************************************************/
 
+//! Converts a value returned by a script to a program exit status
+/*! \param[in] v a ThreadScript value
+ * \return the corresponding program exit status */
+exit_status value_to_status(threadscript::value::value_ptr v)
+{
+    if (!v)
+        return exit_status::success;
+    if (auto b = dynamic_cast<threadscript::value_bool*>(v.get()))
+        return b->cvalue() ? exit_status::success : exit_status::failure;
+    else if (auto i = dynamic_cast<threadscript::value_int*>(v.get()))
+        return static_cast<exit_status>(static_cast<int>(i->cvalue()));
+    else if (auto u = dynamic_cast<threadscript::value_unsigned*>(v.get()))
+        return static_cast<exit_status>(static_cast<int>(u->cvalue()));
+    else
+        return exit_status::success;
+}
+
 //! The actions requested by command line options
 namespace actions {
 
@@ -412,8 +436,117 @@ namespace actions {
  * \return a result of script processing */
 [[nodiscard]] exit_status script(const args& a)
 {
-    throw threadscript::exception::not_implemented(a.syntax() + ':' +
-                                                   a.script());
+    //! [script]
+    // Configure an allocator
+    threadscript::allocator_config alloc_cfg;
+    if (a.max_memory()) {
+        threadscript::allocator_config::limits_t limits;
+        limits.balance = *a.max_memory();
+        alloc_cfg.limits(limits);
+    }
+    threadscript::allocator_any alloc{&alloc_cfg};
+    // Parse the script
+    threadscript::script::script_ptr parsed = nullptr;
+    try {
+        parsed = a.script() == args::script_stdin ?
+            threadscript::parse_code_stream(alloc, std::cin, a.script(),
+                                            a.syntax()) :
+            threadscript::parse_code_file(alloc, a.script(), a.syntax());
+    } catch (std::exception& e) {
+        std::cerr << "Cannot parse " << a.script() << ": " << e.what() <<
+            std::endl;
+        return exit_status::parse_error;
+    }
+    if (a.parse_only())
+        return exit_status::success;
+    // Run phase one
+    threadscript::virtual_machine vm{alloc};
+    auto sh_vars = threadscript::predef_symbols(alloc);
+    threadscript::add_predef_objects(sh_vars, true);
+    vm.sh_vars = sh_vars;
+    if (a.resolve_parsed())
+        parsed->resolve(*sh_vars, false, false);
+    threadscript::state main_thread{vm};
+    if (a.threads()) {
+        auto num_threads = threadscript::value_unsigned::create(alloc);
+        num_threads->value() = *a.threads();
+        main_thread.t_vars.insert(num_threads_var, std::move(num_threads));
+    }
+    exit_status result = exit_status::success;
+    try {
+        result = value_to_status(parsed->eval(main_thread));
+    } catch (std::exception& e) {
+        std::cerr << "Script terminated by exception: " << e.what() <<
+            std::endl;
+        return exit_status::run_exception;
+    }
+    // Check if phase two is requested
+    size_t num_threads = 0;
+    if (auto pnt = main_thread.t_vars.lookup(num_threads_var.data())) {
+        if (auto nt = dynamic_cast<threadscript::value_unsigned*>(pnt->get())) {
+            (*pnt)->set_mt_safe();
+            num_threads = nt->cvalue();
+        } else
+            return result;
+    } else
+        return result;
+    // Prepare symbol tables for phase two
+    for (auto it = main_thread.t_vars.symbols().begin();
+         it != main_thread.t_vars.symbols().end();)
+    {
+        if (it->second->mt_safe()) {
+            sh_vars->insert(it->first, std::move(it->second));
+            // only iterator to the erased element invalidated in unordered_map
+            main_thread.t_vars.symbols().erase(it++);
+        } else
+            ++it;
+    }
+    if (a.resolve_phase1())
+        parsed->resolve(main_thread.t_vars, true, true);
+    // Run phase two
+    auto f_main = dynamic_pointer_cast<threadscript::value_function>(
+                            sh_vars->lookup(main_fun.data()).value_or(nullptr));
+    if (!f_main) {
+        std::cerr << "Function " << main_fun << " not defined" << std::endl;
+        return exit_status::no_fun;
+    }
+    auto f_thread = dynamic_pointer_cast<threadscript::value_function>(
+                        sh_vars->lookup(thread_fun.data()).value_or(nullptr));
+    if (!f_thread && num_threads > 0) {
+        std::cerr << "Function " << thread_fun << " not defined" << std::endl;
+        return exit_status::no_fun;
+    }
+    std::vector<std::thread> threads;
+    std::atomic<size_t> thread_exc = 0;
+    for (size_t t = 0; t < num_threads; ++t)
+        threads.emplace_back([&vm, &f_thread, &thread_exc, t]() {
+            auto args = threadscript::value_vector::create(vm.get_allocator());
+            auto arg_t =
+                threadscript::value_unsigned::create(vm.get_allocator());
+            arg_t->value() = t;
+            args->value().push_back(arg_t);
+            threadscript::state thread{vm};
+            try {
+                f_thread->call(thread, thread_fun, args);
+            } catch (std::exception& e) {
+                std::osyncstream(std::cerr) << "Thread " << t <<
+                    "terminated by exception: " << e.what() << "\n";
+                ++thread_exc;
+            }
+        });
+    try {
+        result = value_to_status(f_main->call(main_thread, main_fun));
+    } catch (std::exception& e) {
+        std::cerr << "Main thread terminated by exception: " << e.what() <<
+            std::endl;
+        return exit_status::run_exception;
+    }
+    for (auto&& t: threads)
+        t.join();
+    if (thread_exc > 0)
+        result = exit_status::thread_exception;
+    return result;
+    //! [script]
 }
 
 } // namespace actions

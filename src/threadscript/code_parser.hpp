@@ -33,6 +33,24 @@ parse_code(const A& alloc, std::string_view src, std::string_view file,
            std::string_view syntax = syntax_factory::syntax_canon,
            parser::context::trace_t trace = {});
 
+//! Parses a script source text from an input stream
+/*! The \a file is not accessed during parsing. It is expected that its
+ * content is provided in \a src. The file name is only used for storing and
+ * reporting code locations.
+ * \tparam A the allocator type
+ * \param[in] alloc the allocator used to allocate the returned parsed script
+ * \param[in] is the source code to be parsed
+ * \param[in] file a file name, which will be stored in the internal
+ * \param[in] syntax the syntax variant of the script
+ * \param[in] trace an optional tracing function
+ * \return the internal representation of the parsed script; never \c nullptr
+ * \throw exception::parse_error if parsing fails
+ * \throw std::ios_base::failure if reading of \a file fails */
+template <impl::allocator A> basic_script<A>::script_ptr
+parse_code_stream(const A& alloc, std::istream& is, std::string_view file,
+                std::string_view syntax = syntax_factory::syntax_canon,
+                parser::context::trace_t trace = {});
+
 //! Parses a script file
 /*! \tparam A the allocator type
  * \param[in] alloc the allocator used to allocate the returned parsed script
@@ -40,7 +58,8 @@ parse_code(const A& alloc, std::string_view src, std::string_view file,
  * \param[in] syntax the syntax variant of the script
  * \param[in] trace an optional tracing function
  * \return the internal representation of the parsed script; never \c nullptr
- * \throw exception::parse_error if parsing fails */
+ * \throw exception::parse_error if parsing fails
+ * \throw std::ios_base::failure if reading of \a file fails */
 template <impl::allocator A> basic_script<A>::script_ptr
 parse_code_file(const A& alloc, std::string_view file,
                 std::string_view syntax = syntax_factory::syntax_canon,

@@ -94,7 +94,8 @@ public:
     //! The type of the virtual machine containing this state.
     using vm_t = basic_virtual_machine<A>;
     //! The constructor registers basic_state in \a vm.
-    /*! \param[in] vm the virtual machine which this state is attached to. */
+    /*! It also sets \c vm.sh_vars as the parent symbol table of \ref t_vars.
+     * \param[in] vm the virtual machine which this state is attached to. */
     explicit basic_state(vm_t& vm):
         vm(vm), t_vars(vm.get_allocator(), nullptr), alloc(vm.get_allocator())
     {

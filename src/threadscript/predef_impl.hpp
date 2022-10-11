@@ -5,6 +5,9 @@
  */
 
 #include "threadscript/predef.hpp"
+#include "threadscript/channel.hpp"
+#include "threadscript/shared_hash.hpp"
+#include "threadscript/shared_vector.hpp"
 
 #include <limits>
 #include <syncstream>
@@ -369,6 +372,7 @@ f_fun<A>::eval(basic_state<A>& thread, basic_symbol_table<A>&l_vars,
         throw exception::value_type();
     auto f = basic_value_function<A>::create(thread.get_allocator());
     f->value() = node.shared_from_child(1);
+    f->set_mt_safe();
     thread.t_vars.insert(name->cvalue(), f);
     return nullptr;
 }
@@ -1190,6 +1194,17 @@ add_predef_symbols(std::shared_ptr<basic_symbol_table<A>> sym, bool replace)
                 sym->insert(f.first, f.second(sym->get_allocator()));
         }
     }
+    return sym;
+}
+
+template <impl::allocator A> std::shared_ptr<basic_symbol_table<A>>
+add_predef_objects(std::shared_ptr<basic_symbol_table<A>> sym, bool replace)
+{
+    //! [register_constructor]
+    channel::register_constructor(*sym, replace);
+    shared_hash::register_constructor(*sym, replace);
+    shared_vector::register_constructor(*sym, replace);
+    //! [register_constructor]
     return sym;
 }
 

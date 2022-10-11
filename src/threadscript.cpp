@@ -65,6 +65,11 @@ parse_code<allocator_any>(const allocator_any& alloc, std::string_view src,
                           parser::context::trace_t trace);
 
 template script::script_ptr
+parse_code_stream<allocator_any>(const allocator_any& alloc, std::istream& is,
+                                 std::string_view file, std::string_view syntax,
+                                 parser::context::trace_t trace);
+
+template script::script_ptr
 parse_code_file<allocator_any>(const allocator_any& alloc,
                                std::string_view file, std::string_view syntax,
                                parser::context::trace_t trace);
@@ -76,6 +81,11 @@ predef_symbols(const allocator_any& alloc);
 
 template std::shared_ptr<basic_symbol_table<allocator_any>>
 add_predef_symbols<allocator_any>(
+                        std::shared_ptr<basic_symbol_table<allocator_any>> sym,
+                        bool replace);
+
+template std::shared_ptr<basic_symbol_table<allocator_any>>
+add_predef_objects<allocator_any>(
                         std::shared_ptr<basic_symbol_table<allocator_any>> sym,
                         bool replace);
 

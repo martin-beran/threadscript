@@ -2,6 +2,8 @@
  *
  * \tableofcontents
  *
+ * More information about the API can be found also in \ref Architecture.
+ *
  * \section API_Headers Header files
  *
  * The main header file, which must be included by each program that uses
@@ -18,19 +20,23 @@
  * instantiates template threadscript::basic_value_object and therefore it
  * includes vm_data_impl.hpp.
  *
- * \section API_VM Virtual machine
+ * \section API_Examples Examples
+ *
+ * \subsection API_VM Virtual machine
  *
  * An example (from script_runner.hpp) of using the API for creating
  * a ThreadScript virtual machine, parsing and running a script:
  * \snippet script_runner.hpp parse_run
  *
- * A more complex example is in test_shared_vector.cpp. It first runs a script
+ * A more complex example is in test_shared_vector.cpp (with function \c
+ * make_sh_vars() defined in script_runner.hpp). It first runs a script
  * in a single thread in order to define global variables and functions. Then
  * it calls functions defined by the script in several parallel threads which
  * share data.
+ * \snippet script_runner.hpp make_sh_vars
  * \snippet test_shared_vector.cpp run_threads
  *
- * \section API_Native Native objects
+ * \subsection API_Native Native objects
  *
  * A native class is derived from threadscript::basic_value_object. It is then
  * registered in a symbol table by calling
@@ -50,4 +56,11 @@
  * ts::virtual_machine vm{alloc};
  * \endcode
  * \snippet test_object.cpp register_constructor
+ *
+ * \subsection API_Complete Complete script processing
+ *
+ * This is the implementation of function pg_ts::actions::script() in file
+ * ts.cpp, which is the core functionality of program
+ * \link Cmdline_ts ts\endlink.
+ * \snippet ts.cpp script
  */
