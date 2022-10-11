@@ -34,10 +34,16 @@ using uint_t = threadscript::config::value_unsigned_type;
 //! The variable containing command line arguments
 constexpr std::string_view cmdline_var{"_cmdline"};
 
+//! The variable containing the number of additional threads
+/*! These are the threads running function \ref thread_fun. */
+constexpr std::string_view num_threads_var{"_num_threads"};
+
 //! The function called in the main thread
 constexpr std::string_view main_fun{"_main"};
 
 //! The function called in each thread except the main
+/*! The number of threads running this function is stored in variable named
+ * \ref num_threads_var. */
 constexpr std::string_view thread_fun{"_thread"};
 
 //! Exit status codes

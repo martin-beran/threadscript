@@ -22,9 +22,12 @@
  * terminates with \link ts_status status\endlink derived from the script
  * execution result.
  *
- * If a two-phase run is selected by command line options, all functions and
+ * If a \a two-phase run is selected by command line options, all functions and
  * thread-safe variables are moved from the symbol table containing global
  * variables of the main thread to the shared variables of the virtual machine.
+ * Global shared thread-safe variable \c _num_threads (the name defined by
+ * pg_ts::num_threads_var) of type \c unsigned is created and set to the number
+ * of threads to be started in addition of the main thread (it can be zero).
  * Function \c _main (the name defined by pg_ts::main_fun), which must have
  * been defined by the script in the first phase, is executed in the main
  * thread, with the global symbol table of the thread retained from the first
@@ -32,9 +35,10 @@
  * (variables that are not thread-safe). The result of the function is used as
  * the \link ts_status exit status\endlink.
  *
- * If multithreaded run is specified by command line options, the script must
- * define function \c _thread (the name defined by pg_ts::thread_fun) in the
- * first phase. A set of threads is started before \c _main is called and
+ * If multithreaded run is specified by command line options (that is,
+ * in a two-phase run with nonzero number of additional threads), the script
+ * must define function \c _thread (the name defined by pg_ts::thread_fun) in
+ * the first phase. A set of threads is started before \c _main is called and
  * joined after \c _main returns and before \c ts terminates. In each thread,
  * function \c _thread is called and the thread finishes after the function
  * returns. The threads have consecutive indices starting at 0. Each \c _thread
