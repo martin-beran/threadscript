@@ -12,6 +12,10 @@
  * \arg \ref Cmdline_ts Command line interpreter \c ts
  * \arg \ref LangRef
  * \arg \ref CppAPI
+ * \arg Sample script files (used by tests) in directory
+ * \link ../test/scripts test/scripts/\endlink
+ * \arg Sample scripts embedded in test programs in directory
+ * \link ../test test/\endlink
  *
  * \section Develop_ThreadScript Develop ThreadScript
  *

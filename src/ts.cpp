@@ -366,7 +366,7 @@ args::args(int argc, char* argv[])
 }
 
 std::string args::help_msg() const {
-    return "\n"s + program_name() + " "s + _help_msg;
+    return "\nUsage: "s + program_name() + " "s + _help_msg;
 }
 
 /*** actions *****************************************************************/
