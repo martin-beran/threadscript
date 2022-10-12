@@ -132,7 +132,7 @@ public:
     }
     //! Gets arguments to be passed to the executed script
     /*! \return the vector of script arguments (after the script name) */
-    const std::vector<std::string_view> script_args() const {
+    const std::vector<std::string>& script_args() const {
         return _script_args;
     }
     //! Request parsing a script, but not running it.
@@ -184,7 +184,7 @@ private:
     //! The stack limit
     std::optional<size_t> _max_stack = {};
     //! Arguments passed to the script
-    std::vector<std::string_view> _script_args;
+    std::vector<std::string> _script_args;
     //! Flag for only parsing the script
     bool _parse_only = false;
     //! Resolve names in the script after parsing
@@ -459,10 +459,19 @@ namespace actions {
     }
     if (a.parse_only())
         return exit_status::success;
-    // Run phase one
+    // Prepare the virtual machine for phase one
     threadscript::virtual_machine vm{alloc};
     auto sh_vars = threadscript::predef_symbols(alloc);
     threadscript::add_predef_objects(sh_vars, true);
+    auto cmdline = threadscript::value_vector::create(alloc);
+    for (auto& arg: a.script_args()) {
+        auto val = threadscript::value_string::create(alloc);
+        val->value() = arg;
+        val->set_mt_safe();
+        cmdline->value().push_back(std::move(val));
+    }
+    cmdline->set_mt_safe();
+    sh_vars->insert(cmdline_var, std::move(cmdline));
     vm.sh_vars = sh_vars;
     if (a.resolve_parsed())
         parsed->resolve(*sh_vars, false, false);
@@ -472,6 +481,7 @@ namespace actions {
         num_threads->value() = *a.threads();
         main_thread.t_vars.insert(num_threads_var, std::move(num_threads));
     }
+    // Run phase one
     exit_status result = exit_status::success;
     try {
         result = value_to_status(parsed->eval(main_thread));
