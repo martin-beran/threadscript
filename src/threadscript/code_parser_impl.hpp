@@ -15,6 +15,9 @@ parse_code(const A& alloc, std::string_view src, std::string_view file,
 {
     basic_script_builder_impl<A> builder(alloc);
     auto parser = syntax_factory::create(syntax);
+    if (!parser)
+        throw exception::parse_error("Unknown syntax \"" +
+                                     std::string(syntax) + "\"");
     parser->parse(builder, src, file, std::move(trace));
     return builder.get_script();
 }
@@ -25,6 +28,9 @@ parse_code_stream(const A& alloc, std::istream& is, std::string_view file,
 {
     basic_script_builder_impl<A> builder(alloc);
     auto parser = syntax_factory::create(syntax);
+    if (!parser)
+        throw exception::parse_error("Unknown syntax \"" +
+                                     std::string(syntax) + "\"");
     parser->parse_stream(builder, is, file, std::move(trace));
     return builder.get_script();
 }
@@ -35,6 +41,9 @@ parse_code_file(const A& alloc, std::string_view file, std::string_view syntax,
 {
     basic_script_builder_impl<A> builder(alloc);
     auto parser = syntax_factory::create(syntax);
+    if (!parser)
+        throw exception::parse_error("Unknown syntax \"" +
+                                     std::string(syntax) + "\"");
     parser->parse_file(builder, file, std::move(trace));
     return builder.get_script();
 }

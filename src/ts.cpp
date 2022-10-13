@@ -351,7 +351,7 @@ args::args(int argc, char* argv[])
     }
     if (only_opt) {
         if (used_opts.size() > 1)
-            throw args_error("Options -"s + char(*only_opt) +
+            throw args_error("Option -"s + char(*only_opt) +
                              " must be the only command line argument");
     } else {
         if (optind >= argc)

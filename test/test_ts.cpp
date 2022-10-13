@@ -17,6 +17,9 @@
 #include <regex>
 #include <sstream>
 
+using namespace std::string_literals;
+using namespace std::string_view_literals;
+
 namespace test {
 
 struct ts_result {
@@ -92,16 +95,137 @@ BOOST_DATA_TEST_CASE(no_args, (std::vector<test::ts_result>{
 //! \endcond
 
 /*! \file
+ * \test \c bad_opts -- Program \link ts.cpp ts\endlink with invalid command
+ * line options */
+//! \cond
+BOOST_DATA_TEST_CASE(bad_opts, (std::vector<test::ts_result>{
+    {{"-1"}, "", 65, // unknown option
+        [](auto&& s) {
+            return s.empty();
+        },
+        [](auto&& s) {
+            return std::regex_search(s,
+                std::regex(R"(Invalid command line option -1\n)"
+                           R"(Run '.*ts -h' for help)")); 
+        }
+    },
+    {{"-t"}, "", 65, // missing option value
+        [](auto&& s) {
+            return s.empty();
+        },
+        [](auto&& s) {
+            return std::regex_search(s,
+                std::regex(R"(Invalid command line option -t\n)"
+                           R"(Run '.*ts -h' for help)")); 
+        }
+    },
+    {{"-t", "X"}, "", 65, // bad option value
+        [](auto&& s) {
+            return s.empty();
+        },
+        [](auto&& s) {
+            return std::regex_search(s,
+                std::regex(R"(Invalid argument of command line option -t\n)"
+                           R"(Run '.*ts -h' for help)")); 
+        }
+    },
+    {{"-h", "-v"}, "", 65, // invalid combination of options
+        [](auto&& s) {
+            return s.empty();
+        },
+        [](auto&& s) {
+            return std::regex_search(s,
+            std::regex(R"(Option -h must be the only command line argument\n)"
+                       R"(Run '.*ts -h' for help)")); 
+        }
+    },
+    {{"-v", "-n"}, "", 65, // invalid combination of options
+        [](auto&& s) {
+            return s.empty();
+        },
+        [](auto&& s) {
+            return std::regex_search(s,
+            std::regex(R"(Option -v must be the only command line argument\n)"
+                       R"(Run '.*ts -h' for help)")); 
+        }
+    },
+    {{"-t", "3", "-C"}, "", 65, // invalid combination of options
+        [](auto&& s) {
+            return s.empty();
+        },
+        [](auto&& s) {
+            return std::regex_search(s,
+            std::regex(R"(Option -C must be the only command line argument\n)"
+                       R"(Run '.*ts -h' for help)")); 
+        }
+    },
+}))
+{
+    check_ts(boost::unit_test::framework::current_test_case().full_name(),
+             sample);
+}
+//! \endcond
+
+/*! \file
+ * \test \c opts_end -- Program \link ts.cpp ts\endlink uses \c "--" as the end
+ * of options */
+//! \cond
+BOOST_DATA_TEST_CASE(opts_end, (std::vector<test::ts_result>{
+    {{"--", "-n", "hello.ts"}, "", 66,
+        [](auto&& s) {
+            return s.empty();
+        },
+        [](auto&& s) {
+            return std::regex_search(s, std::regex(R"(Cannot parse -n: )")); 
+        }
+    },
+}))
+{
+    check_ts(boost::unit_test::framework::current_test_case().full_name(),
+             sample);
+}
+//! \endcond
+
+/*! \file
  * \test \c script_file -- Program \link ts.cpp ts\endlink with a script file */
 //! \cond
 BOOST_DATA_TEST_CASE(script_file, (std::vector<test::ts_result>{
     {{test::script_path("hello.ts")}, "", 0,
         [](auto&& s) {
             return s == "Hello World!\n";
-            return s.empty();
         },
         [](auto&& s) {
             return s.empty();
+        }
+    },
+    {{test::script_path("syntax_error.ts")}, "", 66,
+        [](auto&& s) {
+            return s.empty();
+        },
+        [](auto&& s) {
+            return std::regex_search(s, std::regex(
+                    R"(Cannot parse /.*/syntax_error.ts: 1:8: Expected '\(')")); 
+        }
+    },
+}))
+{
+    check_ts(boost::unit_test::framework::current_test_case().full_name(),
+             sample);
+}
+//! \endcond
+
+/*! \file
+ * \test \c no_script_file -- Program \link ts.cpp ts\endlink with a script
+ * file that does not exist */
+//! \cond
+BOOST_DATA_TEST_CASE(no_script_file, (std::vector<test::ts_result>{
+    {{test::script_path("script-file-does-not-exist.ts")}, "", 66,
+        [](auto&& s) {
+            return s.empty();
+        },
+        [](auto&& s) {
+            return std::regex_search(s, std::regex(
+                        R"(Cannot parse /.*/script-file-does-not-exist.ts: )")); 
         }
     },
 }))
@@ -119,10 +243,18 @@ BOOST_DATA_TEST_CASE(script_stdin, (std::vector<test::ts_result>{
     {{"-"}, R"(print("Hello World!", "\n"))", 0,
         [](auto&& s) {
             return s == "Hello World!\n";
-            return s.empty();
         },
         [](auto&& s) {
             return s.empty();
+        }
+    },
+    {{"-"}, "syntax error", 66,
+        [](auto&& s) {
+            return s.empty();
+        },
+        [](auto&& s) {
+            return std::regex_search(s, std::regex(
+                                    R"(Cannot parse -: 1:8: Expected '\(')")); 
         }
     },
 }))
@@ -143,6 +275,145 @@ BOOST_DATA_TEST_CASE(help, (std::vector<test::ts_result>{
         },
         [](auto&& s) {
             return s.empty();
+        }
+    },
+}))
+{
+    check_ts(boost::unit_test::framework::current_test_case().full_name(),
+             sample);
+}
+//! \endcond
+
+/*! \file
+ * \test \c version -- Program \link ts.cpp ts\endlink version output */
+//! \cond
+BOOST_DATA_TEST_CASE(version, (std::vector<test::ts_result>{
+    {{"-v"}, "", 0,
+        [](auto&& s) {
+            return s == std::string(threadscript::version) + "\n"s; 
+        },
+        [](auto&& s) {
+            return s.empty();
+        }
+    },
+}))
+{
+    check_ts(boost::unit_test::framework::current_test_case().full_name(),
+             sample);
+}
+//! \endcond
+
+/*! \file
+ * \test \c config -- Program \link ts.cpp ts\endlink configuration output */
+//! \cond
+BOOST_DATA_TEST_CASE(config, (std::vector<test::ts_result>{
+    {{"-C"}, "", 0,
+        [](auto&& s) {
+            return std::regex_search(s, std::regex(
+                R"(Version: +\S+\n)"
+                R"(Type int bits: +\d+\n)"
+                R"(Type int min: +-\d+\n)"
+                R"(Type int max: +\+\d+\n)"
+                R"(Type unsigned bits: +\d+\n)"
+                R"(Type unsigned min: +\d+\n)"
+                R"(Type unsigned max: +\d+\n)"
+                R"(Syntax variants: +\S.*\n)")); 
+        },
+        [](auto&& s) {
+            return s.empty();
+        }
+    },
+}))
+{
+    check_ts(boost::unit_test::framework::current_test_case().full_name(),
+             sample);
+}
+//! \endcond
+
+/*! \file
+ * \test \c not_run -- Program \link ts.cpp ts\endlink with option \c -n parses
+ * the script, but does not execute it */
+//! \cond
+BOOST_DATA_TEST_CASE(not_run, (std::vector<test::ts_result>{
+    {{"-n", "-"}, R"(print("Hello World!", "\n"))", 0,
+        [](auto&& s) {
+            return s.empty();
+        },
+        [](auto&& s) {
+            return s.empty();
+        }
+    },
+    {{"-n", test::script_path("hello.ts")}, "", 0,
+        [](auto&& s) {
+            return s.empty();
+        },
+        [](auto&& s) {
+            return s.empty();
+        }
+    },
+    {{"-n", "-"}, "syntax error", 66,
+        [](auto&& s) {
+            return s.empty();
+        },
+        [](auto&& s) {
+            return std::regex_search(s, std::regex(
+                                    R"(Cannot parse -: 1:8: Expected '\(')")); 
+        }
+    },
+    {{"-n", test::script_path("syntax_error.ts")}, "", 66,
+        [](auto&& s) {
+            return s.empty();
+        },
+        [](auto&& s) {
+            return std::regex_search(s, std::regex(
+                R"(Cannot parse /.*/syntax_error\.ts: 1:8: Expected '\(')")); 
+        }
+    },
+}))
+{
+    check_ts(boost::unit_test::framework::current_test_case().full_name(),
+             sample);
+}
+//! \endcond
+
+/*! \file
+ * \test \c syntax -- Program \link ts.cpp ts\endlink selects a syntax variant
+ * by option \c -s */
+//! \cond
+BOOST_DATA_TEST_CASE(syntax, (std::vector<test::ts_result>{
+    {{"-s", "canon", "-"}, R"(print("Hello World!", "\n"))", 0,
+        [](auto&& s) {
+            return s == "Hello World!\n";
+        },
+        [](auto&& s) {
+            return s.empty();
+        }
+    },
+    {{"-s", "canon", test::script_path("hello.ts")}, "", 0,
+        [](auto&& s) {
+            return s == "Hello World!\n";
+        },
+        [](auto&& s) {
+            return s.empty();
+        }
+    },
+    {{"-s", "Undefined", "-"}, R"(print("Hello World!", "\n"))", 66,
+        [](auto&& s) {
+            return s.empty();
+        },
+        [](auto&& s) {
+            return std::regex_search(s, std::regex(
+                R"(Cannot parse -: Parse error: Unknown syntax "Undefined")")); 
+        }
+    },
+    {{"-s", "Undefined", test::script_path("hello.ts")}, "", 66,
+        [](auto&& s) {
+            return s.empty();
+        },
+        [](auto&& s) {
+            return std::regex_search(s, std::regex(
+                R"(Cannot parse /.*/hello\.ts: )"
+                R"(Parse error: Unknown syntax "Undefined")")); 
         }
     },
 }))
