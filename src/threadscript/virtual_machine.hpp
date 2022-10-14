@@ -134,6 +134,8 @@ public:
      * proper synchronization if the same stream is used by multiple threads,
      * e.g., by using std::osyncstream. */
     std::optional<std::ostream*> std_out;
+    //! The maximum stack depth for this thread
+    size_t max_stack = basic_virtual_machine<A>::default_max_stack;
 private:
     //! A stack frame
     /*! For simplicity, it uses frame_location, which does not use custom
@@ -169,8 +171,6 @@ private:
     [[no_unique_address]] A alloc;
     //! The currently used shared variables of the virtual machine
     std::shared_ptr<const basic_symbol_table<A>> sh_vars;
-    //! The maximum stack depth for this thread
-    size_t max_stack = basic_virtual_machine<A>::default_max_stack;
     //! The stack of this thread
     stack_t stack;
     //! basic_code_node::eval() needs access to basic_state

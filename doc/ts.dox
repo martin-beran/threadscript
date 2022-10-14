@@ -77,10 +77,13 @@
  * converted to pg_ts::exit_status::success (0). If the result has any other
  * type or is \c null, then pg_ts::exit_status::success (0) is returned.
  *
+ * If an exception is thrown by an executed script,
+ * pg_ts::exit_status::run_exception is returned.
+ *
  * If \c ts terminates successfully without running a script,
  * pg_ts::exit_status::success is returned.
  *
- * If an exception is thrown by an executed script, or if \c ts fails, then
- * a non-zero status is returned. The value, taken from
- * pg_ts::exit_status, describes the failure reason.
+ * If \c ts fails for other reason than during running a script, then
+ * a non-zero status is returned. The value, taken from pg_ts::exit_status,
+ * describes the failure reason.
  */

@@ -151,6 +151,11 @@ public:
     bool resolve_phase1() const {
         return _resolve_phase1;
     }
+    //! Request reporting exceptions without a stack trace.
+    /*! \return the exception message verbosity flag */
+    bool quiet_exceptions() const {
+        return _quiet_exceptions;
+    }
     //! Request reporting just the help message.
     /*! \return whether to report help (returned by help_msg()) */
     bool report_help() const {
@@ -191,6 +196,8 @@ private:
     bool _resolve_parsed = false;
     //! Resolve names after the first run phase
     bool _resolve_phase1 = false;
+    //! Flag for reporting exceptions without a stack trace
+    bool _quiet_exceptions = false;
     //! Flag for reporting help
     bool _report_help = false;
     //! Flag for reporting version
@@ -237,7 +244,8 @@ Options:
     -S NUMBER
         NUMBER must be positive and controls the maximum stack depth (the
         maximum nesting level of function calls). If the option is not used,
-        the stack is unlimited.
+        the default stack depth limit is )" +
+std::to_string(threadscript::virtual_machine::default_max_stack) + R"(.
 
     -n
         The script will be parsed and checked for syntax error, but it will not
@@ -253,6 +261,9 @@ Options:
         the first phase of execution, using the symbol table of the main
         thread. It allows to resolve names of variables and functions defined
         during the first phase and use the resolved values in the second phase.
+
+    -q
+        Quiet exceptions. Report exceptions without a full stack trace.
 
     -h
         Display this help message and exit.
@@ -275,7 +286,7 @@ args::args(int argc, char* argv[])
     optind = 1;
     opterr = 0;
     for (int o;
-         (o = getopt(argc, argv, "+s:t:M:S:nRrhvC")) != -1;
+         (o = getopt(argc, argv, "+s:t:M:S:nRrqhvC")) != -1;
          used_opts.insert(o))
     {
         if (used_opts.contains(o))
@@ -324,6 +335,9 @@ args::args(int argc, char* argv[])
             break;
         case 'r':
             _resolve_phase1 = true;
+            break;
+        case 'q':
+            _quiet_exceptions = true;
             break;
         case 'h':
             _report_help = true;
@@ -476,6 +490,8 @@ namespace actions {
     if (a.resolve_parsed())
         parsed->resolve(*sh_vars, false, false);
     threadscript::state main_thread{vm};
+    if (a.max_stack())
+        main_thread.max_stack = *a.max_stack();
     if (a.threads()) {
         auto num_threads = threadscript::value_unsigned::create(alloc);
         num_threads->value() = *a.threads();
@@ -485,9 +501,13 @@ namespace actions {
     exit_status result = exit_status::success;
     try {
         result = value_to_status(parsed->eval(main_thread));
+    } catch (threadscript::exception::base& e) {
+        std::cerr << "Script terminated by exception: " <<
+            e.to_string(!a.quiet_exceptions()) << std::endl;
+        return exit_status::run_exception;
     } catch (std::exception& e) {
-        std::cerr << "Script terminated by exception: " << e.what() <<
-            std::endl;
+        std::cerr << "Script terminated by exception: " <<
+            e.what() << std::endl;
         return exit_status::run_exception;
     }
     // Check if phase two is requested
@@ -528,32 +548,54 @@ namespace actions {
     }
     std::vector<std::thread> threads;
     std::atomic<size_t> thread_exc = 0;
+    bool main_exc = false;
     for (size_t t = 0; t < num_threads; ++t)
-        threads.emplace_back([&vm, &f_thread, &thread_exc, t]() {
+        threads.emplace_back([&vm, &a, &f_thread, &thread_exc, t]() {
             auto args = threadscript::value_vector::create(vm.get_allocator());
             auto arg_t =
                 threadscript::value_unsigned::create(vm.get_allocator());
             arg_t->value() = t;
             args->value().push_back(arg_t);
             threadscript::state thread{vm};
+            if (a.max_stack())
+                thread.max_stack = *a.max_stack();
             try {
                 f_thread->call(thread, thread_fun, args);
+            } catch (threadscript::exception::base& e) {
+                std::osyncstream(std::cerr) << "Thread " << t <<
+                    " terminated by exception: " <<
+                    e.to_string(!a.quiet_exceptions()) << "\n";
+                ++thread_exc;
             } catch (std::exception& e) {
                 std::osyncstream(std::cerr) << "Thread " << t <<
-                    "terminated by exception: " << e.what() << "\n";
+                    " terminated by exception: " <<
+                    e.what() << "\n";
+                ++thread_exc;
+            } catch (...) {
+                std::osyncstream(std::cerr) << "Thread " << t <<
+                    " terminated by unknown exception\n";
                 ++thread_exc;
             }
         });
     try {
         result = value_to_status(f_main->call(main_thread, main_fun));
+    } catch (threadscript::exception::base& e) {
+        std::osyncstream(std::cerr) <<
+            "Main thread terminated by exception: " <<
+            e.to_string(!a.quiet_exceptions()) << "\n";
+        result = exit_status::run_exception;
+        // distinguish exception and normal return of exit_status::run_exception
+        main_exc = true;
     } catch (std::exception& e) {
-        std::cerr << "Main thread terminated by exception: " << e.what() <<
-            std::endl;
-        return exit_status::run_exception;
+        std::osyncstream(std::cerr) <<
+            "Main thread terminated by exception: " << e.what() << std::endl;
+        result = exit_status::run_exception;
+        // distinguish exception and normal return of exit_status::run_exception
+        main_exc = true;
     }
     for (auto&& t: threads)
         t.join();
-    if (thread_exc > 0)
+    if (!main_exc && thread_exc > 0)
         result = exit_status::thread_exception;
     return result;
     //! [script]
