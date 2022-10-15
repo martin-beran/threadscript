@@ -234,14 +234,14 @@ public:
     //! Gets the exception type name.
     /*! This member function must be overriden in each derived class.
      * \return the class name without namespace */
-    virtual std::string_view type() const noexcept {
+    [[nodiscard]] virtual std::string_view type() const noexcept {
         return "base";
     }
     //! Creates the message to be stored in the exception.
     /*! \param[in] msg the error message (after the location)
      * \param[in] trace a stack trace
      * \return the message */
-    std::string make_msg(std::string_view msg, const stack_trace& trace);
+    static std::string make_msg(std::string_view msg, const stack_trace& trace);
     //! Replaces the stored stack trace
     /*! \param[in] trace a stack trace */
     void set_trace(stack_trace trace);
@@ -326,7 +326,7 @@ public:
     /*! \param[in] msg a message
      * \param[in] trace a stack trace */
     explicit wrapped(std::string_view msg, stack_trace trace);
-    std::string_view type() const noexcept override {
+    [[nodiscard]] std::string_view type() const noexcept override {
         return "wrapped";
     }
     //! Throws the wrapped exception.
@@ -347,7 +347,7 @@ public:
                              stack_trace trace = {}):
         base(std::string(feature).append(" not implemented"), std::move(trace))
     {}
-    std::string_view type() const noexcept override {
+    [[nodiscard]] std::string_view type() const noexcept override {
         return "not_implemented";
     }
 };
@@ -360,7 +360,7 @@ public:
      * \param[in] trace a stack trace */
     explicit parse_error(std::string_view msg, stack_trace trace = {}):
         base(std::string("Parse error: ").append(msg), std::move(trace)) {}
-    std::string_view type() const noexcept override {
+    [[nodiscard]] std::string_view type() const noexcept override {
         return "parse_error";
     }
 };
@@ -373,7 +373,7 @@ protected:
      * \param[in] trace a stack trace */
     explicit runtime_error(std::string_view msg, stack_trace trace = {}):
         base(std::string("Runtime error: ").append(msg), std::move(trace)) {}
-    std::string_view type() const noexcept override {
+    [[nodiscard]] std::string_view type() const noexcept override {
         return "runtime_error";
     }
 };
@@ -387,7 +387,7 @@ protected:
      * \param[in] trace a stack trace */
     explicit alloc(std::string_view msg, stack_trace trace = {}):
         runtime_error(msg, std::move(trace)) {}
-    std::string_view type() const noexcept override {
+    [[nodiscard]] std::string_view type() const noexcept override {
         return "alloc";
     }
 };
@@ -401,7 +401,7 @@ public:
     /*! \param[in] trace a stack trace */
     explicit alloc_bad(stack_trace trace = {}):
         alloc("Allocation failed", std::move(trace)) {}
-    std::string_view type() const noexcept override {
+    [[nodiscard]] std::string_view type() const noexcept override {
         return "alloc_bad";
     }
 };
@@ -413,7 +413,7 @@ public:
     /*! \param[in] trace a stack trace */
     explicit alloc_limit(stack_trace trace = {}):
         alloc("Allocation denied by limit", std::move(trace)) {}
-    std::string_view type() const noexcept override {
+    [[nodiscard]] std::string_view type() const noexcept override {
         return "alloc_limit";
     }
 };
@@ -427,7 +427,7 @@ public:
     explicit unknown_symbol(std::string_view name, stack_trace trace = {}):
         runtime_error(std::string("Symbol not found: ").append(name),
                       std::move(trace)) {}
-    std::string_view type() const noexcept override {
+    [[nodiscard]] std::string_view type() const noexcept override {
         return "unknown_symbol";
     }
 };
@@ -441,7 +441,7 @@ protected:
      * \param[in] trace a stack trace */
     explicit value(std::string_view msg, stack_trace trace = {}):
         runtime_error(msg, std::move(trace)) {}
-    std::string_view type() const noexcept override {
+    [[nodiscard]] std::string_view type() const noexcept override {
         return "value";
     }
 };
@@ -455,7 +455,7 @@ public:
     /*! \param[in] trace a stack trace */
     explicit value_bad(stack_trace trace = {}):
         value("Bad value", std::move(trace)) {}
-    std::string_view type() const noexcept override {
+    [[nodiscard]] std::string_view type() const noexcept override {
         return "value_bad";
     }
 };
@@ -467,7 +467,7 @@ public:
     /*! \param[in] trace a stack trace */
     explicit value_null(stack_trace trace = {}):
         value("Null value", std::move(trace)) {}
-    std::string_view type() const noexcept override {
+    [[nodiscard]] std::string_view type() const noexcept override {
         return "value_null";
     }
 };
@@ -479,7 +479,7 @@ public:
     /*! \param[in] trace a stack trace */
     explicit value_read_only(stack_trace trace = {}):
         value("Read-only value", std::move(trace)) {}
-    std::string_view type() const noexcept override {
+    [[nodiscard]] std::string_view type() const noexcept override {
         return "value_read_only";
     }
 };
@@ -491,7 +491,7 @@ public:
     /*! \param[in] trace a stack trace */
     explicit value_mt_unsafe(stack_trace trace = {}):
         value("Thread-unsafe value", std::move(trace)) {}
-    std::string_view type() const noexcept override {
+    [[nodiscard]] std::string_view type() const noexcept override {
         return "value_mt_unsafe";
     }
 };
@@ -503,7 +503,7 @@ public:
     /*! \param[in] trace a stack trace */
     explicit value_type(stack_trace trace = {}):
         value("Bad value type", std::move(trace)) {}
-    std::string_view type() const noexcept override {
+    [[nodiscard]] std::string_view type() const noexcept override {
         return "value_type";
     }
 };
@@ -517,7 +517,7 @@ public:
     /*! \param[in] trace a stack trace */
     explicit value_out_of_range(stack_trace trace = {}):
         value("Value out of range", std::move(trace)) {}
-    std::string_view type() const noexcept override {
+    [[nodiscard]] std::string_view type() const noexcept override {
         return "value_out_of_range";
     }
 };
@@ -531,7 +531,7 @@ protected:
      * \param[in] trace a stack trace */
     explicit operation(std::string_view msg, stack_trace trace = {}):
         runtime_error(msg, std::move(trace)) {}
-    std::string_view type() const noexcept override {
+    [[nodiscard]] std::string_view type() const noexcept override {
         return "operation";
     }
 };
@@ -545,7 +545,7 @@ public:
     /*! \param[in] trace a stack trace */
     explicit op_bad(stack_trace trace = {}):
         operation("Bad operation", std::move(trace)) {}
-    std::string_view type() const noexcept override {
+    [[nodiscard]] std::string_view type() const noexcept override {
         return "op_bad";
     }
 };
@@ -558,7 +558,7 @@ public:
     /*! \param[in] trace a stack trace */
     explicit op_recursion(stack_trace trace = {}):
         operation("Recursion too deep", std::move(trace)) {}
-    std::string_view type() const noexcept override {
+    [[nodiscard]] std::string_view type() const noexcept override {
         return "op_recursion";
     }
 };
@@ -572,7 +572,7 @@ public:
     /*! \param[in] trace a stack trace */
     explicit op_narg(stack_trace trace = {}):
         operation("Bad number of arguments", std::move(trace)) {}
-    std::string_view type() const noexcept override {
+    [[nodiscard]] std::string_view type() const noexcept override {
         return "op_narg";
     }
 };
@@ -586,7 +586,7 @@ public:
     /*! \param[in] trace a stack trace */
     explicit op_overflow(stack_trace trace = {}):
         operation("Overflow", std::move(trace)) {}
-    std::string_view type() const noexcept override {
+    [[nodiscard]] std::string_view type() const noexcept override {
         return "op_overflow";
     }
 };
@@ -598,7 +598,7 @@ public:
     /*! \param[in] trace a stack trace */
     explicit op_div_zero(stack_trace trace = {}):
         operation("Division by zero", std::move(trace)) {}
-    std::string_view type() const noexcept override {
+    [[nodiscard]] std::string_view type() const noexcept override {
         return "op_div_zero";
     }
 };
@@ -610,7 +610,7 @@ public:
     /*! \param[in] trace a stack trace */
     explicit op_would_block(stack_trace trace = {}):
         operation("Operation would block", std::move(trace)) {}
-    std::string_view type() const noexcept override {
+    [[nodiscard]] std::string_view type() const noexcept override {
         return "op_would_block";
     }
 };
@@ -623,7 +623,7 @@ public:
     /*! \param[in] trace a stack trace */
     explicit op_library(stack_trace trace = {}):
         operation("Library failure", std::move(trace)) {}
-    std::string_view type() const noexcept override {
+    [[nodiscard]] std::string_view type() const noexcept override {
         return "op_library";
     }
 };
@@ -640,12 +640,12 @@ public:
      * \param[in] trace a stack trace */
     explicit script_throw(std::string_view msg, stack_trace trace = {}):
         base(std::string(prefix).append(msg), std::move(trace)) {}
-    std::string_view type() const noexcept override {
+    [[nodiscard]] std::string_view type() const noexcept override {
         return "script_throw";
     }
     //! Gets the stored part of the message after the \ref prefix.
     /*! \return the message as set by predef::f_throw */
-    std::string_view script_msg() const noexcept {
+    [[nodiscard]] std::string_view script_msg() const noexcept {
         assert(msg().size() >= prefix.size());
         return msg().substr(prefix.size());
     }
