@@ -597,6 +597,8 @@ namespace actions {
         t.join();
     if (!main_exc && thread_exc > 0)
         result = exit_status::thread_exception;
+    if (parsed && (a.resolve_parsed() || a.resolve_phase1()))
+        parsed->unresolve();
     return result;
     //! [script]
 }

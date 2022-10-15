@@ -121,8 +121,19 @@ private:
      * \param[in] remove whether to remove values of unknown names
      * \note Name resolution is performed only for thread-safe values, because
      * assigning a value to a script node makes it shared by all threads that
-     * evaluate the node. */
+     * evaluate the node.
+     * \note Name resolution creates cycles of shared pointers to values and
+     * script nodes, causing potential memory leaks when destroying
+     * basic_script objects. Function unresolve() can be used to break the
+     * cycles. */
     void resolve(const basic_symbol_table<A>& sym, bool replace, bool remove);
+    //! Reverses the result of resolve().
+    /*! This function usets \ref value of nodes with nonempty \ref name. It
+     * applies to this node and recursively to all descendant nodes.
+     * \todo Explore alternatives for preventing memory leaks created by
+     * resolve(), e.g., using \c std::weak_ptr instead of \c std::shared_ptr
+     * for resolved values, or implementing some kind of garbage collection. */
+    void unresolve();
     //! The owner script
     const basic_script<A>& _script;
     file_location location; //!< Location in the script source file
@@ -250,6 +261,10 @@ public:
      * \param[in] replace whether to replace existing values
      * \param[in] remove whether to remove values of unknown names */
     void resolve(const basic_symbol_table<A>& sym, bool replace, bool remove);
+    //! Reverses the result of resolve().
+    /*! It calls basic_code_node::unresolve() on the root node, if it exists.
+     * See documentation of basic_code_node::unresolve() for more details. */
+    void unresolve();
 private:
     //! The script file name
     a_basic_string<A> _file;

@@ -135,6 +135,15 @@ auto basic_code_node<A>::shared_from_this() const -> node_ptr
 }
 
 template <impl::allocator A>
+void basic_code_node<A>::unresolve()
+{
+    if (!name.empty())
+        value.reset();
+    for (auto&& c: _children)
+        c->unresolve();
+}
+
+template <impl::allocator A>
 void basic_code_node<A>::write(std::ostream& os, size_t indent) const
 {
     std::string i_string(indent, ' ');
@@ -252,6 +261,13 @@ void basic_script<A>::resolve(const basic_symbol_table<A>& sym,
 {
     if (_root)
         _root->resolve(sym, replace, remove);
+}
+
+template <impl::allocator A>
+void basic_script<A>::unresolve()
+{
+    if (_root)
+        _root->unresolve();
 }
 
 /*** basic_value_function ****************************************************/

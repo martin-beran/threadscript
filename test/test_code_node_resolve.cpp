@@ -17,6 +17,7 @@ namespace test {
 struct resolving_runner {
     resolving_runner(std::string script1, std::string script2, bool resolve,
                      bool replace, bool remove);
+    ~resolving_runner();
     std::string run(ts::a_string fun);
     void no_fun(ts::a_string fun);
     std::ostringstream std_out;
@@ -70,6 +71,14 @@ resolving_runner::resolving_runner(std::string script1, std::string script2,
         });
     if (resolve)
         parsed1->resolve(thread2.t_vars, replace, remove);
+}
+
+resolving_runner::~resolving_runner()
+{
+    if (parsed1)
+        parsed1->unresolve();
+    if (parsed2)
+        parsed2->unresolve();
 }
 
 std::string resolving_runner::run(ts::a_string fun)

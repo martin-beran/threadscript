@@ -169,6 +169,14 @@
  * Any future calls of functions from the script do not have to repeat name
  * lookups.
  *
+ * Resolving names creates cycles of shared pointers to values and script
+ * nodes, preventing correct destruction of threadscript::script objects and
+ * creating potential memory leaks. This is not a real problem in a program
+ * like ts.cpp, which terminates soon after it stops using a script object. If
+ * a program repeatedly creates and removes script objects, memory leaks can be
+ * prevented by calling threadscript::script::unresolve() before unsetting the
+ * last shared pointer from "outside" to the script.
+ *
  * \subsection Architecture_Parser Parser
  *
  * Parsing of ThreadScript source code is provided by functions
